@@ -1,0 +1,8 @@
+[package]
+name = "c03"
+version = "0.1.0"
+authors = ["Gonzalo Diethelm <gonzalo.diethelm@gmail.com>"]
+
+[dependencies]
+regex = "1.1.0"
+failure = "0.1.3"
