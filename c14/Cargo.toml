@@ -1,0 +1,6 @@
+[package]
+name = "c14"
+version = "0.1.0"
+authors = ["Gonzalo Diethelm <gonzalo.diethelm@gmail.com>"]
+
+[dependencies]
