@@ -10,7 +10,7 @@ pub const Computer = struct {
         STOP = 99,
     };
 
-    pub fn init(line: []u8) Computer {
+    pub fn init(str: []u8) Computer {
         var self = Computer{
             .mem = undefined,
             .pos = 0,
@@ -19,15 +19,15 @@ pub const Computer = struct {
         var j: usize = 0;
         var l: usize = 0;
         while (true) {
-            if (j >= line.len or line[j] < '0' or line[j] > '9') {
+            if (j >= str.len or str[j] < '0' or str[j] > '9') {
                 self.append(cur);
                 cur = 0;
                 l = 0;
-                if (j >= line.len) {
+                if (j >= str.len) {
                     break;
                 }
             } else {
-                cur = cur * 10 + line[j] - '0';
+                cur = cur * 10 + str[j] - '0';
                 l += 1;
             }
             j += 1;

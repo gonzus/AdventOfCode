@@ -13,8 +13,8 @@ pub const Tank = struct {
         return self.mass;
     }
 
-    pub fn parse(self: *Tank, line: []u8, recurse: bool) !void {
-        var value: u32 = try std.fmt.parseInt(u32, line, 10);
+    pub fn parse(self: *Tank, str: []u8, recurse: bool) !void {
+        var value: u32 = try std.fmt.parseInt(u32, str, 10);
         while (value > 6) {
             const smaller: u32 = value / 3 - 2;
             value = smaller;
