@@ -51,22 +51,15 @@ pub const Computer = struct {
     pub fn run(self: *Computer) void {
         var j: usize = 0;
         while (true) : (j += 4) {
-            const op = self.mem[j + 0];
+            const op = @intToEnum(OP, self.mem[j + 0]);
             const p1 = self.mem[j + 1];
             const p2 = self.mem[j + 2];
             const p3 = self.mem[j + 3];
-            if (op == @enumToInt(OP.STOP)) {
-                break;
-            } else if (op == @enumToInt(OP.ADD)) {
-                self.mem[p3] = self.mem[p1] + self.mem[p2];
-            } else if (op == @enumToInt(OP.MUL)) {
-                self.mem[p3] = self.mem[p1] * self.mem[p2];
+            switch (op) {
+                OP.STOP => break,
+                OP.ADD => self.mem[p3] = self.mem[p1] + self.mem[p2],
+                OP.MUL => self.mem[p3] = self.mem[p1] * self.mem[p2],
             }
-            // switch (op) {
-            //     OP.STOP => break;
-            //     OP.ADD => self.mem[p3] = self.mem[p1] + self.mem[p2];
-            //     OP.MUL => self.mem[p3] = self.mem[p1] * self.mem[p2];
-            // }
         }
     }
 };
