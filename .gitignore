@@ -1,3 +1,10 @@
-**/target
+**/target/
 **/*.rs.bk
 **/*.swp
+**/*.o
+**/*.swp
+**/zig-cache/
+2019/p01/p01a
+2019/p01/p01b
+2019/p02/p02a
+2019/p02/p02b
