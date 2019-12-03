@@ -1,0 +1,5 @@
+cat data/c1p1-input.txt | awk '{t+=$0} END {print t}'
+520
+
+cat data/c1p2-input.txt | awk '{ l[pos++] = $1; } END { while(!done) { for (p = 0; !done && p < pos; ++p) { t+=l[p]; if (seen[t] > 0) {print t; done = 1; } seen[t] = 1;}}}'
+394
