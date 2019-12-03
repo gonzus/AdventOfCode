@@ -8,60 +8,21 @@ pub fn main() !void {
     const allocator = std.debug.global_allocator;
     var buf = try std.Buffer.initSize(allocator, 0);
 
-    const board = Board.init();
+    var board = Board.init();
+    defer board.destroy();
 
     var count: u32 = 0;
-    var map = std.AutoHashMap(i32, void).init(std.heap.direct_allocator);
-    defer map.deinit();
-
     while (std.io.readLine(&buf)) |line| {
         count += 1;
-        var it = std.mem.separate(line, ",");
-        var md: i32 = 999999999;
-        var mx: i32 = 0;
-        var my: i32 = 0;
-        var cx: i32 = 0;
-        var cy: i32 = 0;
-        while (it.next()) |what| {
-            const dir = what[0];
-            const len = try std.fmt.parseInt(usize, what[1..], 10);
-            var dx: i32 = 0;
-            dx = switch (dir) {
-                'R' => 1,
-                'L' => -1,
-                else => 0,
-            };
-            var dy: i32 = 0;
-            dy = switch (dir) {
-                'U' => 1,
-                'D' => -1,
-                else => 0,
-            };
-            // std.debug.warn("{} {} {} {}\n", dir, len, dx, dy);
-            var j: usize = 0;
-            while (j < len) : (j += 1) {
-                cx += dx;
-                cy += dy;
-                const pos: i32 = @intCast(i32, @intCast(i32, cx) * @intCast(i32, 10000)) + @intCast(i32, cy);
-                if (count == 1) {
-                    // std.debug.warn("{} SET {} {} {}\n", count, cx, cy, pos);
-                    _ = try map.put(pos, {});
-                } else if (map.contains(pos)) {
-                    // std.debug.warn("{} HIT {} {}\n", count, cx, cy);
-                    const ax = try std.math.absInt(cx);
-                    const ay = try std.math.absInt(cy);
-                    const d = ax + ay;
-                    if (md > d) {
-                        md = d;
-                        mx = cx;
-                        my = cy;
-                    }
-                }
-            }
-        }
-        std.debug.warn("MIN {} {} {}\n", md, mx, my);
+        try board.trace(line, count == 1, dist);
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }
-    try out.print("Read {} lines\n", count);
+    try out.print("Read {} lines, min {} at {} {}\n", count, board.md, board.mx, board.my);
+}
+
+fn dist(x: i32, y: i32, v0: u32, v1: u32) u32 {
+    const ax = std.math.absInt(x) catch 0;
+    const ay = std.math.absInt(y) catch 0;
+    return @intCast(u32, ax) + @intCast(u32, ay);
 }
