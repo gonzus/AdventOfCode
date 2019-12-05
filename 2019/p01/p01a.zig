@@ -12,7 +12,7 @@ pub fn main() !void {
     var count: u32 = 0;
     while (std.io.readLine(&buf)) |line| {
         count += 1;
-        try tank.parse(line, false);
+        _ = tank.parse(line, false);
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }
