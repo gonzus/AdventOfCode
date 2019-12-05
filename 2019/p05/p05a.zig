@@ -15,11 +15,17 @@ pub fn main() !void {
     while (std.io.readLine(&buf)) |line| {
         count += 1;
         var computer = Computer.init(line);
-        for (args) |arg, pos| {
-            if (pos == 0) continue;
-            const input = try std.fmt.parseInt(i32, arg, 10);
+        if (args.len <= 1) {
+            const input: i32 = 1;
             const result = computer.run(input);
             try out.print("Result for {} is {}\n", input, result);
+        } else {
+            for (args) |arg, pos| {
+                if (pos == 0) continue;
+                const input = try std.fmt.parseInt(i32, arg, 10);
+                const result = computer.run(input);
+                try out.print("Result for {} is {}\n", input, result);
+            }
         }
     } else |err| {
         // try out.print("Error, {}!\n", err);
