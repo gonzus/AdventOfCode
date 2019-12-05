@@ -1,7 +1,8 @@
 const std = @import("std");
 
 pub const Computer = struct {
-    mem: [4096]i32,
+    rom: [4096]i32,
+    ram: [4096]i32,
     pos: usize,
 
     const OP = enum(u32) {
@@ -21,9 +22,10 @@ pub const Computer = struct {
         IMMEDIATE = 1,
     };
 
-    pub fn init(str: []u8) Computer {
+    pub fn init(str: []const u8) Computer {
         var self = Computer{
-            .mem = undefined,
+            .rom = undefined,
+            .ram = undefined,
             .pos = 0,
         };
         var cur: i32 = 0;
@@ -51,24 +53,26 @@ pub const Computer = struct {
     }
 
     pub fn get(self: Computer, pos: usize) i32 {
-        return self.mem[pos];
+        return self.ram[pos];
     }
 
     pub fn set(self: *Computer, pos: usize, val: i32) void {
-        self.mem[pos] = val;
+        self.ram[pos] = val;
     }
 
     pub fn append(self: *Computer, val: i32) void {
         // std.debug.warn("PC {} = {}\n", self.pos, val);
-        self.mem[self.pos] = val;
+        self.rom[self.pos] = val;
         self.pos += 1;
     }
 
-    pub fn run(self: *Computer, input: i32) void {
+    pub fn run(self: *Computer, input: i32) i32 {
         var pc: usize = 0;
         var done = false;
+        self.ram = self.rom;
+        var last_printed: i32 = undefined;
         while (true) {
-            var instr: u32 = @intCast(u32, self.mem[pc + 0]);
+            var instr: u32 = @intCast(u32, self.ram[pc + 0]);
             // std.debug.warn("instr: {}\n", instr);
             const op = @intToEnum(OP, instr % 100);
             instr /= 100;
@@ -80,70 +84,71 @@ pub const Computer = struct {
             instr /= 10;
             switch (op) {
                 OP.HALT => {
-                    std.debug.warn("HALT\n");
+                    // std.debug.warn("HALT\n");
                     done = true;
                     break;
                 },
                 OP.ADD => {
-                    const p1 = self.mem[pc + 1];
+                    const p1 = self.ram[pc + 1];
                     const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.mem[@intCast(usize, p1)],
+                        MODE.POSITION => self.ram[@intCast(usize, p1)],
                         MODE.IMMEDIATE => p1,
                     };
-                    const p2 = self.mem[pc + 2];
+                    const p2 = self.ram[pc + 2];
                     const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.mem[@intCast(usize, p2)],
+                        MODE.POSITION => self.ram[@intCast(usize, p2)],
                         MODE.IMMEDIATE => p2,
                     };
-                    const p3 = self.mem[pc + 3];
+                    const p3 = self.ram[pc + 3];
                     // std.debug.warn("ADD: {} = {} + {}\n", p3, v1, v2);
-                    self.mem[@intCast(usize, p3)] = v1 + v2;
+                    self.ram[@intCast(usize, p3)] = v1 + v2;
                     pc += 4;
                 },
                 OP.MUL => {
-                    const p1 = self.mem[pc + 1];
+                    const p1 = self.ram[pc + 1];
                     const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.mem[@intCast(usize, p1)],
+                        MODE.POSITION => self.ram[@intCast(usize, p1)],
                         MODE.IMMEDIATE => p1,
                     };
-                    const p2 = self.mem[pc + 2];
+                    const p2 = self.ram[pc + 2];
                     const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.mem[@intCast(usize, p2)],
+                        MODE.POSITION => self.ram[@intCast(usize, p2)],
                         MODE.IMMEDIATE => p2,
                     };
-                    const p3 = self.mem[pc + 3];
+                    const p3 = self.ram[pc + 3];
                     // std.debug.warn("MUL: {} = {} * {}\n", p3, v1, v2);
-                    self.mem[@intCast(usize, p3)] = v1 * v2;
+                    self.ram[@intCast(usize, p3)] = v1 * v2;
                     pc += 4;
                 },
                 OP.RDSV => {
-                    const p1 = self.mem[pc + 1];
+                    const p1 = self.ram[pc + 1];
                     const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.mem[@intCast(usize, p1)],
+                        MODE.POSITION => self.ram[@intCast(usize, p1)],
                         MODE.IMMEDIATE => p1,
                     };
-                    std.debug.warn("RDSV: {} = {}\n", p1, input);
-                    self.mem[@intCast(usize, p1)] = input;
+                    // std.debug.warn("RDSV: {} = {}\n", p1, input);
+                    self.ram[@intCast(usize, p1)] = input;
                     pc += 2;
                 },
                 OP.PRINT => {
-                    const p1 = self.mem[pc + 1];
+                    const p1 = self.ram[pc + 1];
                     const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.mem[@intCast(usize, p1)],
+                        MODE.POSITION => self.ram[@intCast(usize, p1)],
                         MODE.IMMEDIATE => p1,
                     };
-                    std.debug.warn("PRINT: {}\n", v1);
+                    // std.debug.warn("PRINT: {}\n", v1);
+                    last_printed = v1;
                     pc += 2;
                 },
                 OP.JIT => {
-                    const p1 = self.mem[pc + 1];
+                    const p1 = self.ram[pc + 1];
                     const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.mem[@intCast(usize, p1)],
+                        MODE.POSITION => self.ram[@intCast(usize, p1)],
                         MODE.IMMEDIATE => p1,
                     };
-                    const p2 = self.mem[pc + 2];
+                    const p2 = self.ram[pc + 2];
                     const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.mem[@intCast(usize, p2)],
+                        MODE.POSITION => self.ram[@intCast(usize, p2)],
                         MODE.IMMEDIATE => p2,
                     };
                     // std.debug.warn("JIT: {} {}\n", v1, v2);
@@ -154,14 +159,14 @@ pub const Computer = struct {
                     }
                 },
                 OP.JIF => {
-                    const p1 = self.mem[pc + 1];
+                    const p1 = self.ram[pc + 1];
                     const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.mem[@intCast(usize, p1)],
+                        MODE.POSITION => self.ram[@intCast(usize, p1)],
                         MODE.IMMEDIATE => p1,
                     };
-                    const p2 = self.mem[pc + 2];
+                    const p2 = self.ram[pc + 2];
                     const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.mem[@intCast(usize, p2)],
+                        MODE.POSITION => self.ram[@intCast(usize, p2)],
                         MODE.IMMEDIATE => p2,
                     };
                     // std.debug.warn("JIF: {} {}\n", v1, v2);
@@ -172,38 +177,39 @@ pub const Computer = struct {
                     }
                 },
                 OP.CLT => {
-                    const p1 = self.mem[pc + 1];
+                    const p1 = self.ram[pc + 1];
                     const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.mem[@intCast(usize, p1)],
+                        MODE.POSITION => self.ram[@intCast(usize, p1)],
                         MODE.IMMEDIATE => p1,
                     };
-                    const p2 = self.mem[pc + 2];
+                    const p2 = self.ram[pc + 2];
                     const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.mem[@intCast(usize, p2)],
+                        MODE.POSITION => self.ram[@intCast(usize, p2)],
                         MODE.IMMEDIATE => p2,
                     };
-                    const p3 = self.mem[pc + 3];
+                    const p3 = self.ram[pc + 3];
                     // std.debug.warn("CLT: {} = {} LT {}\n", p3, v1, v2);
-                    self.mem[@intCast(usize, p3)] = if (v1 < v2) 1 else 0;
+                    self.ram[@intCast(usize, p3)] = if (v1 < v2) 1 else 0;
                     pc += 4;
                 },
                 OP.CEQ => {
-                    const p1 = self.mem[pc + 1];
+                    const p1 = self.ram[pc + 1];
                     const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.mem[@intCast(usize, p1)],
+                        MODE.POSITION => self.ram[@intCast(usize, p1)],
                         MODE.IMMEDIATE => p1,
                     };
-                    const p2 = self.mem[pc + 2];
+                    const p2 = self.ram[pc + 2];
                     const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.mem[@intCast(usize, p2)],
+                        MODE.POSITION => self.ram[@intCast(usize, p2)],
                         MODE.IMMEDIATE => p2,
                     };
-                    const p3 = self.mem[pc + 3];
+                    const p3 = self.ram[pc + 3];
                     // std.debug.warn("CEQ: {} = {} EQ {}\n", p3, v1, v2);
-                    self.mem[@intCast(usize, p3)] = if (v1 == v2) 1 else 0;
+                    self.ram[@intCast(usize, p3)] = if (v1 == v2) 1 else 0;
                     pc += 4;
                 },
             }
         }
+        return last_printed;
     }
 };

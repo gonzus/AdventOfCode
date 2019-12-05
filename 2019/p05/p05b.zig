@@ -12,7 +12,9 @@ pub fn main() !void {
     while (std.io.readLine(&buf)) |line| {
         count += 1;
         var computer = Computer.init(line);
-        computer.run(5);
+        const input: i32 = 5;
+        const result: i32 = computer.run(input);
+        try out.print("Result for {} is {}\n", input, result);
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }
