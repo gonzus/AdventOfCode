@@ -1,13 +1,20 @@
 const std = @import("std");
 
 pub const Board = struct {
+    dist: Distance,
     map: std.AutoHashMap(i32, u32),
     md: u32,
     mx: i32,
     my: i32,
 
-    pub fn init() Board {
+    pub const Distance = enum {
+        Manhattan,
+        Travelled,
+    };
+
+    pub fn init(dist: Board.Distance) Board {
         var self = Board{
+            .dist = dist,
             .map = std.AutoHashMap(i32, u32).init(std.heap.direct_allocator),
             .md = std.math.maxInt(u32),
             .mx = 0,
@@ -20,14 +27,14 @@ pub const Board = struct {
         self.map.deinit();
     }
 
-    pub fn trace(self: *Board, str: []u8, first: bool, dist: fn (x: i32, y: i32, v0: u32, v1: u32) u32) !void {
+    pub fn trace(self: *Board, str: []const u8, first: bool) void {
         var it = std.mem.separate(str, ",");
         var cx: i32 = 0;
         var cy: i32 = 0;
         var cl: u32 = 0;
         while (it.next()) |what| {
             const dir = what[0];
-            const len = try std.fmt.parseInt(usize, what[1..], 10);
+            const len = std.fmt.parseInt(usize, what[1..], 10) catch 0;
             var dx: i32 = 0;
             dx = switch (dir) {
                 'R' => 1,
@@ -47,10 +54,13 @@ pub const Board = struct {
                 cl += 1;
                 const pos = cx * 10000 + cy;
                 if (first) {
-                    _ = try self.map.put(pos, cl);
+                    _ = self.map.put(pos, cl) catch unreachable;
                 } else if (self.map.contains(pos)) {
                     const val = self.map.get(pos).?.value;
-                    const d = dist(cx, cy, val, cl);
+                    const d = switch (self.dist) {
+                        Distance.Manhattan => manhattan(cx, cy),
+                        Distance.Travelled => travelled(val, cl),
+                    };
                     if (self.md > d) {
                         self.md = d;
                         self.mx = cx;
@@ -61,3 +71,13 @@ pub const Board = struct {
         }
     }
 };
+
+fn manhattan(x: i32, y: i32) u32 {
+    const ax = std.math.absInt(x) catch 0;
+    const ay = std.math.absInt(y) catch 0;
+    return @intCast(u32, ax) + @intCast(u32, ay);
+}
+
+fn travelled(v0: u32, v1: u32) u32 {
+    return v0 + v1;
+}
