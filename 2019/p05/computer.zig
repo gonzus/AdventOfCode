@@ -69,32 +69,16 @@ pub const Computer = struct {
                     break;
                 },
                 OP.ADD => {
-                    const p1 = self.ram[pc + 1];
-                    const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.ram[@intCast(usize, p1)],
-                        MODE.IMMEDIATE => p1,
-                    };
-                    const p2 = self.ram[pc + 2];
-                    const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.ram[@intCast(usize, p2)],
-                        MODE.IMMEDIATE => p2,
-                    };
+                    const v1 = self.decode(pc, 1, m1);
+                    const v2 = self.decode(pc, 2, m2);
                     const p3 = self.ram[pc + 3];
                     // std.debug.warn("ADD: {} = {} + {}\n", p3, v1, v2);
                     self.ram[@intCast(usize, p3)] = v1 + v2;
                     pc += 4;
                 },
                 OP.MUL => {
-                    const p1 = self.ram[pc + 1];
-                    const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.ram[@intCast(usize, p1)],
-                        MODE.IMMEDIATE => p1,
-                    };
-                    const p2 = self.ram[pc + 2];
-                    const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.ram[@intCast(usize, p2)],
-                        MODE.IMMEDIATE => p2,
-                    };
+                    const v1 = self.decode(pc, 1, m1);
+                    const v2 = self.decode(pc, 2, m2);
                     const p3 = self.ram[pc + 3];
                     // std.debug.warn("MUL: {} = {} * {}\n", p3, v1, v2);
                     self.ram[@intCast(usize, p3)] = v1 * v2;
@@ -102,35 +86,19 @@ pub const Computer = struct {
                 },
                 OP.RDSV => {
                     const p1 = self.ram[pc + 1];
-                    const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.ram[@intCast(usize, p1)],
-                        MODE.IMMEDIATE => p1,
-                    };
                     // std.debug.warn("RDSV: {} = {}\n", p1, input);
                     self.ram[@intCast(usize, p1)] = input;
                     pc += 2;
                 },
                 OP.PRINT => {
-                    const p1 = self.ram[pc + 1];
-                    const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.ram[@intCast(usize, p1)],
-                        MODE.IMMEDIATE => p1,
-                    };
+                    const v1 = self.decode(pc, 1, m1);
                     // std.debug.warn("PRINT: {}\n", v1);
                     last_printed = v1;
                     pc += 2;
                 },
                 OP.JIT => {
-                    const p1 = self.ram[pc + 1];
-                    const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.ram[@intCast(usize, p1)],
-                        MODE.IMMEDIATE => p1,
-                    };
-                    const p2 = self.ram[pc + 2];
-                    const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.ram[@intCast(usize, p2)],
-                        MODE.IMMEDIATE => p2,
-                    };
+                    const v1 = self.decode(pc, 1, m1);
+                    const v2 = self.decode(pc, 2, m2);
                     // std.debug.warn("JIT: {} {}\n", v1, v2);
                     if (v1 == 0) {
                         pc += 3;
@@ -139,16 +107,8 @@ pub const Computer = struct {
                     }
                 },
                 OP.JIF => {
-                    const p1 = self.ram[pc + 1];
-                    const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.ram[@intCast(usize, p1)],
-                        MODE.IMMEDIATE => p1,
-                    };
-                    const p2 = self.ram[pc + 2];
-                    const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.ram[@intCast(usize, p2)],
-                        MODE.IMMEDIATE => p2,
-                    };
+                    const v1 = self.decode(pc, 1, m1);
+                    const v2 = self.decode(pc, 2, m2);
                     // std.debug.warn("JIF: {} {}\n", v1, v2);
                     if (v1 == 0) {
                         pc = @intCast(usize, v2);
@@ -157,32 +117,16 @@ pub const Computer = struct {
                     }
                 },
                 OP.CLT => {
-                    const p1 = self.ram[pc + 1];
-                    const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.ram[@intCast(usize, p1)],
-                        MODE.IMMEDIATE => p1,
-                    };
-                    const p2 = self.ram[pc + 2];
-                    const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.ram[@intCast(usize, p2)],
-                        MODE.IMMEDIATE => p2,
-                    };
+                    const v1 = self.decode(pc, 1, m1);
+                    const v2 = self.decode(pc, 2, m2);
                     const p3 = self.ram[pc + 3];
                     // std.debug.warn("CLT: {} = {} LT {}\n", p3, v1, v2);
                     self.ram[@intCast(usize, p3)] = if (v1 < v2) 1 else 0;
                     pc += 4;
                 },
                 OP.CEQ => {
-                    const p1 = self.ram[pc + 1];
-                    const v1: i32 = switch (m1) {
-                        MODE.POSITION => self.ram[@intCast(usize, p1)],
-                        MODE.IMMEDIATE => p1,
-                    };
-                    const p2 = self.ram[pc + 2];
-                    const v2: i32 = switch (m2) {
-                        MODE.POSITION => self.ram[@intCast(usize, p2)],
-                        MODE.IMMEDIATE => p2,
-                    };
+                    const v1 = self.decode(pc, 1, m1);
+                    const v2 = self.decode(pc, 2, m2);
                     const p3 = self.ram[pc + 3];
                     // std.debug.warn("CEQ: {} = {} EQ {}\n", p3, v1, v2);
                     self.ram[@intCast(usize, p3)] = if (v1 == v2) 1 else 0;
@@ -191,6 +135,15 @@ pub const Computer = struct {
             }
         }
         return last_printed;
+    }
+
+    fn decode(self: Computer, pc: usize, pos: usize, mode: MODE) i32 {
+        const p = self.ram[pc + pos];
+        const v: i32 = switch (mode) {
+            MODE.POSITION => self.ram[@intCast(usize, p)],
+            MODE.IMMEDIATE => p,
+        };
+        return v;
     }
 };
 
