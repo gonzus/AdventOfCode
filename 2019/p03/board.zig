@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 pub const Board = struct {
     dist: Distance,
@@ -80,4 +81,76 @@ fn manhattan(x: i32, y: i32) u32 {
 
 fn travelled(v0: u32, v1: u32) u32 {
     return v0 + v1;
+}
+
+test "Manhattan - distance 6" {
+    const wire0: []const u8 = "R8,U5,L5,D3";
+    const wire1: []const u8 = "U7,R6,D4,L4";
+
+    var board = Board.init(Board.Distance.Manhattan);
+    defer board.destroy();
+
+    board.trace(wire0, true);
+    board.trace(wire1, false);
+    assert(board.md == 6);
+}
+
+test "Manhattan - distance 159" {
+    const wire0: []const u8 = "R75,D30,R83,U83,L12,D49,R71,U7,L72";
+    const wire1: []const u8 = "U62,R66,U55,R34,D71,R55,D58,R83";
+
+    var board = Board.init(Board.Distance.Manhattan);
+    defer board.destroy();
+
+    board.trace(wire0, true);
+    board.trace(wire1, false);
+    assert(board.md == 159);
+}
+
+test "Manhattan - distance 135" {
+    const wire0: []const u8 = "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51";
+    const wire1: []const u8 = "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7";
+
+    var board = Board.init(Board.Distance.Manhattan);
+    defer board.destroy();
+
+    board.trace(wire0, true);
+    board.trace(wire1, false);
+    assert(board.md == 135);
+}
+
+test "Travelled - distance 30" {
+    const wire0: []const u8 = "R8,U5,L5,D3";
+    const wire1: []const u8 = "U7,R6,D4,L4";
+
+    var board = Board.init(Board.Distance.Travelled);
+    defer board.destroy();
+
+    board.trace(wire0, true);
+    board.trace(wire1, false);
+    assert(board.md == 30);
+}
+
+test "Travelled - distance 159" {
+    const wire0: []const u8 = "R75,D30,R83,U83,L12,D49,R71,U7,L72";
+    const wire1: []const u8 = "U62,R66,U55,R34,D71,R55,D58,R83";
+
+    var board = Board.init(Board.Distance.Travelled);
+    defer board.destroy();
+
+    board.trace(wire0, true);
+    board.trace(wire1, false);
+    assert(board.md == 610);
+}
+
+test "Travelled - distance 135" {
+    const wire0: []const u8 = "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51";
+    const wire1: []const u8 = "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7";
+
+    var board = Board.init(Board.Distance.Travelled);
+    defer board.destroy();
+
+    board.trace(wire0, true);
+    board.trace(wire1, false);
+    assert(board.md == 410);
 }
