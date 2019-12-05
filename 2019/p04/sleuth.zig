@@ -1,26 +1,31 @@
 const std = @import("std");
 
 pub const Sleuth = struct {
-    lo: i32,
-    hi: i32,
-    count: usize,
+    match: Match,
+    lo: u32,
+    hi: u32,
 
-    pub fn init() Sleuth {
+    pub const Match = enum {
+        TwoOrMore,
+        TwoOnly,
+    };
+
+    pub fn init(match: Match) Sleuth {
         var self = Sleuth{
+            .match = match,
             .lo = 0,
             .hi = 0,
-            .count = 0,
         };
         return self;
     }
 
-    pub fn search(self: *Sleuth, str: []u8, match: fn (n: i32) bool) !void {
+    pub fn search(self: *Sleuth, str: []u8) usize {
         self.lo = 0;
         self.hi = 0;
         var it = std.mem.separate(str, "-");
         var first = true;
         while (it.next()) |what| {
-            const number = try std.fmt.parseInt(i32, what, 10);
+            const number = std.fmt.parseInt(u32, what, 10) catch unreachable;
             if (first) {
                 self.lo = number;
             } else {
@@ -29,12 +34,76 @@ pub const Sleuth = struct {
             first = false;
         }
 
-        var n: i32 = self.lo;
-        self.count = 0;
+        var n: u32 = self.lo;
+        var count: usize = 0;
         while (n <= self.hi) : (n += 1) {
-            if (match(n)) {
-                self.count += 1;
+            const matched = switch (self.match) {
+                Match.TwoOrMore => match_two_or_more(n),
+                Match.TwoOnly => match_two_only(n),
+            };
+            if (matched) {
+                count += 1;
             }
         }
+        return count;
     }
 };
+
+fn match_two_or_more(n: u32) bool {
+    // try out.print("GONZO {}\n", n);
+    var rep: usize = 0;
+    var dec: usize = 0;
+    var m = n;
+    var q: u8 = 99;
+    while (m > 0 and dec == 0) {
+        var d = @intCast(u8, m % 10);
+        m /= 10;
+        if (d > q) {
+            dec += 1;
+            break;
+        }
+        if (d == q) {
+            rep += 1;
+        }
+        q = d;
+    }
+    if (dec > 0) {
+        return false;
+    }
+    return (rep > 0);
+}
+
+fn match_two_only(n: u32) bool {
+    // try out.print("GONZO {}\n", n);
+    var rep: [10]usize = undefined;
+    var j: usize = 0;
+    while (j < 10) : (j += 1) {
+        rep[j] = 0;
+    }
+    var dec: usize = 0;
+    var m = n;
+    var q: u8 = 99;
+    while (m > 0 and dec == 0) {
+        var d = @intCast(u8, m % 10);
+        m /= 10;
+        if (d > q) {
+            dec += 1;
+            break;
+        }
+        if (d == q) {
+            rep[@intCast(usize, d)] += 1;
+        }
+        q = d;
+    }
+    if (dec > 0) {
+        return false;
+    }
+    var c2: usize = 0;
+    j = 0;
+    while (j < 10) : (j += 1) {
+        if (rep[j] == 1) {
+            c2 += 1;
+        }
+    }
+    return (c2 > 0);
+}
