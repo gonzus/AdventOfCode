@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 pub const Computer = struct {
     rom: [4096]i32,
@@ -213,3 +214,59 @@ pub const Computer = struct {
         return last_printed;
     }
 };
+
+test "position mode - 1 if input equal to 8" {
+    const data: []const u8 = "3,9,8,9,10,9,4,9,99,-1,8";
+    var computer = Computer.init(data[0..]);
+    assert(computer.run(7) == 0);
+    assert(computer.run(8) == 1);
+    assert(computer.run(9) == 0);
+}
+
+test "position mode - 1 if input less than 8" {
+    const data: []const u8 = "3,9,7,9,10,9,4,9,99,-1,8";
+    var computer = Computer.init(data[0..]);
+    assert(computer.run(7) == 1);
+    assert(computer.run(8) == 0);
+    assert(computer.run(9) == 0);
+}
+
+test "immediate mode - 1 if input equal to 8" {
+    const data: []const u8 = "3,3,1108,-1,8,3,4,3,99";
+    var computer = Computer.init(data[0..]);
+    assert(computer.run(7) == 0);
+    assert(computer.run(8) == 1);
+    assert(computer.run(9) == 0);
+}
+
+test "immediate mode - 1 if input less than 8" {
+    const data: []const u8 = "3,3,1107,-1,8,3,4,3,99";
+    var computer = Computer.init(data[0..]);
+    assert(computer.run(7) == 1);
+    assert(computer.run(8) == 0);
+    assert(computer.run(9) == 0);
+}
+
+test "position mode - 0 if input is zero" {
+    const data: []const u8 = "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9";
+    var computer = Computer.init(data[0..]);
+    assert(computer.run(0) == 0);
+    assert(computer.run(1) == 1);
+    assert(computer.run(2) == 1);
+}
+
+test "immediate mode - 0 if input is zero" {
+    const data: []const u8 = "3,3,1105,-1,9,1101,0,0,12,4,12,99,1";
+    var computer = Computer.init(data[0..]);
+    assert(computer.run(0) == 0);
+    assert(computer.run(1) == 1);
+    assert(computer.run(2) == 1);
+}
+
+test "immediate mode - multitest for 8" {
+    const data: []const u8 = "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99";
+    var computer = Computer.init(data[0..]);
+    assert(computer.run(7) == 999);
+    assert(computer.run(8) == 1000);
+    assert(computer.run(9) == 1001);
+}
