@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 pub const Sleuth = struct {
     match: Match,
@@ -106,4 +107,16 @@ fn match_two_only(n: u32) bool {
         }
     }
     return (c2 > 0);
+}
+
+test "match two or more" {
+    assert(match_two_or_more(112233));
+    assert(!match_two_or_more(223450));
+    assert(!match_two_or_more(123789));
+}
+
+test "match exactly two" {
+    assert(match_two_only(112233));
+    assert(!match_two_only(123444));
+    assert(match_two_only(111122));
 }
