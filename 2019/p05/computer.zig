@@ -29,26 +29,11 @@ pub const Computer = struct {
             .ram = undefined,
             .pos = 0,
         };
-        var cur: i32 = 0;
-        var neg = false;
-        var j: usize = 0;
-        var l: usize = 0;
-        while (true) {
-            if (j < str.len and str[j] == '-') {
-                neg = true;
-            } else if (j >= str.len or str[j] < '0' or str[j] > '9') {
-                self.append(if (neg) -cur else cur);
-                cur = 0;
-                neg = false;
-                l = 0;
-                if (j >= str.len) {
-                    break;
-                }
-            } else {
-                cur = cur * 10 + @intCast(i32, str[j] - '0');
-                l += 1;
-            }
-            j += 1;
+        var it = std.mem.separate(str, ",");
+        while (it.next()) |what| {
+            const instr = std.fmt.parseInt(i32, what, 10) catch unreachable;
+            self.rom[self.pos] = instr;
+            self.pos += 1;
         }
         return self;
     }
@@ -59,12 +44,6 @@ pub const Computer = struct {
 
     pub fn set(self: *Computer, pos: usize, val: i32) void {
         self.ram[pos] = val;
-    }
-
-    pub fn append(self: *Computer, val: i32) void {
-        // std.debug.warn("PC {} = {}\n", self.pos, val);
-        self.rom[self.pos] = val;
-        self.pos += 1;
     }
 
     pub fn run(self: *Computer, input: i32) i32 {

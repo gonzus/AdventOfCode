@@ -16,22 +16,11 @@ pub const Computer = struct {
             .mem = undefined,
             .pos = 0,
         };
-        var cur: u32 = 0;
-        var j: usize = 0;
-        var l: usize = 0;
-        while (true) {
-            if (j >= str.len or str[j] < '0' or str[j] > '9') {
-                self.append(cur);
-                cur = 0;
-                l = 0;
-                if (j >= str.len) {
-                    break;
-                }
-            } else {
-                cur = cur * 10 + str[j] - '0';
-                l += 1;
-            }
-            j += 1;
+        var it = std.mem.separate(str, ",");
+        while (it.next()) |what| {
+            const instr = std.fmt.parseInt(u32, what, 10) catch unreachable;
+            self.mem[self.pos] = instr;
+            self.pos += 1;
         }
         return self;
     }
@@ -44,18 +33,13 @@ pub const Computer = struct {
         self.mem[pos] = val;
     }
 
-    pub fn append(self: *Computer, val: u32) void {
-        self.mem[self.pos] = val;
-        self.pos += 1;
-    }
-
     pub fn run(self: *Computer) void {
-        var j: usize = 0;
-        while (true) : (j += 4) {
-            const op = @intToEnum(OP, self.mem[j + 0]);
-            const p1 = self.mem[j + 1];
-            const p2 = self.mem[j + 2];
-            const p3 = self.mem[j + 3];
+        var pc: usize = 0;
+        while (true) : (pc += 4) {
+            const op = @intToEnum(OP, self.mem[pc + 0]);
+            const p1 = self.mem[pc + 1];
+            const p2 = self.mem[pc + 2];
+            const p3 = self.mem[pc + 3];
             switch (op) {
                 OP.STOP => break,
                 OP.ADD => self.mem[p3] = self.mem[p1] + self.mem[p2],
