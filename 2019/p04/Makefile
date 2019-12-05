@@ -1,4 +1,4 @@
 DAY = 04
-MODULES =
+MODULES = sleuth.zig
 
 include ../aoc.mk
