@@ -3,12 +3,14 @@ const assert = std.debug.assert;
 
 pub const Map = struct {
     name_to_pos: std.StringHashMap(usize),
+    pos_to_name: [4096][]const u8,
     body_parent: [4096]?usize,
     pos: usize,
 
     pub fn init() Map {
         var self = Map{
             .name_to_pos = std.StringHashMap(usize).init(std.heap.direct_allocator),
+            .pos_to_name = undefined,
             .body_parent = undefined,
             .pos = 0,
         };
@@ -27,8 +29,9 @@ pub const Map = struct {
             const gop = self.name_to_pos.getOrPutValue(what, self.pos) catch unreachable;
             const pos = gop.value;
             if (!found) {
-                // std.debug.warn("BODY {} {}\n", what, pos);
+                // std.debug.warn("BODY {} => {}\n", what, pos);
                 self.body_parent[pos] = null;
+                self.pos_to_name[pos] = what;
                 self.pos += 1;
             }
             if (parent == null) {
@@ -36,7 +39,7 @@ pub const Map = struct {
             } else {
                 const child = pos;
                 self.body_parent[child] = parent.?;
-                // std.debug.warn("PARENT {} {}\n", child, parent);
+                // std.debug.warn("PARENT {} => {}\n", self.pos_to_name[child], self.pos_to_name[parent.?]);
             }
         }
     }
@@ -44,7 +47,7 @@ pub const Map = struct {
     fn inc_orbit(self: *Map, pos: ?usize, distance: usize) usize {
         if (pos == null) return 0;
         const child = pos.?;
-        // std.debug.warn("ORBITS {} {}: +1\n", child, distance);
+        // std.debug.warn("ORBITS {} {}: +1\n", self.pos_to_name[child], distance);
         const parent = self.body_parent[child];
         return 1 + self.inc_orbit(parent, distance + 1);
     }
@@ -72,7 +75,7 @@ pub const Map = struct {
             if (parent == null) break;
             count += 1;
             current = parent.?;
-            // std.debug.warn("HOP 1 {} {}\n", current, count);
+            // std.debug.warn("HOP A {} {}\n", self.pos_to_name[current], count);
             _ = ha.put(current, count) catch unreachable;
         }
 
@@ -83,7 +86,7 @@ pub const Map = struct {
             if (parent == null) break;
             count += 1;
             current = parent.?;
-            // std.debug.warn("HOP 2 {} {}\n", current, count);
+            // std.debug.warn("HOP B {} {}\n", self.pos_to_name[current], count);
             if (ha.contains(current)) {
                 count += ha.get(current).?.value;
                 break;
@@ -113,9 +116,7 @@ test "total orbit count" {
         map.add_orbit(what);
     }
     const count = map.count_orbits();
-    std.debug.warn("Count {}\n", count);
-    const expected: usize = 42;
-    assert(count == expected);
+    assert(count == 42);
 }
 
 test "hop count" {
@@ -140,7 +141,5 @@ test "hop count" {
         map.add_orbit(what);
     }
     const count = map.count_hops("YOU", "SAN");
-    std.debug.warn("Count {}\n", count);
-    const expected: usize = 4;
-    assert(count == expected);
+    assert(count == 4);
 }
