@@ -4,14 +4,12 @@ const assert = std.debug.assert;
 pub const Map = struct {
     name_to_pos: std.StringHashMap(usize),
     body_parent: [4096]i32,
-    body_orbits: [4096]usize,
     pos: usize,
 
     pub fn init() Map {
         var self = Map{
             .name_to_pos = std.StringHashMap(usize).init(std.heap.direct_allocator),
             .body_parent = undefined,
-            .body_orbits = undefined,
             .pos = 0,
         };
         return self;
@@ -31,7 +29,6 @@ pub const Map = struct {
             const pos = gop.value;
             if (!found) {
                 // std.debug.warn("BODY {} {}\n", what, pos);
-                self.body_orbits[pos] = 0;
                 self.body_parent[pos] = -1;
                 self.pos += 1;
             }
@@ -49,7 +46,6 @@ pub const Map = struct {
     fn inc_orbit(self: *Map, pos: i32, distance: usize) usize {
         if (pos < 0) return 0;
         const child = @intCast(usize, pos);
-        self.body_orbits[child] += 1;
         // std.debug.warn("ORBITS {} {}: +1\n", child, distance);
         const parent = @intCast(i32, self.body_parent[child]);
         return 1 + self.inc_orbit(parent, distance + 1);
