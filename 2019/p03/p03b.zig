@@ -9,7 +9,7 @@ pub fn main() !void {
     var buf = try std.Buffer.initSize(allocator, 0);
 
     var board = Board.init(Board.Distance.Travelled);
-    defer board.destroy();
+    defer board.deinit();
 
     var count: u32 = 0;
     while (std.io.readLine(&buf)) |line| {

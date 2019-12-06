@@ -24,7 +24,7 @@ pub const Board = struct {
         return self;
     }
 
-    pub fn destroy(self: Board) void {
+    pub fn deinit(self: Board) void {
         self.map.deinit();
     }
 
@@ -88,7 +88,7 @@ test "Manhattan - distance 6" {
     const wire1: []const u8 = "U7,R6,D4,L4";
 
     var board = Board.init(Board.Distance.Manhattan);
-    defer board.destroy();
+    defer board.deinit();
 
     board.trace(wire0, true);
     board.trace(wire1, false);
@@ -100,7 +100,7 @@ test "Manhattan - distance 159" {
     const wire1: []const u8 = "U62,R66,U55,R34,D71,R55,D58,R83";
 
     var board = Board.init(Board.Distance.Manhattan);
-    defer board.destroy();
+    defer board.deinit();
 
     board.trace(wire0, true);
     board.trace(wire1, false);
@@ -112,7 +112,7 @@ test "Manhattan - distance 135" {
     const wire1: []const u8 = "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7";
 
     var board = Board.init(Board.Distance.Manhattan);
-    defer board.destroy();
+    defer board.deinit();
 
     board.trace(wire0, true);
     board.trace(wire1, false);
@@ -124,7 +124,7 @@ test "Travelled - distance 30" {
     const wire1: []const u8 = "U7,R6,D4,L4";
 
     var board = Board.init(Board.Distance.Travelled);
-    defer board.destroy();
+    defer board.deinit();
 
     board.trace(wire0, true);
     board.trace(wire1, false);
@@ -136,7 +136,7 @@ test "Travelled - distance 159" {
     const wire1: []const u8 = "U62,R66,U55,R34,D71,R55,D58,R83";
 
     var board = Board.init(Board.Distance.Travelled);
-    defer board.destroy();
+    defer board.deinit();
 
     board.trace(wire0, true);
     board.trace(wire1, false);
@@ -148,7 +148,7 @@ test "Travelled - distance 135" {
     const wire1: []const u8 = "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7";
 
     var board = Board.init(Board.Distance.Travelled);
-    defer board.destroy();
+    defer board.deinit();
 
     board.trace(wire0, true);
     board.trace(wire1, false);
