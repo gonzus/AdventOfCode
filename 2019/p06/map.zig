@@ -17,7 +17,7 @@ pub const Map = struct {
         return self;
     }
 
-    pub fn destroy(self: Map) void {
+    pub fn deinit(self: Map) void {
         self.name_to_pos.deinit();
     }
 
@@ -111,6 +111,8 @@ test "total orbit count" {
         \\K)L
     ;
     var map = Map.init();
+    defer map.deinit();
+
     var it = std.mem.separate(data, "\n");
     while (it.next()) |what| {
         map.add_orbit(what);
@@ -136,6 +138,8 @@ test "hop count" {
         \\I)SAN
     ;
     var map = Map.init();
+    defer map.deinit();
+
     var it = std.mem.separate(data, "\n");
     while (it.next()) |what| {
         map.add_orbit(what);

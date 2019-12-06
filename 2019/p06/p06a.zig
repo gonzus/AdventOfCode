@@ -12,6 +12,8 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     var map = Map.init();
+    defer map.deinit();
+
     var count: u32 = 0;
     while (std.io.readLine(&buf)) |line| {
         map.add_orbit(line);
