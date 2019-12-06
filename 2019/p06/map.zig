@@ -21,8 +21,7 @@ pub const Map = struct {
 
     pub fn add_orbit(self: *Map, str: []const u8) void {
         var it = std.mem.separate(str, ")");
-        var first = true;
-        var parent: usize = undefined;
+        var parent: ?usize = null;
         while (it.next()) |what| {
             const found = self.name_to_pos.contains(what);
             const gop = self.name_to_pos.getOrPutValue(what, self.pos) catch unreachable;
@@ -32,14 +31,13 @@ pub const Map = struct {
                 self.body_parent[pos] = -1;
                 self.pos += 1;
             }
-            if (first) {
+            if (parent == null) {
                 parent = pos;
             } else {
                 const child = pos;
-                self.body_parent[child] = @intCast(i32, parent);
+                self.body_parent[child] = @intCast(i32, parent.?);
                 // std.debug.warn("PARENT {} {}\n", child, parent);
             }
-            first = false;
         }
     }
 
