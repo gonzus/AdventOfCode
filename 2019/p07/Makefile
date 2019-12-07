@@ -1,4 +1,4 @@
 DAY = 07
-MODULES = computer.zig bank.zig
+MODULES = bank.zig
 
 include ../aoc.mk

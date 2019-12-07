@@ -1,5 +1,5 @@
 const std = @import("std");
-const Computer = @import("./computer.zig").Computer;
+const Bank = @import("./bank.zig").Bank;
 
 pub fn main() !void {
     const stdout = std.io.getStdOut() catch unreachable;
@@ -11,8 +11,9 @@ pub fn main() !void {
     var count: u32 = 0;
     while (std.io.readLine(&buf)) |line| {
         count += 1;
-        var computer = Computer.init(line);
-        const result = computer.optimize_thruster_signal();
+        var bank = Bank.init(line);
+        var phase = [5]u8{ 0, 1, 2, 3, 4 }; // must be sorted
+        const result = bank.optimize_thruster_signal(&phase);
         try out.print("Result is {}\n", result);
     } else |err| {
         // try out.print("Error, {}!\n", err);
