@@ -66,7 +66,7 @@ pub const Computer = struct {
     }
 
     pub fn resetRAM(self: *Computer) void {
-        std.debug.warn("RESET\n");
+        // std.debug.warn("RESET\n");
         self.ram = self.rom;
         self.halted = false;
         self.pc = 0;
@@ -111,7 +111,7 @@ pub const Computer = struct {
             instr /= 10;
             switch (op) {
                 OP.HALT => {
-                    std.debug.warn("{} | HALT\n", self.pc);
+                    // std.debug.warn("{} | HALT\n", self.pc);
                     self.halted = true;
                     break;
                 },
@@ -119,7 +119,7 @@ pub const Computer = struct {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
                     const p3 = self.ram[self.pc + 3];
-                    std.debug.warn("{} | ADD: {} = {} + {}\n", self.pc, p3, v1, v2);
+                    // std.debug.warn("{} | ADD: {} = {} + {}\n", self.pc, p3, v1, v2);
                     self.ram[@intCast(usize, p3)] = v1 + v2;
                     self.pc += 4;
                 },
@@ -127,17 +127,17 @@ pub const Computer = struct {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
                     const p3 = self.ram[self.pc + 3];
-                    std.debug.warn("{} | MUL: {} = {} * {}\n", self.pc, p3, v1, v2);
+                    // std.debug.warn("{} | MUL: {} = {} * {}\n", self.pc, p3, v1, v2);
                     self.ram[@intCast(usize, p3)] = v1 * v2;
                     self.pc += 4;
                 },
                 OP.RDSV => {
                     if (self.pir >= self.piw) {
-                        std.debug.warn("{} | RDSV: PAUSED {} {}\n", self.pc, self.pir, self.piw);
+                        // std.debug.warn("{} | RDSV: PAUSED {} {}\n", self.pc, self.pir, self.piw);
                         break;
                     }
                     const p1 = self.ram[self.pc + 1];
-                    std.debug.warn("{} | RDSV: {} = {}\n", self.pc, p1, self.inputs[self.pir]);
+                    // std.debug.warn("{} | RDSV: {} = {}\n", self.pc, p1, self.inputs[self.pir]);
                     self.ram[@intCast(usize, p1)] = self.inputs[self.pir];
                     self.pir += 1;
                     if (self.pir == self.piw) {
@@ -148,7 +148,7 @@ pub const Computer = struct {
                 },
                 OP.PRINT => {
                     const v1 = self.decode(1, m1);
-                    std.debug.warn("{} | PRINT: {}\n", self.pc, v1);
+                    // std.debug.warn("{} | PRINT: {}\n", self.pc, v1);
                     self.outputs[self.pow] = v1;
                     self.pow += 1;
                     self.pc += 2;
@@ -156,7 +156,7 @@ pub const Computer = struct {
                 OP.JIT => {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
-                    std.debug.warn("{} | JIT: {} {}\n", self.pc, v1, v2);
+                    // std.debug.warn("{} | JIT: {} {}\n", self.pc, v1, v2);
                     if (v1 == 0) {
                         self.pc += 3;
                     } else {
@@ -166,7 +166,7 @@ pub const Computer = struct {
                 OP.JIF => {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
-                    std.debug.warn("{} | JIF: {} {}\n", self.pc, v1, v2);
+                    // std.debug.warn("{} | JIF: {} {}\n", self.pc, v1, v2);
                     if (v1 == 0) {
                         self.pc = @intCast(usize, v2);
                     } else {
@@ -177,7 +177,7 @@ pub const Computer = struct {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
                     const p3 = self.ram[self.pc + 3];
-                    std.debug.warn("{} | CLT: {} = {} LT {}\n", self.pc, p3, v1, v2);
+                    // std.debug.warn("{} | CLT: {} = {} LT {}\n", self.pc, p3, v1, v2);
                     self.ram[@intCast(usize, p3)] = if (v1 < v2) 1 else 0;
                     self.pc += 4;
                 },
@@ -185,7 +185,7 @@ pub const Computer = struct {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
                     const p3 = self.ram[self.pc + 3];
-                    std.debug.warn("{} | CEQ: {} = {} EQ {}\n", self.pc, p3, v1, v2);
+                    // std.debug.warn("{} | CEQ: {} = {} EQ {}\n", self.pc, p3, v1, v2);
                     self.ram[@intCast(usize, p3)] = if (v1 == v2) 1 else 0;
                     self.pc += 4;
                 },
@@ -211,7 +211,7 @@ pub const Computer = struct {
             self.enqueueInput(phase[j]);
             self.enqueueInput(previous);
             const output = self.run();
-            std.debug.warn("NODE {}: {} => {}\n", j, previous, output.?);
+            // std.debug.warn("NODE {}: {} => {}\n", j, previous, output.?);
             previous = output.?;
             j += 1;
         }

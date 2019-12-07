@@ -43,16 +43,16 @@ pub const Bank = struct {
         var result: i32 = 0;
         while (true) {
             if (self.node[n].halted) {
-                std.debug.warn("NODE {} halted\n", n);
+                // std.debug.warn("NODE {} halted\n", n);
                 if (n == top - 1) break;
             } else if (previous != null) {
                 self.node[n].enqueueInput(previous.?);
                 const output = self.node[n].run();
                 if (output == null) {
-                    std.debug.warn("NODE {} paused\n", n);
+                    // std.debug.warn("NODE {} paused\n", n);
                 } else {
                     if (n == top - 1) result = output.?;
-                    std.debug.warn("NODE {}: {} => {}\n", n, previous, output.?);
+                    // std.debug.warn("NODE {}: {} => {}\n", n, previous, output.?);
                 }
                 previous = output;
             }
