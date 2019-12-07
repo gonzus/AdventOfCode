@@ -12,6 +12,8 @@ pub fn main() !void {
     while (std.io.readLine(&buf)) |line| {
         count += 1;
         var bank = Bank.init(line);
+        defer bank.deinit();
+
         var phase = [5]u8{ 0, 1, 2, 3, 4 }; // must be sorted
         const result = bank.optimize_thruster_signal(&phase);
         try out.print("Result is {}\n", result);

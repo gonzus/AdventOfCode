@@ -1,17 +1,64 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+pub const IntBuf = struct {
+    data: [4096]i32,
+    pw: usize,
+    pr: usize,
+
+    pub fn init() IntBuf {
+        var self = IntBuf{
+            .data = undefined,
+            .pw = 0,
+            .pr = 0,
+        };
+        return self;
+    }
+
+    pub fn empty(self: IntBuf) bool {
+        return (self.pr >= self.pw);
+    }
+
+    pub fn read(self: IntBuf, pos: usize) ?i32 {
+        if (pos >= self.pw) {
+            return null;
+        }
+        return self.data[pos];
+    }
+
+    pub fn write(self: *IntBuf, pos: usize, value: i32) void {
+        self.data[pos] = value;
+    }
+
+    pub fn get(self: *IntBuf) ?i32 {
+        if (self.empty()) {
+            return null;
+        }
+        const value = self.data[self.pr];
+        self.pr += 1;
+        if (self.empty()) {
+            self.clear();
+        }
+        return value;
+    }
+
+    pub fn put(self: *IntBuf, value: i32) void {
+        self.data[self.pw] = value;
+        self.pw += 1;
+    }
+
+    pub fn clear(self: *IntBuf) void {
+        self.pr = 0;
+        self.pw = 0;
+    }
+};
+
 pub const Computer = struct {
-    rom: [4096]i32,
-    ram: [4096]i32,
+    rom: IntBuf,
+    ram: IntBuf,
     pc: usize,
-    pos: usize,
-    inputs: [4096]i32,
-    piw: usize,
-    pir: usize,
-    outputs: [4096]i32,
-    pow: usize,
-    por: usize,
+    inputs: IntBuf,
+    outputs: IntBuf,
     reentrant: bool,
     halted: bool,
 
@@ -37,45 +84,42 @@ pub const Computer = struct {
             .rom = undefined,
             .ram = undefined,
             .pc = 0,
-            .pos = 0,
             .inputs = undefined,
-            .piw = 0,
-            .pir = 0,
             .outputs = undefined,
-            .pow = 0,
-            .por = 0,
             .reentrant = false,
             .halted = false,
         };
         var it = std.mem.separate(str, ",");
         while (it.next()) |what| {
             const instr = std.fmt.parseInt(i32, what, 10) catch unreachable;
-            self.rom[self.pos] = instr;
-            self.pos += 1;
+            self.rom.put(instr);
         }
-        self.resetRAM();
+        self.clear();
         return self;
     }
 
+    pub fn deinit(self: *Computer) void {}
+
     pub fn get(self: Computer, pos: usize) i32 {
-        return self.ram[pos];
+        return self.ram.read(pos);
     }
 
     pub fn set(self: *Computer, pos: usize, val: i32) void {
-        self.ram[pos] = val;
+        self.ram.write(pos, val);
     }
 
-    pub fn resetRAM(self: *Computer) void {
+    pub fn clear(self: *Computer) void {
         // std.debug.warn("RESET\n");
         self.ram = self.rom;
         self.halted = false;
         self.pc = 0;
+        self.inputs.clear();
+        self.outputs.clear();
     }
 
     pub fn enqueueInput(self: *Computer, input: i32) void {
-        // std.debug.warn("ENQUEUE {} in pos {}\n", input, self.piw);
-        self.inputs[self.piw] = input;
-        self.piw += 1;
+        // std.debug.warn("ENQUEUE {}\n", input);
+        self.inputs.put(input);
     }
 
     pub fn setReentrant(self: *Computer) void {
@@ -83,23 +127,18 @@ pub const Computer = struct {
     }
 
     pub fn getOutput(self: *Computer) ?i32 {
-        if (self.por >= self.pow) {
+        if (self.outputs.empty()) {
             return null;
         }
-        const result = self.outputs[self.por];
-        self.por += 1;
-        if (self.por == self.pow) {
-            self.pow = 0;
-            self.por = 0;
-        }
+        const result = self.outputs.get().?;
         return result;
     }
 
     pub fn run(self: *Computer) ?i32 {
-        if (!self.reentrant) self.resetRAM();
+        if (!self.reentrant) self.clear();
 
         while (!self.halted) {
-            var instr: u32 = @intCast(u32, self.ram[self.pc + 0]);
+            var instr: u32 = @intCast(u32, self.ram.read(self.pc + 0).?);
             // std.debug.warn("instr: {}\n", instr);
             const op = @intToEnum(OP, instr % 100);
             instr /= 100;
@@ -118,39 +157,33 @@ pub const Computer = struct {
                 OP.ADD => {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
-                    const p3 = self.ram[self.pc + 3];
+                    const p3 = self.ram.read(self.pc + 3).?;
                     // std.debug.warn("{} | ADD: {} = {} + {}\n", self.pc, p3, v1, v2);
-                    self.ram[@intCast(usize, p3)] = v1 + v2;
+                    self.ram.write(@intCast(usize, p3), v1 + v2);
                     self.pc += 4;
                 },
                 OP.MUL => {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
-                    const p3 = self.ram[self.pc + 3];
+                    const p3 = self.ram.read(self.pc + 3).?;
                     // std.debug.warn("{} | MUL: {} = {} * {}\n", self.pc, p3, v1, v2);
-                    self.ram[@intCast(usize, p3)] = v1 * v2;
+                    self.ram.write(@intCast(usize, p3), v1 * v2);
                     self.pc += 4;
                 },
                 OP.RDSV => {
-                    if (self.pir >= self.piw) {
-                        // std.debug.warn("{} | RDSV: PAUSED {} {}\n", self.pc, self.pir, self.piw);
+                    if (self.inputs.empty()) {
+                        // std.debug.warn("{} | RDSV: PAUSED\n", self.pc);
                         break;
                     }
-                    const p1 = self.ram[self.pc + 1];
-                    // std.debug.warn("{} | RDSV: {} = {}\n", self.pc, p1, self.inputs[self.pir]);
-                    self.ram[@intCast(usize, p1)] = self.inputs[self.pir];
-                    self.pir += 1;
-                    if (self.pir == self.piw) {
-                        self.pir = 0;
-                        self.piw = 0;
-                    }
+                    const p1 = self.ram.read(self.pc + 1).?;
+                    // std.debug.warn("{} | RDSV: {} = {}\n", self.pc, p1, self.inputs.get());
+                    self.ram.write(@intCast(usize, p1), self.inputs.get().?);
                     self.pc += 2;
                 },
                 OP.PRINT => {
                     const v1 = self.decode(1, m1);
                     // std.debug.warn("{} | PRINT: {}\n", self.pc, v1);
-                    self.outputs[self.pow] = v1;
-                    self.pow += 1;
+                    self.outputs.put(v1);
                     self.pc += 2;
                 },
                 OP.JIT => {
@@ -176,17 +209,27 @@ pub const Computer = struct {
                 OP.CLT => {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
-                    const p3 = self.ram[self.pc + 3];
+                    const p3 = self.ram.read(self.pc + 3).?;
                     // std.debug.warn("{} | CLT: {} = {} LT {}\n", self.pc, p3, v1, v2);
-                    self.ram[@intCast(usize, p3)] = if (v1 < v2) 1 else 0;
+
+                    // tried doing this way, got an error:
+                    //
+                    // const value: i32 = if (v1 < v2) 1 else 0;
+                    // error: cannot store runtime value in type 'comptime_int'
+                    //
+                    var value: i32 = 0;
+                    if (v1 < v2) value = 1;
+                    self.ram.write(@intCast(usize, p3), value);
                     self.pc += 4;
                 },
                 OP.CEQ => {
                     const v1 = self.decode(1, m1);
                     const v2 = self.decode(2, m2);
-                    const p3 = self.ram[self.pc + 3];
+                    const p3 = self.ram.read(self.pc + 3).?;
                     // std.debug.warn("{} | CEQ: {} = {} EQ {}\n", self.pc, p3, v1, v2);
-                    self.ram[@intCast(usize, p3)] = if (v1 == v2) 1 else 0;
+                    var value: i32 = 0;
+                    if (v1 == v2) value = 1;
+                    self.ram.write(@intCast(usize, p3), value);
                     self.pc += 4;
                 },
             }
@@ -195,9 +238,9 @@ pub const Computer = struct {
     }
 
     fn decode(self: Computer, pos: usize, mode: MODE) i32 {
-        const p = self.ram[self.pc + pos];
+        const p = self.ram.read(self.pc + pos).?;
         const v: i32 = switch (mode) {
-            MODE.POSITION => self.ram[@intCast(usize, p)],
+            MODE.POSITION => self.ram.read(@intCast(usize, p)).?,
             MODE.IMMEDIATE => p,
         };
         return v;

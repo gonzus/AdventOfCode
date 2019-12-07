@@ -18,9 +18,9 @@ pub const Bank = struct {
     }
 
     pub fn deinit(self: *Bank) void {
-        var j = 0;
-        while (j < node.len) : (j += 1) {
-            node[j].deinit();
+        var j: usize = 0;
+        while (j < self.node.len) : (j += 1) {
+            self.node[j].deinit();
         }
     }
 
@@ -31,15 +31,15 @@ pub const Bank = struct {
         }
     }
 
-    pub fn reset(self: *Bank) void {
+    pub fn clear(self: *Bank) void {
         var j: usize = 0;
         while (j < self.node.len) : (j += 1) {
-            self.node[j].resetRAM();
+            self.node[j].clear();
         }
     }
 
     pub fn get_thruster_signal(self: *Bank, phases: [5]u8) i32 {
-        self.reset();
+        self.clear();
         const top = self.node.len;
         var n: usize = 0;
         while (n < top) : (n += 1) {
@@ -55,16 +55,15 @@ pub const Bank = struct {
             } else if (previous != null) {
                 self.node[n].enqueueInput(previous.?);
                 const output = self.node[n].run();
-                if (output == null) {
-                    // std.debug.warn("NODE {} paused\n", n);
-                } else {
-                    if (n == top - 1) result = output.?;
-                    // std.debug.warn("NODE {}: {} => {}\n", n, previous, output.?);
+                if (output != null and n == top - 1) {
+                    result = output.?;
                 }
                 previous = output;
+            } else {
+                std.debug.warn("NODE {} is paused but there is no input\n", n);
+                break;
             }
-            n += 1;
-            if (n >= phases.len) n = 0;
+            n = (n + 1) % phases.len;
         }
         return result;
     }
@@ -87,17 +86,9 @@ pub const Bank = struct {
         var j: usize = 0;
         while (j < phases.len) : (j += 1) {
             const m = len - 1;
-            var t: u8 = 0;
-
-            t = phases[j];
-            phases[j] = phases[m];
-            phases[m] = t;
-
+            std.mem.swap(u8, &phases[j], &phases[m]);
             self.ots(phases, m, mt);
-
-            t = phases[j];
-            phases[j] = phases[m];
-            phases[m] = t;
+            std.mem.swap(u8, &phases[j], &phases[m]);
         }
     }
 };
