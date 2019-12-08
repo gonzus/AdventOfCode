@@ -12,7 +12,7 @@ pub fn main() !void {
     while (std.io.readLine(&buf)) |line| {
         var image = Image.init(std.heap.direct_allocator, 25, 6);
         image.parse(line);
-        const result = image.find_layer_with_fewest_zeros();
+        const result = image.find_layer_with_fewest_blacks();
         try out.print("Image {}, result is {}\n", count, result);
         count += 1;
     } else |err| {

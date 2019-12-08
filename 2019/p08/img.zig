@@ -2,11 +2,19 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 pub const Image = struct {
+    const Color = enum(u8) {
+        Black = 0,
+        White = 1,
+        Transparent = 2,
+        LAST = 3,
+        OTHER = 99,
+    };
+
     allocator: *std.mem.Allocator,
     w: usize,
     h: usize,
     l: usize,
-    data: [128 * 25 * 6]u8,
+    data: [128 * 25 * 6]Color,
 
     // the intention was to dynamically allocate data, but I got a compiler error:
     //
@@ -56,7 +64,9 @@ pub const Image = struct {
             // std.debug.warn("ALLOC {} layers\n", self.l);
         }
         while (j < data.len) : (j += 1) {
-            const color = data[j] - '0';
+            var num = data[j] - '0';
+            if (num >= @enumToInt(Color.LAST)) num = @enumToInt(Color.OTHER);
+            const color = @intToEnum(Color, num);
             self.data[self.pos(l, c, r)] = color;
             // std.debug.warn("DATA {} {} {} = {}\n", l, r, c, color);
             c += 1;
@@ -73,36 +83,34 @@ pub const Image = struct {
         self.l = l;
     }
 
-    pub fn find_layer_with_fewest_zeros(self: *Image) usize {
-        var m0: usize = std.math.maxInt(u32);
-        var ml: usize = 0;
-        var mp: usize = 0;
+    pub fn find_layer_with_fewest_blacks(self: *Image) usize {
+        var min_black: usize = std.math.maxInt(u32);
+        var min_product: usize = 0;
         var l: usize = 0;
         while (l < self.l) : (l += 1) {
-            var c0: usize = 0;
-            var c1: usize = 0;
-            var c2: usize = 0;
+            var count_black: usize = 0;
+            var count_white: usize = 0;
+            var count_trans: usize = 0;
             var r: usize = 0;
             while (r < self.h) : (r += 1) {
                 var c: usize = 0;
                 while (c < self.w) : (c += 1) {
                     switch (self.data[self.pos(l, c, r)]) {
-                        0 => c0 += 1,
-                        1 => c1 += 1,
-                        2 => c2 += 1,
+                        Color.Black => count_black += 1,
+                        Color.White => count_white += 1,
+                        Color.Transparent => count_trans += 1,
                         else => break,
                     }
                 }
             }
-            // std.debug.warn("LAYER {} has {} zeros\n", l, c0);
-            if (m0 > c0) {
-                m0 = c0;
-                ml = l;
-                mp = c1 * c2;
+            // std.debug.warn("LAYER {} has {} blacks\n", l, count_black);
+            if (min_black > count_black) {
+                min_black = count_black;
+                min_product = count_white * count_trans;
             }
         }
-        // std.debug.warn("LAYER MIN is {} has {} zeros product is {}\n", ml, m0, mp);
-        return mp;
+        // std.debug.warn("LAYER MIN has {} blacks, product is {}\n", min_black, min_product);
+        return min_product;
     }
 
     pub fn render(self: *Image) !void {
@@ -116,14 +124,18 @@ pub const Image = struct {
                 var l: usize = 0;
                 while (l < self.l) : (l += 1) {
                     const color = self.data[self.pos(l, c, r)];
-                    if (color == 2) {
-                        continue;
-                    } else if (color == 0) {
-                        try out.print(" ");
-                    } else if (color == 1) {
-                        try out.print("\u{2588}");
-                    } else {}
-                    break;
+                    switch (color) {
+                        Color.Transparent => continue,
+                        Color.Black => {
+                            try out.print(" ");
+                            break;
+                        },
+                        Color.White => {
+                            try out.print("\u{2588}");
+                            break;
+                        },
+                        else => break,
+                    }
                 }
             }
             try out.print("\n");
@@ -138,5 +150,5 @@ test "total orbit count" {
 
     image.parse(data);
     assert(image.l == 2);
-    const result = image.find_layer_with_fewest_zeros();
+    const result = image.find_layer_with_fewest_blacks();
 }
