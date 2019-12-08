@@ -12,7 +12,7 @@ pub fn main() !void {
     while (std.io.readLine(&buf)) |line| {
         var image = Image.init(std.heap.direct_allocator, 25, 6);
         image.parse(line);
-        image.render();
+        try image.render();
         count += 1;
     } else |err| {
         // try out.print("Error, {}!\n", err);

@@ -105,7 +105,10 @@ pub const Image = struct {
         return mp;
     }
 
-    pub fn render(self: *Image) void {
+    pub fn render(self: *Image) !void {
+        const stdout = std.io.getStdOut() catch unreachable;
+        const out = &stdout.outStream().stream;
+        // std.debug.warn("TYPE [{}]\n", @typeName(@typeOf(out)));
         var r: usize = 0;
         while (r < self.h) : (r += 1) {
             var c: usize = 0;
@@ -116,14 +119,14 @@ pub const Image = struct {
                     if (color == 2) {
                         continue;
                     } else if (color == 0) {
-                        std.debug.warn(" ");
+                        try out.print(" ");
                     } else if (color == 1) {
-                        std.debug.warn("\u{2588}");
+                        try out.print("\u{2588}");
                     } else {}
                     break;
                 }
             }
-            std.debug.warn("\n");
+            try out.print("\n");
         }
     }
 };
