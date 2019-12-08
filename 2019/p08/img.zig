@@ -8,6 +8,15 @@ pub const Image = struct {
     l: usize,
     data: [128 * 25 * 6]u8,
 
+    // the intention was to dynamically allocate data, but I got a compiler error:
+    //
+    //     broken LLVM module found: Call parameter type does not match function signature!
+    //   %31 = getelementptr inbounds %Image, %Image* %30, i32 0, i32 4, !dbg !1078
+    //  { %"[]u8", i16 }*  call fastcc void @std.mem.Allocator.alloc(%"[]u8"* sret %31, %std.builtin.StackTrace* %error_return_trace, %std.mem.Allocator* %34, i64 %38), !dbg !1121
+    //
+    // Unable to dump stack trace: debug info stripped
+    // make: *** [img.zig_test] Abort trap: 6
+
     pub fn init(allocator: *std.mem.Allocator, w: usize, h: usize) Image {
         var self = Image{
             .allocator = allocator,
@@ -20,7 +29,7 @@ pub const Image = struct {
     }
 
     pub fn deinit(self: Image) void {
-        std.debug.warn("DEINIT {} layers\n", self.l);
+        // std.debug.warn("DEINIT {} layers\n", self.l);
         // self.allocator.free(self.data);
     }
 
@@ -38,13 +47,13 @@ pub const Image = struct {
         const num_layers = (data.len + layer_size - 1) / layer_size;
         if (self.l < num_layers) {
             if (self.l > 0) {
-                std.debug.warn("FREE {} layers\n", self.l);
+                // std.debug.warn("FREE {} layers\n", self.l);
                 // self.allocator.free(self.data);
                 self.l = 0;
             }
             // self.data = self.allocator.alloc(u8, layer_size * num_layers);
             self.l = num_layers;
-            std.debug.warn("ALLOC {} layers\n", self.l);
+            // std.debug.warn("ALLOC {} layers\n", self.l);
         }
         while (j < data.len) : (j += 1) {
             const color = data[j] - '0';
