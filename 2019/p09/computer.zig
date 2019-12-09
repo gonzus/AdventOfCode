@@ -106,6 +106,13 @@ pub const Computer = struct {
         return self;
     }
 
+    pub fn deinit(self: *Computer) void {
+        self.outputs.deinit();
+        self.inputs.deinit();
+        self.ram.deinit();
+        self.rom.deinit();
+    }
+
     pub fn parse(self: *Computer, str: []const u8) void {
         var it = std.mem.separate(str, ",");
         while (it.next()) |what| {
@@ -113,13 +120,6 @@ pub const Computer = struct {
             self.rom.put(instr);
         }
         self.clear();
-    }
-
-    pub fn deinit(self: *Computer) void {
-        self.rom.deinit();
-        self.ram.deinit();
-        self.inputs.deinit();
-        self.outputs.deinit();
     }
 
     pub fn get(self: Computer, pos: usize) i64 {
@@ -304,6 +304,7 @@ test "quine" {
     std.debug.warn("\n");
     const code: []const u8 = "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99";
     var computer = Computer.init(true);
+    defer computer.deinit();
     computer.parse(code[0..]);
     computer.run_until_halted();
     assert(computer.outputs.pw == computer.rom.pw);
@@ -319,6 +320,7 @@ test "print 16 digit number" {
     std.debug.warn("\n");
     const code: []const u8 = "1102,34915192,34915192,7,4,7,99,0";
     var computer = Computer.init(true);
+    defer computer.deinit();
     computer.parse(code[0..]);
     computer.run_until_halted();
     assert(computer.outputs.pw == 1);
@@ -329,6 +331,7 @@ test "print large number in the middle" {
     std.debug.warn("\n");
     const code: []const u8 = "104,1125899906842624,99";
     var computer = Computer.init(true);
+    defer computer.deinit();
     computer.parse(code[0..]);
     computer.run_until_halted();
     assert(computer.outputs.pw == 1);
