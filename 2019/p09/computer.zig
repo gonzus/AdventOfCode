@@ -156,13 +156,6 @@ pub const Computer = struct {
         return result;
     }
 
-    pub fn run_until_halted(self: *Computer) void {
-        while (true) {
-            self.run();
-            if (self.halted) break;
-        }
-    }
-
     pub fn run(self: *Computer) void {
         if (!self.reentrant) self.clear();
 
@@ -306,7 +299,7 @@ test "quine" {
     var computer = Computer.init(true);
     defer computer.deinit();
     computer.parse(code[0..]);
-    computer.run_until_halted();
+    computer.run();
     assert(computer.outputs.pw == computer.rom.pw);
     var ok = true;
     var j: usize = 0;
@@ -322,7 +315,7 @@ test "print 16 digit number" {
     var computer = Computer.init(true);
     defer computer.deinit();
     computer.parse(code[0..]);
-    computer.run_until_halted();
+    computer.run();
     assert(computer.outputs.pw == 1);
     assert(computer.outputs.data[0] == 1219070632396864);
 }
@@ -333,7 +326,7 @@ test "print large number in the middle" {
     var computer = Computer.init(true);
     defer computer.deinit();
     computer.parse(code[0..]);
-    computer.run_until_halted();
+    computer.run();
     assert(computer.outputs.pw == 1);
     assert(computer.outputs.data[0] == 1125899906842624);
 }

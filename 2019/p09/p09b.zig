@@ -17,7 +17,7 @@ pub fn main() !void {
 
         computer.parse(line);
         computer.enqueueInput(2);
-        computer.run_until_halted();
+        computer.run();
 
         try out.print("Line {}, {} total outputs\n", count, computer.outputs.pw);
         var j: usize = 0;
