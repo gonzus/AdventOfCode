@@ -11,20 +11,19 @@ pub fn main() !void {
     var count: u32 = 0;
     while (std.io.readLine(&buf)) |line| {
         count += 1;
-        var computer = Computer.init(line);
-        defer computer.deinit();
-        computer.setReentrant();
 
+        var computer = Computer.init(true);
+        defer computer.deinit();
+
+        computer.parse(line);
         computer.enqueueInput(1);
-        while (true) {
-            computer.run();
-            if (computer.halted) break;
-        }
+        computer.run_until_halted();
+
+        try out.print("Line {}, {} total outputs\n", count, computer.outputs.pw);
         var j: usize = 0;
         while (j < computer.outputs.pw) : (j += 1) {
-            std.debug.warn("{}\n", computer.outputs.data[j]);
+            try out.print("  {}: {}\n", j, computer.outputs.data[j]);
         }
-        std.debug.warn("DONE\n");
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }

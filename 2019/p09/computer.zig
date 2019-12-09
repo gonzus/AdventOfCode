@@ -88,8 +88,8 @@ pub const Computer = struct {
         RELATIVE = 2,
     };
 
-    pub fn init(str: []const u8) Computer {
-        const mem_size = 10 * 1024;
+    pub fn init(reentrant: bool) Computer {
+        const mem_size = 1 * 1024 * 1024;
         const io_size = 10 * 1024;
         var self = Computer{
             .rom = IntBuf.init(mem_size),
@@ -97,18 +97,22 @@ pub const Computer = struct {
             .pc = 0,
             .inputs = IntBuf.init(io_size),
             .outputs = IntBuf.init(io_size),
-            .reentrant = false,
+            .reentrant = reentrant,
             .halted = false,
             .debug = false,
             .base = 0,
         };
+        self.clear();
+        return self;
+    }
+
+    pub fn parse(self: *Computer, str: []const u8) void {
         var it = std.mem.separate(str, ",");
         while (it.next()) |what| {
             const instr = std.fmt.parseInt(i64, what, 10) catch unreachable;
             self.rom.put(instr);
         }
         self.clear();
-        return self;
     }
 
     pub fn deinit(self: *Computer) void {
@@ -150,6 +154,13 @@ pub const Computer = struct {
         }
         const result = self.outputs.get().?;
         return result;
+    }
+
+    pub fn run_until_halted(self: *Computer) void {
+        while (true) {
+            self.run();
+            if (self.halted) break;
+        }
     }
 
     pub fn run(self: *Computer) void {
@@ -292,35 +303,34 @@ pub const Computer = struct {
 test "quine" {
     std.debug.warn("\n");
     const code: []const u8 = "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99";
-    var computer = Computer.init(code[0..]);
-    computer.run();
+    var computer = Computer.init(true);
+    computer.parse(code[0..]);
+    computer.run_until_halted();
+    assert(computer.outputs.pw == computer.rom.pw);
+    var ok = true;
     var j: usize = 0;
-    while (j < computer.outputs.pw) : (j += 1) {
-        std.debug.warn("{}\n", computer.outputs.data[j]);
+    while (ok and j < computer.outputs.pw) : (j += 1) {
+        ok = computer.outputs.data[j] == computer.rom.data[j];
     }
-    std.debug.warn("DONE\n");
+    assert(ok);
 }
 
 test "print 16 digit number" {
     std.debug.warn("\n");
     const code: []const u8 = "1102,34915192,34915192,7,4,7,99,0";
-    var computer = Computer.init(code[0..]);
-    _ = computer.run();
-    var j: usize = 0;
-    while (j < computer.outputs.pw) : (j += 1) {
-        std.debug.warn("{}\n", computer.outputs.data[j]);
-    }
-    std.debug.warn("DONE\n");
+    var computer = Computer.init(true);
+    computer.parse(code[0..]);
+    computer.run_until_halted();
+    assert(computer.outputs.pw == 1);
+    assert(computer.outputs.data[0] == 1219070632396864);
 }
 
 test "print large number in the middle" {
     std.debug.warn("\n");
     const code: []const u8 = "104,1125899906842624,99";
-    var computer = Computer.init(code[0..]);
-    computer.run();
-    var j: usize = 0;
-    while (j < computer.outputs.pw) : (j += 1) {
-        std.debug.warn("{}\n", computer.outputs.data[j]);
-    }
-    std.debug.warn("DONE\n");
+    var computer = Computer.init(true);
+    computer.parse(code[0..]);
+    computer.run_until_halted();
+    assert(computer.outputs.pw == 1);
+    assert(computer.outputs.data[0] == 1125899906842624);
 }
