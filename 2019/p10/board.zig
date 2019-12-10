@@ -15,14 +15,14 @@ fn cmpByAngle(l: TargetInfo, r: TargetInfo) bool {
 }
 
 pub const Board = struct {
-    mx: usize,
-    my: usize,
+    maxx: usize,
+    maxy: usize,
     data: [50][50]usize,
 
     pub fn init() Board {
         var self = Board{
-            .mx = 0,
-            .my = 0,
+            .maxx = 0,
+            .maxy = 0,
             .data = undefined,
         };
         return self;
@@ -30,17 +30,24 @@ pub const Board = struct {
 
     pub fn deinit(self: Board) void {}
 
+    pub fn add_lines(self: *Board, lines: []const u8) void {
+        var it = std.mem.separate(lines, "\n");
+        while (it.next()) |str| {
+            self.add_line(str);
+        }
+    }
+
     pub fn add_line(self: *Board, str: []const u8) void {
         var j: usize = 0;
         while (j < str.len) : (j += 1) {
             var c: usize = 0;
             if (str[j] == '#') c = 1;
-            self.data[self.my][j] = c;
+            self.data[self.maxy][j] = c;
         }
-        if (self.mx < j) {
-            self.mx = j;
+        if (self.maxx < j) {
+            self.maxx = j;
         }
-        self.my += 1;
+        self.maxy += 1;
     }
 
     fn gcd(a: usize, b: usize) usize {
@@ -56,11 +63,11 @@ pub const Board = struct {
 
     pub fn show(self: Board) void {
         var sy: usize = 0;
-        std.debug.warn("BOARD {}x{}\n", self.my, self.mx);
-        while (sy < self.my) : (sy += 1) {
+        std.debug.warn("BOARD {}x{}\n", self.maxy, self.maxx);
+        while (sy < self.maxy) : (sy += 1) {
             var sx: usize = 0;
             std.debug.warn("[");
-            while (sx < self.mx) : (sx += 1) {
+            while (sx < self.maxx) : (sx += 1) {
                 std.debug.warn("{}", self.data[sy][sx]);
             }
             std.debug.warn("]\n");
@@ -69,24 +76,24 @@ pub const Board = struct {
 
     pub fn find_best_position(self: *Board) usize {
         var mc: usize = 0;
-        var mx: usize = 0;
-        var my: usize = 0;
+        var maxx: usize = 0;
+        var maxy: usize = 0;
 
         var seen = std.AutoHashMap(usize, void).init(std.debug.global_allocator);
         defer seen.deinit();
 
         var sy: usize = 0;
-        while (sy < self.my) : (sy += 1) {
+        while (sy < self.maxy) : (sy += 1) {
             var sx: usize = 0;
-            while (sx < self.mx) : (sx += 1) {
+            while (sx < self.maxx) : (sx += 1) {
                 if (self.data[sy][sx] == 0) continue;
                 // std.debug.warn("S {} {}\n", sx, sy);
 
                 seen.clear();
                 var ty: usize = 0;
-                while (ty < self.my) : (ty += 1) {
+                while (ty < self.maxy) : (ty += 1) {
                     var tx: usize = 0;
-                    while (tx < self.mx) : (tx += 1) {
+                    while (tx < self.maxx) : (tx += 1) {
                         if (tx == sx and ty == sy) continue;
                         if (self.data[ty][tx] == 0) continue;
                         // std.debug.warn("T {} {}\n", tx, ty);
@@ -112,8 +119,8 @@ pub const Board = struct {
                         if (seen.contains(l)) continue;
                         self.data[sy][sx] += 1;
                         if (mc < self.data[sy][sx]) {
-                            mx = sx;
-                            my = sy;
+                            maxx = sx;
+                            maxy = sy;
                             mc = self.data[sy][sx];
                         }
                         _ = seen.put(l, {}) catch unreachable;
@@ -121,7 +128,7 @@ pub const Board = struct {
                 }
             }
         }
-        // std.debug.warn("MIN is {} at {} {}\n", mc - 1, mx, my);
+        // std.debug.warn("MIN is {} at {} {}\n", mc - 1, maxx, maxy);
         return mc - 1;
     }
 
@@ -129,9 +136,9 @@ pub const Board = struct {
         var data: [50 * 50]TargetInfo = undefined;
         var pos: usize = 0;
         var y: i32 = 0;
-        while (y < @intCast(i32, self.my)) : (y += 1) {
+        while (y < @intCast(i32, self.maxy)) : (y += 1) {
             var x: i32 = 0;
-            while (x < @intCast(i32, self.mx)) : (x += 1) {
+            while (x < @intCast(i32, self.maxx)) : (x += 1) {
                 if (x == sx and y == sy) continue;
                 if (self.data[@intCast(usize, y)][@intCast(usize, x)] == 0) continue;
                 const dx = @intToFloat(f64, sx - x);
@@ -192,100 +199,115 @@ pub const Board = struct {
     }
 };
 
-test "map1" {
+test "best position 1" {
     std.debug.warn("\n");
+    const data: []const u8 =
+        \\.#..#
+        \\.....
+        \\#####
+        \\....#
+        \\...##
+    ;
     var board = Board.init();
-    board.add_line(".#..#");
-    board.add_line(".....");
-    board.add_line("#####");
-    board.add_line("....#");
-    board.add_line("...##");
+    board.add_lines(data);
     // board.show();
 
     const result = board.find_best_position();
     assert(result == 8);
 }
 
-test "map2" {
+test "best position 2" {
     std.debug.warn("\n");
+    const data: []const u8 =
+        \\......#.#.
+        \\#..#.#....
+        \\..#######.
+        \\.#.#.###..
+        \\.#..#.....
+        \\..#....#.#
+        \\#..#....#.
+        \\.##.#..###
+        \\##...#..#.
+        \\.#....####
+    ;
     var board = Board.init();
-    board.add_line("......#.#.");
-    board.add_line("#..#.#....");
-    board.add_line("..#######.");
-    board.add_line(".#.#.###..");
-    board.add_line(".#..#.....");
-    board.add_line("..#....#.#");
-    board.add_line("#..#....#.");
-    board.add_line(".##.#..###");
-    board.add_line("##...#..#.");
-    board.add_line(".#....####");
+    board.add_lines(data);
     // board.show();
 
     const result = board.find_best_position();
     assert(result == 33);
 }
 
-test "map3" {
+test "best position 3" {
     std.debug.warn("\n");
+    const data: []const u8 =
+        \\#.#...#.#.
+        \\.###....#.
+        \\.#....#...
+        \\##.#.#.#.#
+        \\....#.#.#.
+        \\.##..###.#
+        \\..#...##..
+        \\..##....##
+        \\......#...
+        \\.####.###.
+    ;
     var board = Board.init();
-    board.add_line("#.#...#.#.");
-    board.add_line(".###....#.");
-    board.add_line(".#....#...");
-    board.add_line("##.#.#.#.#");
-    board.add_line("....#.#.#.");
-    board.add_line(".##..###.#");
-    board.add_line("..#...##..");
-    board.add_line("..##....##");
-    board.add_line("......#...");
-    board.add_line(".####.###.");
+    board.add_lines(data);
     // board.show();
 
     const result = board.find_best_position();
     assert(result == 35);
 }
 
-test "map4" {
+test "best position 4" {
     std.debug.warn("\n");
+    const data: []const u8 =
+        \\.#..#..###
+        \\####.###.#
+        \\....###.#.
+        \\..###.##.#
+        \\##.##.#.#.
+        \\....###..#
+        \\..#.#..#.#
+        \\#..#.#.###
+        \\.##...##.#
+        \\.....#.#..
+    ;
     var board = Board.init();
-    board.add_line(".#..#..###");
-    board.add_line("####.###.#");
-    board.add_line("....###.#.");
-    board.add_line("..###.##.#");
-    board.add_line("##.##.#.#.");
-    board.add_line("....###..#");
-    board.add_line("..#.#..#.#");
-    board.add_line("#..#.#.###");
-    board.add_line(".##...##.#");
-    board.add_line(".....#.#..");
+    board.add_lines(data);
     // board.show();
 
     const result = board.find_best_position();
     assert(result == 41);
 }
 
-test "map5" {
+test "best position 5" {
     std.debug.warn("\n");
+    const data: []const u8 =
+        \\.#..##.###...#######
+        \\##.############..##.
+        \\.#.######.########.#
+        \\.###.#######.####.#.
+        \\#####.##.#.##.###.##
+        \\..#####..#.#########
+        \\####################
+        \\#.####....###.#.#.##
+        \\##.#################
+        \\#####.##.###..####..
+        \\..######..##.#######
+        \\####.##.####...##..#
+        \\.#####..#.######.###
+        \\##...#.##########...
+        \\#.##########.#######
+        \\.####.#.###.###.#.##
+        \\....##.##.###..#####
+        \\.#.#.###########.###
+        \\#.#.#.#####.####.###
+        \\###.##.####.##.#..##
+    ;
     var board = Board.init();
-    board.add_line(".#..##.###...#######");
-    board.add_line("##.############..##.");
-    board.add_line(".#.######.########.#");
-    board.add_line(".###.#######.####.#.");
-    board.add_line("#####.##.#.##.###.##");
-    board.add_line("..#####..#.#########");
-    board.add_line("####################");
-    board.add_line("#.####....###.#.#.##");
-    board.add_line("##.#################");
-    board.add_line("#####.##.###..####..");
-    board.add_line("..######..##.#######");
-    board.add_line("####.##.####...##..#");
-    board.add_line(".#####..#.######.###");
-    board.add_line("##...#.##########...");
-    board.add_line("#.##########.#######");
-    board.add_line(".####.#.###.###.#.##");
-    board.add_line("....##.##.###..#####");
-    board.add_line(".#.#.###########.###");
-    board.add_line("#.#.#.#####.####.###");
-    board.add_line("###.##.####.##.#..##");
+    board.add_lines(data);
     // board.show();
 
     const result = board.find_best_position();
@@ -294,12 +316,15 @@ test "map5" {
 
 test "scan small" {
     std.debug.warn("\n");
+    const data: []const u8 =
+        \\.#....#####...#..
+        \\##...##.#####..##
+        \\##...#...#.#####.
+        \\..#.....#...###..
+        \\..#.#.....#....##
+    ;
     var board = Board.init();
-    board.add_line(".#....#####...#..");
-    board.add_line("##...##.#####..##");
-    board.add_line("##...#...#.#####.");
-    board.add_line("..#.....#...###..");
-    board.add_line("..#.#.....#....##");
+    board.add_lines(data);
     // board.show();
     const result = board.scan_and_blast(8, 3, 36);
     assert(result == 1403);
@@ -307,27 +332,30 @@ test "scan small" {
 
 test "scan medium" {
     std.debug.warn("\n");
+    const data: []const u8 =
+        \\.#..##.###...#######
+        \\##.############..##.
+        \\.#.######.########.#
+        \\.###.#######.####.#.
+        \\#####.##.#.##.###.##
+        \\..#####..#.#########
+        \\####################
+        \\#.####....###.#.#.##
+        \\##.#################
+        \\#####.##.###..####..
+        \\..######..##.#######
+        \\####.##.####...##..#
+        \\.#####..#.######.###
+        \\##...#.##########...
+        \\#.##########.#######
+        \\.####.#.###.###.#.##
+        \\....##.##.###..#####
+        \\.#.#.###########.###
+        \\#.#.#.#####.####.###
+        \\###.##.####.##.#..##
+    ;
     var board = Board.init();
-    board.add_line(".#..##.###...#######");
-    board.add_line("##.############..##.");
-    board.add_line(".#.######.########.#");
-    board.add_line(".###.#######.####.#.");
-    board.add_line("#####.##.#.##.###.##");
-    board.add_line("..#####..#.#########");
-    board.add_line("####################");
-    board.add_line("#.####....###.#.#.##");
-    board.add_line("##.#################");
-    board.add_line("#####.##.###..####..");
-    board.add_line("..######..##.#######");
-    board.add_line("####.##.####...##..#");
-    board.add_line(".#####..#.######.###");
-    board.add_line("##...#.##########...");
-    board.add_line("#.##########.#######");
-    board.add_line(".####.#.###.###.#.##");
-    board.add_line("....##.##.###..#####");
-    board.add_line(".#.#.###########.###");
-    board.add_line("#.#.#.#####.####.###");
-    board.add_line("###.##.####.##.#..##");
+    board.add_lines(data);
     // board.show();
     const result = board.scan_and_blast(11, 13, 200);
     assert(result == 802);
