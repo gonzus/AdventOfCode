@@ -121,7 +121,7 @@ pub const Board = struct {
                 }
             }
         }
-        std.debug.warn("MIN is {} at {} {}\n", mc - 1, mx, my);
+        // std.debug.warn("MIN is {} at {} {}\n", mc - 1, mx, my);
         return mc - 1;
     }
 
@@ -206,95 +206,91 @@ test "map1" {
     assert(result == 8);
 }
 
-// test "map2" {
-//     std.debug.warn("\n");
-//     var board = Board.init();
-//     board.add_line("......#.#.");
-//     board.add_line("#..#.#....");
-//     board.add_line("..#######.");
-//     board.add_line(".#.#.###..");
-//     board.add_line(".#..#.....");
-//     board.add_line("..#....#.#");
-//     board.add_line("#..#....#.");
-//     board.add_line(".##.#..###");
-//     board.add_line("##...#..#.");
-//     board.add_line(".#....####");
-//     board.show();
-//
-//     const result = board.find_best_position();
-//     // board.show();
-//     assert(result == 33);
-// }
-//
-// test "map3" {
-//     std.debug.warn("\n");
-//     var board = Board.init();
-//     board.add_line("#.#...#.#.");
-//     board.add_line(".###....#.");
-//     board.add_line(".#....#...");
-//     board.add_line("##.#.#.#.#");
-//     board.add_line("....#.#.#.");
-//     board.add_line(".##..###.#");
-//     board.add_line("..#...##..");
-//     board.add_line("..##....##");
-//     board.add_line("......#...");
-//     board.add_line(".####.###.");
-//     board.show();
-//
-//     const result = board.find_best_position();
-//     // board.show();
-//     assert(result == 35);
-// }
-//
-// test "map3" {
-//     std.debug.warn("\n");
-//     var board = Board.init();
-//     board.add_line(".#..#..###");
-//     board.add_line("####.###.#");
-//     board.add_line("....###.#.");
-//     board.add_line("..###.##.#");
-//     board.add_line("##.##.#.#.");
-//     board.add_line("....###..#");
-//     board.add_line("..#.#..#.#");
-//     board.add_line("#..#.#.###");
-//     board.add_line(".##...##.#");
-//     board.add_line(".....#.#..");
-//     board.show();
-//
-//     const result = board.find_best_position();
-//     // board.show();
-//     assert(result == 41);
-// }
-//
-// test "map3" {
-//     std.debug.warn("\n");
-//     var board = Board.init();
-//     board.add_line(".#..##.###...#######");
-//     board.add_line("##.############..##.");
-//     board.add_line(".#.######.########.#");
-//     board.add_line(".###.#######.####.#.");
-//     board.add_line("#####.##.#.##.###.##");
-//     board.add_line("..#####..#.#########");
-//     board.add_line("####################");
-//     board.add_line("#.####....###.#.#.##");
-//     board.add_line("##.#################");
-//     board.add_line("#####.##.###..####..");
-//     board.add_line("..######..##.#######");
-//     board.add_line("####.##.####...##..#");
-//     board.add_line(".#####..#.######.###");
-//     board.add_line("##...#.##########...");
-//     board.add_line("#.##########.#######");
-//     board.add_line(".####.#.###.###.#.##");
-//     board.add_line("....##.##.###..#####");
-//     board.add_line(".#.#.###########.###");
-//     board.add_line("#.#.#.#####.####.###");
-//     board.add_line("###.##.####.##.#..##");
-//     board.show();
-//
-//     const result = board.find_best_position();
-//     // board.show();
-//     assert(result == 210);
-// }
+test "map2" {
+    std.debug.warn("\n");
+    var board = Board.init();
+    board.add_line("......#.#.");
+    board.add_line("#..#.#....");
+    board.add_line("..#######.");
+    board.add_line(".#.#.###..");
+    board.add_line(".#..#.....");
+    board.add_line("..#....#.#");
+    board.add_line("#..#....#.");
+    board.add_line(".##.#..###");
+    board.add_line("##...#..#.");
+    board.add_line(".#....####");
+    // board.show();
+
+    const result = board.find_best_position();
+    assert(result == 33);
+}
+
+test "map3" {
+    std.debug.warn("\n");
+    var board = Board.init();
+    board.add_line("#.#...#.#.");
+    board.add_line(".###....#.");
+    board.add_line(".#....#...");
+    board.add_line("##.#.#.#.#");
+    board.add_line("....#.#.#.");
+    board.add_line(".##..###.#");
+    board.add_line("..#...##..");
+    board.add_line("..##....##");
+    board.add_line("......#...");
+    board.add_line(".####.###.");
+    // board.show();
+
+    const result = board.find_best_position();
+    assert(result == 35);
+}
+
+test "map4" {
+    std.debug.warn("\n");
+    var board = Board.init();
+    board.add_line(".#..#..###");
+    board.add_line("####.###.#");
+    board.add_line("....###.#.");
+    board.add_line("..###.##.#");
+    board.add_line("##.##.#.#.");
+    board.add_line("....###..#");
+    board.add_line("..#.#..#.#");
+    board.add_line("#..#.#.###");
+    board.add_line(".##...##.#");
+    board.add_line(".....#.#..");
+    // board.show();
+
+    const result = board.find_best_position();
+    assert(result == 41);
+}
+
+test "map5" {
+    std.debug.warn("\n");
+    var board = Board.init();
+    board.add_line(".#..##.###...#######");
+    board.add_line("##.############..##.");
+    board.add_line(".#.######.########.#");
+    board.add_line(".###.#######.####.#.");
+    board.add_line("#####.##.#.##.###.##");
+    board.add_line("..#####..#.#########");
+    board.add_line("####################");
+    board.add_line("#.####....###.#.#.##");
+    board.add_line("##.#################");
+    board.add_line("#####.##.###..####..");
+    board.add_line("..######..##.#######");
+    board.add_line("####.##.####...##..#");
+    board.add_line(".#####..#.######.###");
+    board.add_line("##...#.##########...");
+    board.add_line("#.##########.#######");
+    board.add_line(".####.#.###.###.#.##");
+    board.add_line("....##.##.###..#####");
+    board.add_line(".#.#.###########.###");
+    board.add_line("#.#.#.#####.####.###");
+    board.add_line("###.##.####.##.#..##");
+    // board.show();
+
+    const result = board.find_best_position();
+    assert(result == 210);
+}
 
 test "scan small" {
     std.debug.warn("\n");
