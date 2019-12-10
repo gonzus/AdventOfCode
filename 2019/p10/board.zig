@@ -62,90 +62,77 @@ pub const Board = struct {
     }
 
     pub fn show(self: Board) void {
-        var sy: usize = 0;
+        var y: usize = 0;
         std.debug.warn("BOARD {}x{}\n", self.maxy, self.maxx);
-        while (sy < self.maxy) : (sy += 1) {
-            var sx: usize = 0;
-            std.debug.warn("[");
-            while (sx < self.maxx) : (sx += 1) {
-                std.debug.warn("{}", self.data[sy][sx]);
+        while (y < self.maxy) : (y += 1) {
+            var x: usize = 0;
+            std.debug.warn("|");
+            while (x < self.maxx) : (x += 1) {
+                std.debug.warn("{}", self.data[y][x]);
             }
-            std.debug.warn("]\n");
+            std.debug.warn("|\n");
         }
     }
 
     pub fn find_best_position(self: *Board) usize {
-        var mc: usize = 0;
-        var maxx: usize = 0;
-        var maxy: usize = 0;
+        var minc: usize = 0;
+        var minx: usize = 0;
+        var miny: usize = 0;
 
         var seen = std.AutoHashMap(usize, void).init(std.debug.global_allocator);
         defer seen.deinit();
 
-        var sy: usize = 0;
-        while (sy < self.maxy) : (sy += 1) {
-            var sx: usize = 0;
-            while (sx < self.maxx) : (sx += 1) {
-                if (self.data[sy][sx] == 0) continue;
-                // std.debug.warn("S {} {}\n", sx, sy);
+        var srcy: usize = 0;
+        while (srcy < self.maxy) : (srcy += 1) {
+            var srcx: usize = 0;
+            while (srcx < self.maxx) : (srcx += 1) {
+                if (self.data[srcy][srcx] == 0) continue;
 
                 seen.clear();
-                var ty: usize = 0;
-                while (ty < self.maxy) : (ty += 1) {
-                    var tx: usize = 0;
-                    while (tx < self.maxx) : (tx += 1) {
-                        if (tx == sx and ty == sy) continue;
-                        if (self.data[ty][tx] == 0) continue;
-                        // std.debug.warn("T {} {}\n", tx, ty);
-                        var dir: usize = 0;
-                        var dx: usize = 0;
-                        if (sx > tx) {
-                            dx = sx - tx;
-                            dir |= 0x01;
-                        } else {
-                            dx = tx - sx;
+                var tgty: usize = 0;
+                while (tgty < self.maxy) : (tgty += 1) {
+                    var tgtx: usize = 0;
+                    while (tgtx < self.maxx) : (tgtx += 1) {
+                        if (tgtx == srcx and tgty == srcy) continue;
+                        if (self.data[tgty][tgtx] == 0) continue;
+
+                        const label = make_label(srcx, srcy, tgtx, tgty);
+                        if (seen.contains(label)) continue;
+
+                        self.data[srcy][srcx] += 1;
+                        if (minc < self.data[srcy][srcx]) {
+                            minx = srcx;
+                            miny = srcy;
+                            minc = self.data[srcy][srcx];
                         }
-                        var dy: usize = 0;
-                        if (sy > ty) {
-                            dy = sy - ty;
-                            dir |= 0x10;
-                        } else {
-                            dy = ty - sy;
-                        }
-                        const g = gcd(dx, dy);
-                        const cx = dx / g;
-                        const cy = dy / g;
-                        const l = (dir * 10 + cx) * 100 + cy;
-                        if (seen.contains(l)) continue;
-                        self.data[sy][sx] += 1;
-                        if (mc < self.data[sy][sx]) {
-                            maxx = sx;
-                            maxy = sy;
-                            mc = self.data[sy][sx];
-                        }
-                        _ = seen.put(l, {}) catch unreachable;
+                        _ = seen.put(label, {}) catch unreachable;
                     }
                 }
             }
         }
-        // std.debug.warn("MIN is {} at {} {}\n", mc - 1, maxx, maxy);
-        return mc - 1;
+        // std.debug.warn("MIN is {} at {} {}\n", minc - 1, minx, miny);
+        return minc - 1; // the position itself doesn't count
     }
 
-    pub fn scan_and_blast(self: *Board, sx: i32, sy: i32, target: usize) usize {
+    pub fn scan_and_blast(self: *Board, srcx: i32, srcy: i32, target: usize) usize {
         var data: [50 * 50]TargetInfo = undefined;
         var pos: usize = 0;
         var y: i32 = 0;
         while (y < @intCast(i32, self.maxy)) : (y += 1) {
             var x: i32 = 0;
             while (x < @intCast(i32, self.maxx)) : (x += 1) {
-                if (x == sx and y == sy) continue;
+                if (x == srcx and y == srcy) continue;
                 if (self.data[@intCast(usize, y)][@intCast(usize, x)] == 0) continue;
-                const dx = @intToFloat(f64, sx - x);
-                const dy = @intToFloat(f64, sy - y);
+
+                // compute theta = atan(dx / dy)
+                // atan returns angles that grow counterclockwise, hence the '-'
+                // atan returns negative angles for x<0, hence we add 2*pi then
+                const dx = @intToFloat(f64, srcx - x);
+                const dy = @intToFloat(f64, srcy - y);
                 var theta = -std.math.atan2(f64, dx, dy);
                 if (theta < 0) theta += 2.0 * std.math.pi;
-                const a = @floatToInt(i32, theta * 1000.0);
+
+                // we just keep the tangent to three decimals
                 data[pos].angle = @floatToInt(i32, theta * 1000.0);
                 data[pos].x = x;
                 data[pos].y = y;
@@ -155,47 +142,59 @@ pub const Board = struct {
                 pos += 1;
             }
         }
+
+        // we can now sort by angle; for positions with the same angle, the lowest distance wins
         std.sort.sort(TargetInfo, data[0..pos], cmpByAngle);
 
+        // we can now circle around as many times as necessary to hit the desired target
         var seen = std.AutoHashMap(usize, void).init(std.debug.global_allocator);
         defer seen.deinit();
         var shot: usize = 0;
         while (shot < pos) {
+            // on each turn we "forget" the previous targets
             seen.clear();
             var j: usize = 0;
             while (j < pos) : (j += 1) {
+                // skip positions we have already shot
                 if (data[j].shot) continue;
-                // std.debug.warn("POS {} = {} {} : {}\n", j, data[j].x, data[j].y, data[j].a);
-                var dir: usize = 0;
-                var dx: usize = 0;
-                if (sx > data[j].x) {
-                    dx = @intCast(usize, sx - data[j].x);
-                    dir |= 0x01;
-                } else {
-                    dx = @intCast(usize, data[j].x - sx);
-                }
-                var dy: usize = 0;
-                if (sy > data[j].y) {
-                    dy = @intCast(usize, sy - data[j].y);
-                    dir |= 0x10;
-                } else {
-                    dy = @intCast(usize, data[j].y - sy);
-                }
-                const g = gcd(dx, dy);
-                const cx = dx / g;
-                const cy = dy / g;
-                const l = (dir * 10 + cx) * 100 + cy;
-                if (seen.contains(l)) continue;
+
+                const label = make_label(@intCast(usize, srcx), @intCast(usize, srcy), @intCast(usize, data[j].x), @intCast(usize, data[j].y));
+                if (seen.contains(label)) continue;
+
+                // we have not shot yet in this direction; do it!
                 shot += 1;
                 // std.debug.warn("SHOT  #{}: {} {}\n", shot, data[j].x, data[j].y);
                 data[j].shot = true;
-                _ = seen.put(l, {}) catch unreachable;
+                _ = seen.put(label, {}) catch unreachable;
                 if (shot == target) {
                     return @intCast(usize, data[j].x) * 100 + @intCast(usize, data[j].y);
                 }
             }
         }
         return 0;
+    }
+
+    fn make_label(srcx: usize, srcy: usize, tgtx: usize, tgty: usize) usize {
+        var dir: usize = 0;
+        var dx: usize = 0;
+        if (srcx > tgtx) {
+            dx = srcx - tgtx;
+            dir |= 0x01;
+        } else {
+            dx = tgtx - srcx;
+        }
+        var dy: usize = 0;
+        if (srcy > tgty) {
+            dy = srcy - tgty;
+            dir |= 0x10;
+        } else {
+            dy = tgty - srcy;
+        }
+        const common = gcd(dx, dy);
+        const canonx = dx / common;
+        const canony = dy / common;
+        const label = (dir * 10 + canonx) * 100 + canony;
+        return label;
     }
 };
 
