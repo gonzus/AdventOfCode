@@ -1,17 +1,17 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-const AngleAndPos = struct {
-    a: i32,
+const TargetInfo = struct {
+    angle: i32,
     x: i32,
     y: i32,
-    d: usize,
-    s: bool,
+    dist: usize,
+    shot: bool,
 };
-fn cmpByAngle(l: AngleAndPos, r: AngleAndPos) bool {
-    if (l.a < r.a) return true;
-    if (l.a > r.a) return false;
-    return l.d < r.d;
+fn cmpByAngle(l: TargetInfo, r: TargetInfo) bool {
+    if (l.angle < r.angle) return true;
+    if (l.angle > r.angle) return false;
+    return l.dist < r.dist;
 }
 
 pub const Board = struct {
@@ -125,8 +125,8 @@ pub const Board = struct {
         return mc - 1;
     }
 
-    pub fn scan_and_blast(self: *Board, sx: i32, sy: i32) void {
-        var data: [50 * 50]AngleAndPos = undefined;
+    pub fn scan_and_blast(self: *Board, sx: i32, sy: i32, target: usize) usize {
+        var data: [50 * 50]TargetInfo = undefined;
         var pos: usize = 0;
         var y: i32 = 0;
         while (y < @intCast(i32, self.my)) : (y += 1) {
@@ -139,17 +139,16 @@ pub const Board = struct {
                 var theta = -std.math.atan2(f64, dx, dy);
                 if (theta < 0) theta += 2.0 * std.math.pi;
                 const a = @floatToInt(i32, theta * 1000.0);
-                data[pos].a = @floatToInt(i32, theta * 1000.0);
+                data[pos].angle = @floatToInt(i32, theta * 1000.0);
                 data[pos].x = x;
                 data[pos].y = y;
-                data[pos].d = @floatToInt(usize, std.math.absFloat(dx) + std.math.absFloat(dy));
-                data[pos].s = false;
+                data[pos].dist = @floatToInt(usize, std.math.absFloat(dx) + std.math.absFloat(dy));
+                data[pos].shot = false;
                 // std.debug.warn("POS {} = {} {} : {}\n", pos, data[pos].x, data[pos].y, data[pos].a);
                 pos += 1;
             }
         }
-        std.debug.warn("SCAN: {} points for {} {}\n", pos, sx, sy);
-        std.sort.sort(AngleAndPos, data[0..pos], cmpByAngle);
+        std.sort.sort(TargetInfo, data[0..pos], cmpByAngle);
 
         var seen = std.AutoHashMap(usize, void).init(std.debug.global_allocator);
         defer seen.deinit();
@@ -158,7 +157,7 @@ pub const Board = struct {
             seen.clear();
             var j: usize = 0;
             while (j < pos) : (j += 1) {
-                if (data[j].s) continue;
+                if (data[j].shot) continue;
                 // std.debug.warn("POS {} = {} {} : {}\n", j, data[j].x, data[j].y, data[j].a);
                 var dir: usize = 0;
                 var dx: usize = 0;
@@ -181,29 +180,32 @@ pub const Board = struct {
                 const l = (dir * 10 + cx) * 100 + cy;
                 if (seen.contains(l)) continue;
                 shot += 1;
-                std.debug.warn("SHOT  #{}: {} {}\n", shot, data[j].x, data[j].y);
-                data[j].s = true;
+                // std.debug.warn("SHOT  #{}: {} {}\n", shot, data[j].x, data[j].y);
+                data[j].shot = true;
                 _ = seen.put(l, {}) catch unreachable;
+                if (shot == target) {
+                    return @intCast(usize, data[j].x) * 100 + @intCast(usize, data[j].y);
+                }
             }
         }
+        return 0;
     }
 };
 
-// test "map1" {
-//     std.debug.warn("\n");
-//     var board = Board.init();
-//     board.add_line(".#..#");
-//     board.add_line(".....");
-//     board.add_line("#####");
-//     board.add_line("....#");
-//     board.add_line("...##");
-//     board.show();
-//
-//     const result = board.find_best_position();
-//     // board.show();
-//     assert(result == 8);
-// }
-//
+test "map1" {
+    std.debug.warn("\n");
+    var board = Board.init();
+    board.add_line(".#..#");
+    board.add_line(".....");
+    board.add_line("#####");
+    board.add_line("....#");
+    board.add_line("...##");
+    // board.show();
+
+    const result = board.find_best_position();
+    assert(result == 8);
+}
+
 // test "map2" {
 //     std.debug.warn("\n");
 //     var board = Board.init();
@@ -300,10 +302,11 @@ test "scan small" {
     board.add_line(".#....#####...#..");
     board.add_line("##...##.#####..##");
     board.add_line("##...#...#.#####.");
-    board.add_line("..#.....X...###..");
+    board.add_line("..#.....#...###..");
     board.add_line("..#.#.....#....##");
-    board.show();
-    board.scan_and_blast(8, 3);
+    // board.show();
+    const result = board.scan_and_blast(8, 3, 36);
+    assert(result == 1403);
 }
 
 test "scan medium" {
@@ -329,6 +332,7 @@ test "scan medium" {
     board.add_line(".#.#.###########.###");
     board.add_line("#.#.#.#####.####.###");
     board.add_line("###.##.####.##.#..##");
-    board.show();
-    board.scan_and_blast(11, 13);
+    // board.show();
+    const result = board.scan_and_blast(11, 13, 200);
+    assert(result == 802);
 }

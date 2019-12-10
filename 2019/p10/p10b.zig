@@ -18,6 +18,7 @@ pub fn main() !void {
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }
-    board.scan_and_blast(26, 28);
-    try out.print("Read {} lines\n", count);
+    const wanted: usize = 200;
+    const result = board.scan_and_blast(26, 28, wanted);
+    try out.print("Read {} lines, shot #{} is {}\n", count, wanted, result);
 }
