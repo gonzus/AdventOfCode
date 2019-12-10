@@ -2,9 +2,9 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const TargetInfo = struct {
-    angle: i32,
-    x: i32,
-    y: i32,
+    angle: f64,
+    x: usize,
+    y: usize,
     dist: usize,
     shot: bool,
 };
@@ -114,29 +114,29 @@ pub const Board = struct {
         return minc - 1; // the position itself doesn't count
     }
 
-    pub fn scan_and_blast(self: *Board, srcx: i32, srcy: i32, target: usize) usize {
+    pub fn scan_and_blast(self: *Board, srcx: usize, srcy: usize, target: usize) usize {
         var data: [50 * 50]TargetInfo = undefined;
         var pos: usize = 0;
-        var y: i32 = 0;
-        while (y < @intCast(i32, self.maxy)) : (y += 1) {
-            var x: i32 = 0;
-            while (x < @intCast(i32, self.maxx)) : (x += 1) {
+        var y: usize = 0;
+        while (y < self.maxy) : (y += 1) {
+            var x: usize = 0;
+            while (x < self.maxx) : (x += 1) {
                 if (x == srcx and y == srcy) continue;
-                if (self.data[@intCast(usize, y)][@intCast(usize, x)] == 0) continue;
+                if (self.data[y][x] == 0) continue;
 
                 // compute theta = atan(dx / dy)
+                // in this case we do want the signs for the differences
                 // atan returns angles that grow counterclockwise, hence the '-'
                 // atan returns negative angles for x<0, hence we add 2*pi then
-                const dx = @intToFloat(f64, srcx - x);
-                const dy = @intToFloat(f64, srcy - y);
+                const dx = @intToFloat(f64, @intCast(i32, srcx) - @intCast(i32, x));
+                const dy = @intToFloat(f64, @intCast(i32, srcy) - @intCast(i32, y));
                 var theta = -std.math.atan2(f64, dx, dy);
                 if (theta < 0) theta += 2.0 * std.math.pi;
 
-                // we just keep the tangent to three decimals
-                data[pos].angle = @floatToInt(i32, theta * 1000.0);
+                data[pos].angle = theta;
                 data[pos].x = x;
                 data[pos].y = y;
-                data[pos].dist = @floatToInt(usize, std.math.absFloat(dx) + std.math.absFloat(dy));
+                data[pos].dist = @floatToInt(usize, std.math.absFloat(dx)) + @floatToInt(usize, std.math.absFloat(dy));
                 data[pos].shot = false;
                 // std.debug.warn("POS {} = {} {} : {}\n", pos, data[pos].x, data[pos].y, data[pos].a);
                 pos += 1;
@@ -158,16 +158,16 @@ pub const Board = struct {
                 // skip positions we have already shot
                 if (data[j].shot) continue;
 
-                const label = make_label(@intCast(usize, srcx), @intCast(usize, srcy), @intCast(usize, data[j].x), @intCast(usize, data[j].y));
+                const label = make_label(srcx, srcy, data[j].x, data[j].y);
                 if (seen.contains(label)) continue;
+                _ = seen.put(label, {}) catch unreachable;
 
                 // we have not shot yet in this direction; do it!
                 shot += 1;
                 // std.debug.warn("SHOT  #{}: {} {}\n", shot, data[j].x, data[j].y);
                 data[j].shot = true;
-                _ = seen.put(label, {}) catch unreachable;
                 if (shot == target) {
-                    return @intCast(usize, data[j].x) * 100 + @intCast(usize, data[j].y);
+                    return data[j].x * 100 + data[j].y;
                 }
             }
         }
