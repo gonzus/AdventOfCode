@@ -1,5 +1,7 @@
 const std = @import("std");
-const Ship = @import("./ship.zig").Ship;
+const ship = @import("./ship.zig");
+const Hull = ship.Hull;
+const Pos = ship.Pos;
 const Computer = @import("./computer.zig").Computer;
 
 pub fn main() !void {
@@ -13,15 +15,15 @@ pub fn main() !void {
     while (std.io.readLine(&buf)) |line| {
         count += 1;
 
-        var ship = Ship.init(Ship.Color.White);
-        defer ship.deinit();
+        var hull = Hull.init(Hull.Color.White);
+        defer hull.deinit();
 
         var computer = Computer.init(true);
         defer computer.deinit();
 
         computer.parse(line);
         while (!computer.halted) {
-            const color = ship.scan_color();
+            const color = hull.get_current_color();
             const input = @enumToInt(color);
             // std.debug.warn("SHIP enqueuing {}\n", color);
             computer.enqueueInput(input);
@@ -32,27 +34,28 @@ pub fn main() !void {
                 if (output == null) {
                     if (computer.halted) break;
                 } else if (state == 0) {
-                    const next_color = @intToEnum(Ship.Color, @intCast(u8, output.?));
+                    const next_color = @intToEnum(Hull.Color, @intCast(u8, output.?));
                     // std.debug.warn("SHIP painting {}\n", next_color);
-                    ship.paint_color(next_color);
+                    hull.paint(next_color);
                 } else {
-                    const next_rotation = @intToEnum(Ship.Rotation, @intCast(u8, output.?));
+                    const next_rotation = @intToEnum(Hull.Rotation, @intCast(u8, output.?));
                     // std.debug.warn("SHIP rotating {}\n", next_rotation);
-                    ship.move(next_rotation);
+                    hull.move(next_rotation);
                 }
             }
         }
 
-        try out.print("Line {}, painted {} cells\n", count, ship.painted);
-        try out.print("Bounds: {} {} - {} {}\n", ship.ix, ship.iy, ship.ax, ship.ay);
-        var y: usize = ship.ay;
-        while (y >= ship.iy) : (y -= 1) {
-            var x: usize = ship.ix;
-            while (x <= ship.ax) : (x += 1) {
-                const color = ship.get_color(x, y);
+        try out.print("Line {}, painted {} cells\n", count, hull.painted);
+        try out.print("Bounds: {} {} - {} {}\n", hull.pmin.x, hull.pmin.y, hull.pmax.x, hull.pmax.y);
+        var pos: Pos = undefined;
+        pos.y = hull.pmax.y;
+        while (pos.y >= hull.pmin.y) : (pos.y -= 1) {
+            pos.x = hull.pmin.x;
+            while (pos.x <= hull.pmax.x) : (pos.x += 1) {
+                const color = hull.get_color(pos);
                 switch (color) {
-                    Ship.Color.Black => try out.print(" "),
-                    Ship.Color.White => try out.print("\u{2588}"),
+                    Hull.Color.Black => try out.print(" "),
+                    Hull.Color.White => try out.print("\u{2588}"),
                 }
             }
             try out.print("\n");

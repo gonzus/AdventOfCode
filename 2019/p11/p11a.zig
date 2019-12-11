@@ -1,5 +1,6 @@
 const std = @import("std");
-const Ship = @import("./ship.zig").Ship;
+const ship = @import("./ship.zig");
+const Hull = ship.Hull;
 const Computer = @import("./computer.zig").Computer;
 
 pub fn main() !void {
@@ -13,15 +14,15 @@ pub fn main() !void {
     while (std.io.readLine(&buf)) |line| {
         count += 1;
 
-        var ship = Ship.init(Ship.Color.Black);
-        defer ship.deinit();
+        var hull = Hull.init(Hull.Color.Black);
+        defer hull.deinit();
 
         var computer = Computer.init(true);
         defer computer.deinit();
 
         computer.parse(line);
         while (!computer.halted) {
-            const color = ship.scan_color();
+            const color = hull.get_current_color();
             const input = @enumToInt(color);
             // std.debug.warn("SHIP enqueuing {}\n", color);
             computer.enqueueInput(input);
@@ -32,18 +33,18 @@ pub fn main() !void {
                 if (output == null) {
                     if (computer.halted) break;
                 } else if (state == 0) {
-                    const next_color = @intToEnum(Ship.Color, @intCast(u8, output.?));
+                    const next_color = @intToEnum(Hull.Color, @intCast(u8, output.?));
                     // std.debug.warn("SHIP painting {}\n", next_color);
-                    ship.paint_color(next_color);
+                    hull.paint(next_color);
                 } else {
-                    const next_rotation = @intToEnum(Ship.Rotation, @intCast(u8, output.?));
+                    const next_rotation = @intToEnum(Hull.Rotation, @intCast(u8, output.?));
                     // std.debug.warn("SHIP rotating {}\n", next_rotation);
-                    ship.move(next_rotation);
+                    hull.move(next_rotation);
                 }
             }
         }
 
-        try out.print("Line {}, painted {} cells\n", count, ship.painted);
+        try out.print("Line {}, painted {} cells\n", count, hull.painted);
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }

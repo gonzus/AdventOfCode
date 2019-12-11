@@ -1,14 +1,20 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-pub const Ship = struct {
-    hull: std.AutoHashMap(usize, Color),
-    hx: usize,
-    hy: usize,
-    ix: usize,
-    iy: usize,
-    ax: usize,
-    ay: usize,
+pub const Pos = struct {
+    x: usize,
+    y: usize,
+
+    pub fn encode(self: Pos) usize {
+        return self.x * 10000 + self.y;
+    }
+};
+
+pub const Hull = struct {
+    cells: std.AutoHashMap(usize, Color),
+    curr: Pos,
+    pmin: Pos,
+    pmax: Pos,
     dir: Direction,
     painted: usize,
 
@@ -29,69 +35,63 @@ pub const Ship = struct {
         R = 1,
     };
 
-    pub fn init(first_color: Color) Ship {
-        var self = Ship{
-            .hull = std.AutoHashMap(usize, Color).init(std.heap.direct_allocator),
-            .hx = 500,
-            .hy = 500,
-            .ix = std.math.maxInt(usize),
-            .iy = std.math.maxInt(usize),
-            .ax = 0,
-            .ay = 0,
+    pub fn init(first_color: Color) Hull {
+        var self = Hull{
+            .cells = std.AutoHashMap(usize, Color).init(std.heap.direct_allocator),
+            .curr = Pos{ .x = 500, .y = 500 },
+            .pmin = Pos{ .x = std.math.maxInt(usize), .y = std.math.maxInt(usize) },
+            .pmax = Pos{ .x = 0, .y = 0 },
             .dir = Direction.U,
             .painted = 0,
         };
-        self.paint_color(first_color);
+        self.paint(first_color);
         return self;
     }
 
-    pub fn deinit(self: *Ship) void {
-        self.hull.deinit();
+    pub fn deinit(self: *Hull) void {
+        self.cells.deinit();
     }
 
-    fn P(x: usize, y: usize) usize {
-        return x * 10000 + y;
+    pub fn position(self: Hull) usize {
+        return self.curr.encode();
     }
 
-    pub fn position(self: Ship) usize {
-        return P(self.hx, self.hy);
-    }
-
-    pub fn get_color(self: *Ship, x: usize, y: usize) Color {
-        const pos = P(x, y);
-        if (self.hull.contains(pos)) {
-            return self.hull.get(pos).?.value;
+    pub fn get_color(self: *Hull, pos: Pos) Color {
+        const label = pos.encode();
+        if (self.cells.contains(label)) {
+            return self.cells.get(label).?.value;
         }
         return Color.Black;
     }
 
-    pub fn scan_color(self: *Ship) Color {
-        return self.get_color(self.hx, self.hy);
+    pub fn get_current_color(self: *Hull) Color {
+        return self.get_color(self.curr);
     }
 
-    pub fn paint_color(self: *Ship, c: Color) void {
+    pub fn paint(self: *Hull, c: Color) void {
         const pos = self.position();
-        if (!self.hull.contains(pos)) {
+        if (!self.cells.contains(pos)) {
             self.painted += 1;
         }
-        _ = self.hull.put(pos, c) catch unreachable;
+        _ = self.cells.put(pos, c) catch unreachable;
     }
 
-    pub fn move(self: *Ship, rotation: Rotation) void {
-        switch (rotation) {
-            Rotation.L => self.dir = switch (self.dir) {
+    pub fn move(self: *Hull, rotation: Rotation) void {
+        self.dir = switch (rotation) {
+            Rotation.L => switch (self.dir) {
                 Direction.U => Direction.L,
-                Direction.D => Direction.R,
                 Direction.L => Direction.D,
+                Direction.D => Direction.R,
                 Direction.R => Direction.U,
             },
-            Rotation.R => self.dir = switch (self.dir) {
+            Rotation.R => switch (self.dir) {
                 Direction.U => Direction.R,
-                Direction.D => Direction.L,
                 Direction.L => Direction.U,
+                Direction.D => Direction.L,
                 Direction.R => Direction.D,
             },
-        }
+        };
+
         var dx: i32 = 0;
         var dy: i32 = 0;
         switch (self.dir) {
@@ -100,51 +100,52 @@ pub const Ship = struct {
             Direction.L => dx = -1,
             Direction.R => dx = 1,
         }
-        self.hx = @intCast(usize, @intCast(i32, self.hx) + dx);
-        self.hy = @intCast(usize, @intCast(i32, self.hy) + dy);
-        if (self.ix > self.hx) self.ix = self.hx;
-        if (self.iy > self.hy) self.iy = self.hy;
-        if (self.ax < self.hx) self.ax = self.hx;
-        if (self.ay < self.hy) self.ay = self.hy;
+        self.curr.x = @intCast(usize, @intCast(i32, self.curr.x) + dx);
+        self.curr.y = @intCast(usize, @intCast(i32, self.curr.y) + dy);
+
+        if (self.pmin.x > self.curr.x) self.pmin.x = self.curr.x;
+        if (self.pmin.y > self.curr.y) self.pmin.y = self.curr.y;
+        if (self.pmax.x < self.curr.x) self.pmax.x = self.curr.x;
+        if (self.pmax.y < self.curr.y) self.pmax.y = self.curr.y;
     }
 };
 
 test "simple" {
     std.debug.warn("\n");
-    var ship = Ship.init(Ship.Color.Black);
-    defer ship.deinit();
+    var hull = Hull.init(Hull.Color.Black);
+    defer hull.deinit();
 
-    assert(ship.painted == 1);
+    assert(hull.painted == 1);
 
-    assert(ship.scan_color() == Ship.Color.Black);
-    ship.paint_color(Ship.Color.White);
-    assert(ship.scan_color() == Ship.Color.White);
-    assert(ship.painted == 1);
-    ship.paint_color(Ship.Color.Black);
-    assert(ship.scan_color() == Ship.Color.Black);
-    assert(ship.painted == 1);
+    assert(hull.get_current_color() == Hull.Color.Black);
+    hull.paint(Hull.Color.White);
+    assert(hull.get_current_color() == Hull.Color.White);
+    assert(hull.painted == 1);
+    hull.paint(Hull.Color.Black);
+    assert(hull.get_current_color() == Hull.Color.Black);
+    assert(hull.painted == 1);
 
-    ship.move(Ship.Rotation.L);
-    assert(ship.position() == 4990500);
+    hull.move(Hull.Rotation.L);
+    assert(hull.position() == 4990500);
 
-    ship.move(Ship.Rotation.L);
-    assert(ship.position() == 4990499);
+    hull.move(Hull.Rotation.L);
+    assert(hull.position() == 4990499);
 
-    ship.move(Ship.Rotation.L);
-    assert(ship.position() == 5000499);
+    hull.move(Hull.Rotation.L);
+    assert(hull.position() == 5000499);
 
-    ship.move(Ship.Rotation.L);
-    assert(ship.position() == 5000500);
+    hull.move(Hull.Rotation.L);
+    assert(hull.position() == 5000500);
 
-    ship.move(Ship.Rotation.R);
-    assert(ship.position() == 5010500);
+    hull.move(Hull.Rotation.R);
+    assert(hull.position() == 5010500);
 
-    ship.move(Ship.Rotation.R);
-    assert(ship.position() == 5010499);
+    hull.move(Hull.Rotation.R);
+    assert(hull.position() == 5010499);
 
-    ship.move(Ship.Rotation.R);
-    assert(ship.position() == 5000499);
+    hull.move(Hull.Rotation.R);
+    assert(hull.position() == 5000499);
 
-    ship.move(Ship.Rotation.R);
-    assert(ship.position() == 5000500);
+    hull.move(Hull.Rotation.R);
+    assert(hull.position() == 5000500);
 }
