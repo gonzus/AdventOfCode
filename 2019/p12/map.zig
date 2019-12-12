@@ -1,10 +1,10 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+const DIM = 3;
+
 const Vec = struct {
-    x: i32,
-    y: i32,
-    z: i32,
+    v: [DIM]i32,
 };
 
 const Moon = struct {
@@ -12,33 +12,45 @@ const Moon = struct {
     vel: Vec,
 };
 
-pub const Map = struct {
-    const DIM = 3;
+pub const Trace = struct {
+    data: std.AutoHashMap(u128, usize),
+    done: bool,
 
+    pub fn init() Trace {
+        var self = Trace{
+            .data = std.AutoHashMap(u128, usize).init(std.heap.direct_allocator),
+            .done = false,
+        };
+        return self;
+    }
+
+    pub fn deinit(self: *Trace) void {
+        self.data.deinit();
+    }
+};
+
+pub const Map = struct {
     moons: [10]Moon,
     pos: usize,
-    traces: [3]std.AutoHashMap(u128, usize),
-    trace_done: [3]bool,
+    trace: [DIM]Trace,
 
     pub fn init() Map {
         var self = Map{
             .moons = undefined,
             .pos = 0,
-            .traces = undefined,
-            .trace_done = undefined,
+            .trace = undefined,
         };
-        var j: usize = 0;
-        while (j < 3) : (j += 1) {
-            self.traces[j] = std.AutoHashMap(u128, usize).init(std.heap.direct_allocator);
-            self.trace_done[j] = false;
+        var dim: usize = 0;
+        while (dim < DIM) : (dim += 1) {
+            self.trace[dim] = Trace.init();
         }
         return self;
     }
 
     pub fn deinit(self: *Map) void {
-        var j: usize = 0;
-        while (j < 3) : (j += 1) {
-            self.traces[j].deinit();
+        var dim: usize = 0;
+        while (dim < DIM) : (dim += 1) {
+            self.trace[dim].deinit();
         }
     }
 
@@ -51,27 +63,19 @@ pub const Map = struct {
 
     pub fn add_line(self: *Map, line: []const u8) void {
         var itc = std.mem.separate(line[1 .. line.len - 1], ", ");
-        while (itc.next()) |str3| {
-            var ite = std.mem.separate(str3, "=");
+        while (itc.next()) |str_coord| {
+            var ite = std.mem.separate(str_coord, "=");
             var j: usize = 0;
-            var state: usize = 99;
-            while (ite.next()) |str1| : (j += 1) {
-                if (state == 99) {
-                    state = str1[0] - 'x';
+            var dim: usize = 99;
+            while (ite.next()) |str_val| : (j += 1) {
+                if (dim == 99) {
+                    dim = str_val[0] - 'x';
                     continue;
                 }
-                const input = std.fmt.parseInt(i32, str1, 10) catch unreachable;
-                if (state == 0) {
-                    self.moons[self.pos].pos.x = input;
-                    self.moons[self.pos].vel.x = 0;
-                } else if (state == 1) {
-                    self.moons[self.pos].pos.y = input;
-                    self.moons[self.pos].vel.y = 0;
-                } else if (state == 2) {
-                    self.moons[self.pos].pos.z = input;
-                    self.moons[self.pos].vel.z = 0;
-                }
-                state = 99;
+                const input = std.fmt.parseInt(i32, str_val, 10) catch unreachable;
+                self.moons[self.pos].pos.v[dim] = input;
+                self.moons[self.pos].vel.v[dim] = 0;
+                dim = 99;
             }
         }
         self.pos += 1;
@@ -83,29 +87,18 @@ pub const Map = struct {
         while (j < self.pos) : (j += 1) {
             var k: usize = j + 1;
             while (k < self.pos) : (k += 1) {
-                if (self.moons[j].pos.x < self.moons[k].pos.x) {
-                    self.moons[j].vel.x += 1;
-                    self.moons[k].vel.x -= 1;
-                }
-                if (self.moons[j].pos.x > self.moons[k].pos.x) {
-                    self.moons[j].vel.x -= 1;
-                    self.moons[k].vel.x += 1;
-                }
-                if (self.moons[j].pos.y < self.moons[k].pos.y) {
-                    self.moons[j].vel.y += 1;
-                    self.moons[k].vel.y -= 1;
-                }
-                if (self.moons[j].pos.y > self.moons[k].pos.y) {
-                    self.moons[j].vel.y -= 1;
-                    self.moons[k].vel.y += 1;
-                }
-                if (self.moons[j].pos.z < self.moons[k].pos.z) {
-                    self.moons[j].vel.z += 1;
-                    self.moons[k].vel.z -= 1;
-                }
-                if (self.moons[j].pos.z > self.moons[k].pos.z) {
-                    self.moons[j].vel.z -= 1;
-                    self.moons[k].vel.z += 1;
+                var dim: usize = 0;
+                while (dim < DIM) : (dim += 1) {
+                    if (self.moons[j].pos.v[dim] < self.moons[k].pos.v[dim]) {
+                        self.moons[j].vel.v[dim] += 1;
+                        self.moons[k].vel.v[dim] -= 1;
+                        continue;
+                    }
+                    if (self.moons[j].pos.v[dim] > self.moons[k].pos.v[dim]) {
+                        self.moons[j].vel.v[dim] -= 1;
+                        self.moons[k].vel.v[dim] += 1;
+                        continue;
+                    }
                 }
             }
         }
@@ -114,16 +107,18 @@ pub const Map = struct {
     fn step_pos(self: *Map) void {
         var j: usize = 0;
         while (j < self.pos) : (j += 1) {
-            self.moons[j].pos.x += self.moons[j].vel.x;
-            self.moons[j].pos.y += self.moons[j].vel.y;
-            self.moons[j].pos.z += self.moons[j].vel.z;
+            var dim: usize = 0;
+            while (dim < DIM) : (dim += 1) {
+                self.moons[j].pos.v[dim] += self.moons[j].vel.v[dim];
+            }
         }
     }
 
     pub fn step(self: *Map) void {
-        _ = self.trace(0);
-        _ = self.trace(1);
-        _ = self.trace(2);
+        var dim: usize = 0;
+        while (dim < DIM) : (dim += 1) {
+            _ = self.trace_step(dim);
+        }
         self.step_vel();
         self.step_pos();
     }
@@ -133,14 +128,13 @@ pub const Map = struct {
         var j: usize = 0;
         while (j < self.pos) : (j += 1) {
             var potential: usize = 0;
-            potential += @intCast(usize, std.math.absInt(self.moons[j].pos.x) catch 0);
-            potential += @intCast(usize, std.math.absInt(self.moons[j].pos.y) catch 0);
-            potential += @intCast(usize, std.math.absInt(self.moons[j].pos.z) catch 0);
-
             var kinetic: usize = 0;
-            kinetic += @intCast(usize, std.math.absInt(self.moons[j].vel.x) catch 0);
-            kinetic += @intCast(usize, std.math.absInt(self.moons[j].vel.y) catch 0);
-            kinetic += @intCast(usize, std.math.absInt(self.moons[j].vel.z) catch 0);
+
+            var dim: usize = 0;
+            while (dim < DIM) : (dim += 1) {
+                potential += @intCast(usize, std.math.absInt(self.moons[j].pos.v[dim]) catch 0);
+                kinetic += @intCast(usize, std.math.absInt(self.moons[j].vel.v[dim]) catch 0);
+            }
 
             total += potential * kinetic;
         }
@@ -148,52 +142,36 @@ pub const Map = struct {
     }
 
     pub fn trace_completed(self: *Map) bool {
-        var j: usize = 0;
-        while (j < DIM) : (j += 1) {
-            if (!self.trace_done[j]) {
+        var dim: usize = 0;
+        while (dim < DIM) : (dim += 1) {
+            if (!self.trace[dim].done) {
                 return false;
             }
         }
         return true;
     }
 
-    pub fn trace(self: *Map, dim: usize) ?usize {
-        const size = self.traces[dim].count();
-        if (self.trace_done[dim]) {
+    pub fn trace_step(self: *Map, dim: usize) ?usize {
+        const size = self.trace[dim].data.count();
+        if (self.trace[dim].done) {
             return size;
         }
 
         var label: u128 = 0;
-        if (dim == 0) {
-            var j: usize = 0;
-            while (j < self.pos) : (j += 1) {
-                label = label * 10000 + @intCast(u128, 10000 - self.moons[j].pos.x);
-                label = label * 10000 + @intCast(u128, 10000 - self.moons[j].vel.x);
-            }
-        } else if (dim == 1) {
-            var j: usize = 0;
-            while (j < self.pos) : (j += 1) {
-                label = label * 10000 + @intCast(u128, 10000 - self.moons[j].pos.y);
-                label = label * 10000 + @intCast(u128, 10000 - self.moons[j].vel.y);
-            }
-        } else if (dim == 2) {
-            var j: usize = 0;
-            while (j < self.pos) : (j += 1) {
-                label = label * 10000 + @intCast(u128, 10000 - self.moons[j].pos.z);
-                label = label * 10000 + @intCast(u128, 10000 - self.moons[j].vel.z);
-            }
-        } else {
-            @panic("FUCK YOU\n");
+        var j: usize = 0;
+        while (j < self.pos) : (j += 1) {
+            label = label * 10000 + @intCast(u128, 10000 - self.moons[j].pos.v[dim]);
+            label = label * 10000 + @intCast(u128, 10000 - self.moons[j].vel.v[dim]);
         }
 
         const pos = size + 1;
-        if (self.traces[dim].contains(label)) {
-            self.trace_done[dim] = true;
-            const where = self.traces[dim].get(label).?.value;
+        if (self.trace[dim].data.contains(label)) {
+            self.trace[dim].done = true;
+            const where = self.trace[dim].data.get(label).?.value;
             // std.debug.warn("*** FOUND dim {} pos {} label {} => {}\n", dim, pos, label, size);
             return pos;
         } else {
-            _ = self.traces[dim].put(label, pos) catch unreachable;
+            _ = self.trace[dim].data.put(label, pos) catch unreachable;
             // std.debug.warn("*** CREATE dim {} pos {} label {}\n", dim, pos, label);
             return null;
         }
@@ -210,12 +188,12 @@ pub const Map = struct {
         return la;
     }
 
-    pub fn cycle_size(self: Map) usize {
-        var j: usize = 0;
+    fn compute_cycle_size(self: Map) usize {
         var p: usize = 1;
-        while (j < 3) : (j += 1) {
-            const v = self.traces[j].count();
-            if (j == 0) {
+        var dim: usize = 0;
+        while (dim < DIM) : (dim += 1) {
+            const v = self.trace[dim].data.count();
+            if (dim == 0) {
                 p = v;
                 continue;
             }
@@ -229,7 +207,7 @@ pub const Map = struct {
         while (!self.trace_completed()) {
             self.step();
         }
-        return self.cycle_size();
+        return self.compute_cycle_size();
     }
 
     pub fn show(self: Map) void {
@@ -237,31 +215,12 @@ pub const Map = struct {
         std.debug.warn("Total energy: {}\n", self.total_energy());
         var j: usize = 0;
         while (j < self.pos) : (j += 1) {
-            std.debug.warn("Moon {}: pos {} {} {}, vel {} {} {}\n", j, self.moons[j].pos.x, self.moons[j].pos.y, self.moons[j].pos.z, self.moons[j].vel.x, self.moons[j].vel.y, self.moons[j].vel.z);
+            std.debug.warn("Moon {}: pos {} {} {}, vel {} {} {}\n", j, self.moons[j].pos.v[0], self.moons[j].pos.v[1], self.moons[j].pos.v[2], self.moons[j].vel.v[0], self.moons[j].vel.v[1], self.moons[j].vel.v[2]);
         }
     }
 };
 
-// test "simple" {
-//     std.debug.warn("\n");
-//     const data: []const u8 =
-//         \\<x=-1, y=0, z=2>
-//         \\<x=2, y=-10, z=-7>
-//         \\<x=4, y=-8, z=8>
-//         \\<x=3, y=5, z=-1>
-//     ;
-//     var map = Map.init();
-//     map.add_lines(data);
-//     map.show();
-//     var j: usize = 0;
-//     while (j < 10) : (j += 1) {
-//         map.step();
-//         map.show();
-//     }
-// }
-
-test "recur" {
-    std.debug.warn("\n");
+test "energy aftr 10 steps" {
     const data: []const u8 =
         \\<x=-1, y=0, z=2>
         \\<x=2, y=-10, z=-7>
@@ -270,11 +229,128 @@ test "recur" {
     ;
     var map = Map.init();
     map.add_lines(data);
-    map.show();
+    var j: usize = 0;
+    while (j < 10) : (j += 1) {
+        map.step();
+    }
+
+    assert(map.moons[0].pos.v[0] == 2);
+    assert(map.moons[0].pos.v[1] == 1);
+    assert(map.moons[0].pos.v[2] == -3);
+    assert(map.moons[0].vel.v[0] == -3);
+    assert(map.moons[0].vel.v[1] == -2);
+    assert(map.moons[0].vel.v[2] == 1);
+    assert(map.moons[1].pos.v[0] == 1);
+    assert(map.moons[1].pos.v[1] == -8);
+    assert(map.moons[1].pos.v[2] == 0);
+    assert(map.moons[1].vel.v[0] == -1);
+    assert(map.moons[1].vel.v[1] == 1);
+    assert(map.moons[1].vel.v[2] == 3);
+    assert(map.moons[2].pos.v[0] == 3);
+    assert(map.moons[2].pos.v[1] == -6);
+    assert(map.moons[2].pos.v[2] == 1);
+    assert(map.moons[2].vel.v[0] == 3);
+    assert(map.moons[2].vel.v[1] == 2);
+    assert(map.moons[2].vel.v[2] == -3);
+    assert(map.moons[3].pos.v[0] == 2);
+    assert(map.moons[3].pos.v[1] == 0);
+    assert(map.moons[3].pos.v[2] == 4);
+    assert(map.moons[3].vel.v[0] == 1);
+    assert(map.moons[3].vel.v[1] == -1);
+    assert(map.moons[3].vel.v[2] == -1);
+    assert(map.total_energy() == 179);
+}
+
+test "energy aftr 100 steps" {
+    const data: []const u8 =
+        \\<x=-8, y=-10, z=0>
+        \\<x=5, y=5, z=10>
+        \\<x=2, y=-7, z=3>
+        \\<x=9, y=-8, z=-3>
+    ;
+    var map = Map.init();
+    map.add_lines(data);
+    var j: usize = 0;
+    while (j < 100) : (j += 1) {
+        map.step();
+    }
+
+    assert(map.moons[0].pos.v[0] == 8);
+    assert(map.moons[0].pos.v[1] == -12);
+    assert(map.moons[0].pos.v[2] == -9);
+    assert(map.moons[0].vel.v[0] == -7);
+    assert(map.moons[0].vel.v[1] == 3);
+    assert(map.moons[0].vel.v[2] == 0);
+    assert(map.moons[1].pos.v[0] == 13);
+    assert(map.moons[1].pos.v[1] == 16);
+    assert(map.moons[1].pos.v[2] == -3);
+    assert(map.moons[1].vel.v[0] == 3);
+    assert(map.moons[1].vel.v[1] == -11);
+    assert(map.moons[1].vel.v[2] == -5);
+    assert(map.moons[2].pos.v[0] == -29);
+    assert(map.moons[2].pos.v[1] == -11);
+    assert(map.moons[2].pos.v[2] == -1);
+    assert(map.moons[2].vel.v[0] == -3);
+    assert(map.moons[2].vel.v[1] == 7);
+    assert(map.moons[2].vel.v[2] == 4);
+    assert(map.moons[3].pos.v[0] == 16);
+    assert(map.moons[3].pos.v[1] == -13);
+    assert(map.moons[3].pos.v[2] == 23);
+    assert(map.moons[3].vel.v[0] == 7);
+    assert(map.moons[3].vel.v[1] == 1);
+    assert(map.moons[3].vel.v[2] == 1);
+    assert(map.total_energy() == 1940);
+}
+
+test "cycle size small" {
+    const data: []const u8 =
+        \\<x=-1, y=0, z=2>
+        \\<x=2, y=-10, z=-7>
+        \\<x=4, y=-8, z=8>
+        \\<x=3, y=5, z=-1>
+    ;
+    var map = Map.init();
+    map.add_lines(data);
     var j: usize = 0;
     while (j < 2772) : (j += 1) {
         map.step();
-        map.show();
     }
-    std.debug.warn("Cycle size: {}\n", map.cycle_size());
+    assert(map.moons[0].pos.v[0] == -1);
+    assert(map.moons[0].pos.v[1] == 0);
+    assert(map.moons[0].pos.v[2] == 2);
+    assert(map.moons[0].vel.v[0] == 0);
+    assert(map.moons[0].vel.v[1] == 0);
+    assert(map.moons[0].vel.v[2] == 0);
+    assert(map.moons[1].pos.v[0] == 2);
+    assert(map.moons[1].pos.v[1] == -10);
+    assert(map.moons[1].pos.v[2] == -7);
+    assert(map.moons[1].vel.v[0] == 0);
+    assert(map.moons[1].vel.v[1] == 0);
+    assert(map.moons[1].vel.v[2] == 0);
+    assert(map.moons[2].pos.v[0] == 4);
+    assert(map.moons[2].pos.v[1] == -8);
+    assert(map.moons[2].pos.v[2] == 8);
+    assert(map.moons[2].vel.v[0] == 0);
+    assert(map.moons[2].vel.v[1] == 0);
+    assert(map.moons[2].vel.v[2] == 0);
+    assert(map.moons[3].pos.v[0] == 3);
+    assert(map.moons[3].pos.v[1] == 5);
+    assert(map.moons[3].pos.v[2] == -1);
+    assert(map.moons[3].vel.v[0] == 0);
+    assert(map.moons[3].vel.v[1] == 0);
+    assert(map.moons[3].vel.v[2] == 0);
+    assert(map.compute_cycle_size() == 2772);
+}
+
+test "cycle size large" {
+    const data: []const u8 =
+        \\<x=-8, y=-10, z=0>
+        \\<x=5, y=5, z=10>
+        \\<x=2, y=-7, z=3>
+        \\<x=9, y=-8, z=-3>
+    ;
+    var map = Map.init();
+    map.add_lines(data);
+    const result = map.find_cycle_size();
+    assert(result == 4686774924);
 }
