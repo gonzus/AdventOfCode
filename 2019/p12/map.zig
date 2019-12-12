@@ -13,19 +13,24 @@ const Moon = struct {
 };
 
 pub const Map = struct {
+    const DIM = 3;
+
     moons: [10]Moon,
     pos: usize,
     traces: [3]std.AutoHashMap(u128, usize),
+    trace_done: [3]bool,
 
     pub fn init() Map {
         var self = Map{
             .moons = undefined,
             .pos = 0,
             .traces = undefined,
+            .trace_done = undefined,
         };
         var j: usize = 0;
         while (j < 3) : (j += 1) {
             self.traces[j] = std.AutoHashMap(u128, usize).init(std.heap.direct_allocator);
+            self.trace_done[j] = false;
         }
         return self;
     }
@@ -142,7 +147,22 @@ pub const Map = struct {
         return total;
     }
 
+    pub fn trace_completed(self: *Map) bool {
+        var j: usize = 0;
+        while (j < DIM) : (j += 1) {
+            if (!self.trace_done[j]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     pub fn trace(self: *Map, dim: usize) ?usize {
+        const size = self.traces[dim].count();
+        if (self.trace_done[dim]) {
+            return size;
+        }
+
         var label: u128 = 0;
         if (dim == 0) {
             var j: usize = 0;
@@ -166,9 +186,9 @@ pub const Map = struct {
             @panic("FUCK YOU\n");
         }
 
-        const size = self.traces[dim].count();
         const pos = size + 1;
         if (self.traces[dim].contains(label)) {
+            self.trace_done[dim] = true;
             const where = self.traces[dim].get(label).?.value;
             // std.debug.warn("*** FOUND dim {} pos {} label {} => {}\n", dim, pos, label, size);
             return pos;
@@ -203,6 +223,13 @@ pub const Map = struct {
             p *= v / g;
         }
         return p;
+    }
+
+    pub fn find_cycle_size(self: *Map) usize {
+        while (!self.trace_completed()) {
+            self.step();
+        }
+        return self.cycle_size();
     }
 
     pub fn show(self: Map) void {

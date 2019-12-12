@@ -16,10 +16,6 @@ pub fn main() !void {
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }
-    var j: usize = 0;
-    while (j < 1000000) : (j += 1) {
-        map.step();
-    }
-    map.show();
-    std.debug.warn("Cycle size: {}\n", map.cycle_size());
+    const result = map.find_cycle_size();
+    try out.print("Cycle size: {}\n", result);
 }

@@ -20,5 +20,5 @@ pub fn main() !void {
     while (j < 1000) : (j += 1) {
         map.step();
     }
-    map.show();
+    try out.print("Total energy: {}\n", map.total_energy());
 }
