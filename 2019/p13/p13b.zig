@@ -12,10 +12,10 @@ pub fn main() !void {
     while (std.io.readLine(&buf)) |line| {
         count += 1;
 
-        var board = Board.init();
+        var board = Board.init(true);
         defer board.deinit();
 
-        board.parse(line, true);
+        board.parse(line);
         board.run();
         const result = board.score;
         try out.print("Line {}, last score is {}\n", count, board.score);

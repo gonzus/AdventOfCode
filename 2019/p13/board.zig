@@ -23,6 +23,7 @@ pub const Board = struct {
     bpos: Pos,
     ppos: Pos,
     score: usize,
+    hacked: bool,
 
     pub const Tile = enum(u8) {
         Empty = 0,
@@ -32,7 +33,7 @@ pub const Board = struct {
         Ball = 4,
     };
 
-    pub fn init() Board {
+    pub fn init(hacked: bool) Board {
         var self = Board{
             .cells = std.AutoHashMap(usize, Tile).init(std.heap.direct_allocator),
             .computer = Computer.init(true),
@@ -45,6 +46,7 @@ pub const Board = struct {
             .finished = false,
             .state = 0,
             .score = 0,
+            .hacked = hacked,
         };
         return self;
     }
@@ -54,8 +56,8 @@ pub const Board = struct {
         self.cells.deinit();
     }
 
-    pub fn parse(self: *Board, str: []const u8, hack: bool) void {
-        self.computer.parse(str, hack);
+    pub fn parse(self: *Board, str: []const u8) void {
+        self.computer.parse(str, self.hacked);
     }
 
     pub fn run(self: *Board) void {
@@ -172,7 +174,7 @@ pub const Board = struct {
 
 test "without blocks" {
     // std.debug.warn("\n");
-    var board = Board.init();
+    var board = Board.init(false);
     defer board.deinit();
 
     const data = "1,2,2,6,5,4";
@@ -188,7 +190,7 @@ test "without blocks" {
 
 test "with blocks" {
     // std.debug.warn("\n");
-    var board = Board.init();
+    var board = Board.init(false);
     defer board.deinit();
 
     const data = "1,2,3,6,5,4";

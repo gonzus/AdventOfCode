@@ -12,10 +12,10 @@ pub fn main() !void {
     while (std.io.readLine(&buf)) |line| {
         count += 1;
 
-        var board = Board.init();
+        var board = Board.init(false);
         defer board.deinit();
 
-        board.parse(line, false);
+        board.parse(line);
         board.run();
         const result = board.count_tiles(Board.Tile.Block);
         try out.print("Line {}, counted {} {} tiles\n", count, result, Board.Tile.Block);
