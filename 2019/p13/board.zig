@@ -63,12 +63,12 @@ pub const Board = struct {
     pub fn run(self: *Board) void {
         while (true) {
             self.computer.run();
-            if (self.hacked) self.show();
             while (true) {
                 const output = self.computer.getOutput();
                 if (output == null) break;
                 _ = self.process_output(output.?);
             }
+            if (self.hacked) self.show();
             if (self.computer.halted) {
                 std.debug.warn("HALT computer\n");
                 break;
@@ -129,10 +129,11 @@ pub const Board = struct {
             while (x <= self.pmax.x) : (x += 1) {
                 const pos = Pos{ .x = x, .y = y };
                 const tile = self.get_tile(pos);
-                std.debug.warn("{}", tile);
+                out.print("{}", tile) catch unreachable;
             }
-            std.debug.warn("\n");
+            out.print("\n") catch unreachable;
         }
+        out.print("SCORE: {}\n", self.score) catch unreachable;
     }
 
     pub fn put_tile(self: *Board, pos: Pos, t: Tile) void {
