@@ -63,7 +63,7 @@ pub const Board = struct {
     pub fn run(self: *Board) void {
         while (true) {
             self.computer.run();
-            // self.show();
+            if (self.hacked) self.show();
             while (true) {
                 const output = self.computer.getOutput();
                 if (output == null) break;
@@ -119,6 +119,10 @@ pub const Board = struct {
     }
 
     pub fn show(self: Board) void {
+        const stdout = std.io.getStdOut() catch unreachable;
+        const out = &stdout.outStream().stream;
+        const escape: u8 = 0o33;
+        out.print("{c}[2J{c}[H", escape, escape) catch unreachable;
         var y: usize = self.pmin.y;
         while (y <= self.pmax.y) : (y += 1) {
             var x: usize = self.pmin.x;
