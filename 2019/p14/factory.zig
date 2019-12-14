@@ -196,23 +196,32 @@ pub const Factory = struct {
     }
 
     pub fn fuel_possible(self: *Factory, available_ore: usize) usize {
+        // we will do a binary search, need to bracket with two points, one too low and one too high
         const need_for_one = self.ore_needed_for_fuel(1);
         var fuel_lo: usize = @intCast(usize, available_ore / need_for_one); // estimation, will be too small
         var need_lo = self.ore_needed_for_fuel(fuel_lo);
         // std.debug.warn("LO {} {} -- {}\n", fuel_lo, need_lo, @intCast(i64, available_ore - need_lo));
-        var fuel_hi: usize = fuel_lo * 10; // estimation
-        var need_hi = self.ore_needed_for_fuel(fuel_hi);
-        // std.debug.warn("HI {} {} -- {}\n", fuel_hi, need_hi, @intCast(i64, available_ore) - @intCast(i64, need_hi));
+
+        var fuel_hi: usize = fuel_lo * 2; // estimation
+        var need_hi: usize = 0;
         while (true) {
-            if (fuel_lo >= fuel_hi) break;
-            const fm: usize = (fuel_lo + fuel_hi) / 2;
-            const nm = self.ore_needed_for_fuel(fm);
-            // std.debug.warn("{} {} -> {} {} -- {}\n", fuel_lo, fuel_hi, fm, nm, @intCast(i64, available_ore) - @intCast(i64, nm));
-            if (fuel_hi == fm or fuel_lo == fm) break;
-            if (nm > available_ore) {
-                fuel_hi = fm;
+            need_hi = self.ore_needed_for_fuel(fuel_hi);
+            if (need_hi >= available_ore) break;
+            fuel_hi *= 2;
+        }
+        // std.debug.warn("HI {} {} -- {}\n", fuel_hi, need_hi, @intCast(i64, available_ore) - @intCast(i64, need_hi));
+
+        // now a classic binary search
+        var j: usize = 0;
+        while (true) : (j += 1) {
+            const fuel_half: usize = (fuel_lo + fuel_hi) / 2;
+            const need_half = self.ore_needed_for_fuel(fuel_half);
+            // std.debug.warn("#{}: {} {} -> {} {} -- {}\n", j, fuel_lo, fuel_hi, fuel_half, need_half, @intCast(i64, available_ore) - @intCast(i64, need_half));
+            if (fuel_hi == fuel_half or fuel_lo == fuel_half) break;
+            if (need_half > available_ore) {
+                fuel_hi = fuel_half;
             } else {
-                fuel_lo = fm;
+                fuel_lo = fuel_half;
             }
         }
         return fuel_lo;
