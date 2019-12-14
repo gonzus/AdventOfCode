@@ -1,7 +1,5 @@
 const std = @import("std");
-const factory_module = @import("./factory.zig");
-const Factory = factory_module.Factory;
-const Rule = factory_module.Rule;
+const Factory = @import("./factory.zig").Factory;
 
 pub fn main() !void {
     const stdout = std.io.getStdOut() catch unreachable;
@@ -16,10 +14,7 @@ pub fn main() !void {
     var count: u32 = 0;
     while (std.io.readLine(&buf)) |line| {
         count += 1;
-
-        var rule = Rule.init();
-        rule.parse(line);
-        factory.add_rule(rule);
+        factory.parse(line);
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }

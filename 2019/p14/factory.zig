@@ -1,96 +1,96 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-pub const Rule = struct {
-    needed: std.StringHashMap(usize),
-    produced: []u8,
-    amount: usize,
-
-    pub fn init() Rule {
-        const allocator = std.heap.direct_allocator;
-        var self = Rule{
-            .needed = std.StringHashMap(usize).init(allocator),
-            .produced = undefined,
-            .amount = 0,
-        };
-        return self;
-    }
-
-    pub fn deinit(self: *Rule) void {
-        const allocator = std.heap.direct_allocator;
-        var it = self.needed.iterator();
-        while (it.next()) |needed| {
-            allocator.free(needed.key);
-        }
-        allocator.free(self.produced);
-        self.needed.deinit();
-    }
-
-    pub fn parse(self: *Rule, str: []const u8) void {
-        const allocator = std.heap.direct_allocator;
-        var statel: usize = 0;
-        var itl = std.mem.separate(str, "=>");
-        while (itl.next()) |side| {
-            if (statel == 0) {
-                // left hand: needed
-                var stater: usize = 0;
-                var itr = std.mem.separate(std.mem.trim(u8, side, " "), ",");
-                while (itr.next()) |rule| {
-                    var amount: usize = 0;
-                    var staten: usize = 0;
-                    var itn = std.mem.separate(std.mem.trim(u8, rule, " "), " ");
-                    while (itn.next()) |data| {
-                        if (staten == 0) {
-                            amount = std.fmt.parseInt(usize, data, 10) catch unreachable;
-                            staten = 1;
-                        } else {
-                            // std.debug.warn("NEEDED: {} [{}]\n", amount, data);
-                            const needed = allocator.alloc(u8, data.len) catch unreachable;
-                            std.mem.copy(u8, needed, data);
-                            if (self.needed.contains(needed)) {
-                                std.debug.warn("DUPLICATE needed [{}]\n", needed);
-                            } else {
-                                _ = self.needed.put(needed, amount) catch unreachable;
-                            }
-                            staten = 0;
-                        }
-                    }
-                }
-                statel = 1;
-            } else {
-                // right hand: produced
-                var amount: usize = 0;
-                var statep: usize = 0;
-                var itp = std.mem.separate(std.mem.trim(u8, side, " "), " ");
-                while (itp.next()) |data| {
-                    if (statep == 0) {
-                        amount = std.fmt.parseInt(usize, data, 10) catch unreachable;
-                        statep = 1;
-                    } else {
-                        // std.debug.warn("PRODUCED: {} [{}]\n", amount, data);
-                        self.amount = amount;
-                        self.produced = allocator.alloc(u8, data.len) catch unreachable;
-                        std.mem.copy(u8, self.produced, data);
-                        statep = 0;
-                    }
-                }
-                statel = 0;
-            }
-        }
-    }
-
-    pub fn show(self: Rule) void {
-        std.debug.warn("RULE to produce {} of [{}]:\n", self.amount, self.produced);
-        var it = self.needed.iterator();
-        while (it.next()) |needed| {
-            std.debug.warn("  NEED {} of [{}]\n", needed.value, needed.key);
-        }
-    }
-};
-
 pub const Factory = struct {
     rules: std.StringHashMap(Rule),
     ore_produced: usize,
+
+    const Rule = struct {
+        needed: std.StringHashMap(usize),
+        produced: []u8,
+        amount: usize,
+
+        pub fn init() Rule {
+            const allocator = std.heap.direct_allocator;
+            var self = Rule{
+                .needed = std.StringHashMap(usize).init(allocator),
+                .produced = undefined,
+                .amount = 0,
+            };
+            return self;
+        }
+
+        pub fn deinit(self: *Rule) void {
+            const allocator = std.heap.direct_allocator;
+            var it = self.needed.iterator();
+            while (it.next()) |needed| {
+                allocator.free(needed.key);
+            }
+            allocator.free(self.produced);
+            self.needed.deinit();
+        }
+
+        pub fn parse(self: *Rule, str: []const u8) void {
+            const allocator = std.heap.direct_allocator;
+            var statel: usize = 0;
+            var itl = std.mem.separate(str, "=>");
+            while (itl.next()) |side| {
+                if (statel == 0) {
+                    // left hand: needed
+                    var stater: usize = 0;
+                    var itr = std.mem.separate(std.mem.trim(u8, side, " "), ",");
+                    while (itr.next()) |rule| {
+                        var amount: usize = 0;
+                        var staten: usize = 0;
+                        var itn = std.mem.separate(std.mem.trim(u8, rule, " "), " ");
+                        while (itn.next()) |data| {
+                            if (staten == 0) {
+                                amount = std.fmt.parseInt(usize, data, 10) catch unreachable;
+                                staten = 1;
+                            } else {
+                                // std.debug.warn("NEEDED: {} [{}]\n", amount, data);
+                                const needed = allocator.alloc(u8, data.len) catch unreachable;
+                                std.mem.copy(u8, needed, data);
+                                if (self.needed.contains(needed)) {
+                                    std.debug.warn("DUPLICATE needed [{}]\n", needed);
+                                } else {
+                                    _ = self.needed.put(needed, amount) catch unreachable;
+                                }
+                                staten = 0;
+                            }
+                        }
+                    }
+                    statel = 1;
+                } else {
+                    // right hand: produced
+                    var amount: usize = 0;
+                    var statep: usize = 0;
+                    var itp = std.mem.separate(std.mem.trim(u8, side, " "), " ");
+                    while (itp.next()) |data| {
+                        if (statep == 0) {
+                            amount = std.fmt.parseInt(usize, data, 10) catch unreachable;
+                            statep = 1;
+                        } else {
+                            // std.debug.warn("PRODUCED: {} [{}]\n", amount, data);
+                            self.amount = amount;
+                            self.produced = allocator.alloc(u8, data.len) catch unreachable;
+                            std.mem.copy(u8, self.produced, data);
+                            statep = 0;
+                        }
+                    }
+                    statel = 0;
+                }
+            }
+        }
+
+        pub fn show(self: Rule) void {
+            std.debug.warn("RULE to produce {} of [{}]:\n", self.amount, self.produced);
+            var it = self.needed.iterator();
+            while (it.next()) |needed| {
+                std.debug.warn("  NEED {} of [{}]\n", needed.value, needed.key);
+            }
+        }
+    };
 
     pub fn init() Factory {
         const allocator = std.heap.direct_allocator;
@@ -108,6 +108,12 @@ pub const Factory = struct {
             rule.value.deinit();
         }
         self.rules.deinit();
+    }
+
+    pub fn parse(self: *Factory, str: []const u8) void {
+        var rule = Rule.init();
+        rule.parse(str);
+        self.add_rule(rule);
     }
 
     pub fn add_rule(self: *Factory, rule: Rule) void {
@@ -230,9 +236,7 @@ test "simple 1" {
 
     var it = std.mem.separate(data, "\n");
     while (it.next()) |line| {
-        var rule = Rule.init();
-        rule.parse(line);
-        factory.add_rule(rule);
+        factory.parse(line);
     }
     const needed = factory.ore_needed_for_fuel(1);
     std.debug.warn("NEEDED {} ore\n", needed);
@@ -256,9 +260,7 @@ test "simple 2" {
 
     var it = std.mem.separate(data, "\n");
     while (it.next()) |line| {
-        var rule = Rule.init();
-        rule.parse(line);
-        factory.add_rule(rule);
+        factory.parse(line);
     }
     const needed = factory.ore_needed_for_fuel(1);
     std.debug.warn("NEEDED {} ore\n", needed);
@@ -284,9 +286,7 @@ test "simple 3" {
 
     var it = std.mem.separate(data, "\n");
     while (it.next()) |line| {
-        var rule = Rule.init();
-        rule.parse(line);
-        factory.add_rule(rule);
+        factory.parse(line);
     }
     const needed = factory.ore_needed_for_fuel(1);
     std.debug.warn("NEEDED {} ore\n", needed);
@@ -315,9 +315,7 @@ test "simple 4" {
 
     var it = std.mem.separate(data, "\n");
     while (it.next()) |line| {
-        var rule = Rule.init();
-        rule.parse(line);
-        factory.add_rule(rule);
+        factory.parse(line);
     }
     const needed = factory.ore_needed_for_fuel(1);
     std.debug.warn("NEEDED {} ore\n", needed);
@@ -351,9 +349,7 @@ test "simple 5" {
 
     var it = std.mem.separate(data, "\n");
     while (it.next()) |line| {
-        var rule = Rule.init();
-        rule.parse(line);
-        factory.add_rule(rule);
+        factory.parse(line);
     }
     const needed = factory.ore_needed_for_fuel(1);
     std.debug.warn("NEEDED {} ore\n", needed);
@@ -379,9 +375,7 @@ test "search 3" {
 
     var it = std.mem.separate(data, "\n");
     while (it.next()) |line| {
-        var rule = Rule.init();
-        rule.parse(line);
-        factory.add_rule(rule);
+        factory.parse(line);
     }
     const result = factory.fuel_possible(1000000000000);
     assert(result == 82892753);
@@ -409,9 +403,7 @@ test "search 4" {
 
     var it = std.mem.separate(data, "\n");
     while (it.next()) |line| {
-        var rule = Rule.init();
-        rule.parse(line);
-        factory.add_rule(rule);
+        factory.parse(line);
     }
     const result = factory.fuel_possible(1000000000000);
     assert(result == 5586022);
@@ -444,9 +436,7 @@ test "search 5" {
 
     var it = std.mem.separate(data, "\n");
     while (it.next()) |line| {
-        var rule = Rule.init();
-        rule.parse(line);
-        factory.add_rule(rule);
+        factory.parse(line);
     }
     const result = factory.fuel_possible(1000000000000);
     assert(result == 460664);
