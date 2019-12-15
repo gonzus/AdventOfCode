@@ -38,6 +38,26 @@ pub const Map = struct {
         S = 2,
         W = 3,
         E = 4,
+
+        pub fn reverse(d: Dir) Dir {
+            return switch (d) {
+                Dir.N => Dir.S,
+                Dir.S => Dir.N,
+                Dir.W => Dir.E,
+                Dir.E => Dir.W,
+            };
+        }
+
+        pub fn move(p: Pos, d: Dir) Pos {
+            var q = p;
+            switch (d) {
+                Dir.N => q.y -= 1,
+                Dir.S => q.y += 1,
+                Dir.W => q.x -= 1,
+                Dir.E => q.x += 1,
+            }
+            return q;
+        }
     };
 
     pub const Status = enum(u8) {
@@ -94,30 +114,9 @@ pub const Map = struct {
         const pcur = self.pcur;
         var j: u8 = 1;
         while (j <= 4) : (j += 1) {
-            var dx: i32 = 0;
-            var dy: i32 = 0;
             const d = @intToEnum(Dir, j);
-            var r: Dir = undefined;
-            switch (d) {
-                Dir.N => {
-                    dy = -1;
-                    r = Dir.S;
-                },
-                Dir.S => {
-                    dy = 1;
-                    r = Dir.N;
-                },
-                Dir.W => {
-                    dx = -1;
-                    r = Dir.E;
-                },
-                Dir.E => {
-                    dx = 1;
-                    r = Dir.W;
-                },
-            }
-            self.pcur.x = @intCast(usize, @intCast(i32, pcur.x) + dx);
-            self.pcur.y = @intCast(usize, @intCast(i32, pcur.y) + dy);
+            const r = Dir.reverse(d);
+            self.pcur = Dir.move(pcur, d);
             if (self.cells.contains(self.pcur.encode())) continue;
 
             const status = self.tryMove(d);
@@ -201,19 +200,10 @@ pub const Map = struct {
             const du = Dist.get(u).?.value;
             var j: u8 = 1;
             while (j <= 4) : (j += 1) {
-                var dx: i32 = 0;
-                var dy: i32 = 0;
                 const d = @intToEnum(Dir, j);
-                switch (d) {
-                    Dir.N => dy = -1,
-                    Dir.S => dy = 1,
-                    Dir.W => dx = -1,
-                    Dir.E => dx = 1,
-                }
                 var vpos: Pos = undefined;
                 vpos.decode(u);
-                vpos.x = @intCast(usize, @intCast(i32, vpos.x) + dx);
-                vpos.y = @intCast(usize, @intCast(i32, vpos.y) + dy);
+                vpos = Dir.move(vpos, d);
                 const v = vpos.encode();
                 if (!self.cells.contains(v)) continue;
                 const tile = self.cells.get(v).?.value;
@@ -281,18 +271,9 @@ pub const Map = struct {
             const dist = data.dist + 1;
             var j: u8 = 1;
             while (j <= 4) : (j += 1) {
-                var dx: i32 = 0;
-                var dy: i32 = 0;
                 const d = @intToEnum(Dir, j);
-                switch (d) {
-                    Dir.N => dy = -1,
-                    Dir.S => dy = 1,
-                    Dir.W => dx = -1,
-                    Dir.E => dx = 1,
-                }
                 var vpos = data.pos;
-                vpos.x = @intCast(usize, @intCast(i32, vpos.x) + dx);
-                vpos.y = @intCast(usize, @intCast(i32, vpos.y) + dy);
+                vpos = Dir.move(vpos, d);
                 const v = vpos.encode();
                 if (!self.cells.contains(v)) continue;
                 const tile = self.cells.get(v).?.value;
