@@ -15,18 +15,13 @@ pub const Pos = struct {
         };
     }
 
-    pub fn encode(self: Pos) usize {
-        return self.x * OFFSET + self.y;
-    }
-
-    pub fn decode(self: *Pos, encoded: usize) void {
-        self.y = encoded % OFFSET;
-        self.x = encoded / OFFSET;
+    pub fn equal(self: Pos, other: Pos) bool {
+        return self.x == other.x and self.y == other.y;
     }
 };
 
 pub const Map = struct {
-    cells: std.AutoHashMap(usize, Tile),
+    cells: std.AutoHashMap(Pos, Tile),
     computer: Computer,
     pcur: Pos,
     poxy: Pos,
@@ -74,7 +69,7 @@ pub const Map = struct {
 
     pub fn init() Map {
         var self = Map{
-            .cells = std.AutoHashMap(usize, Tile).init(std.heap.direct_allocator),
+            .cells = std.AutoHashMap(Pos, Tile).init(std.heap.direct_allocator),
             .computer = Computer.init(true),
             .poxy = undefined,
             .pcur = Pos.init(Pos.OFFSET / 2, Pos.OFFSET / 2),
@@ -94,7 +89,7 @@ pub const Map = struct {
     }
 
     pub fn set_pos(self: *Map, pos: Pos, mark: Tile) void {
-        _ = self.cells.put(pos.encode(), mark) catch unreachable;
+        _ = self.cells.put(pos, mark) catch unreachable;
         if (self.pmin.x > pos.x) self.pmin.x = pos.x;
         if (self.pmin.y > pos.y) self.pmin.y = pos.y;
         if (self.pmax.x < pos.x) self.pmax.x = pos.x;
@@ -117,7 +112,7 @@ pub const Map = struct {
             const d = @intToEnum(Dir, j);
             const r = Dir.reverse(d);
             self.pcur = Dir.move(pcur, d);
-            if (self.cells.contains(self.pcur.encode())) continue;
+            if (self.cells.contains(self.pcur)) continue;
 
             const status = self.tryMove(d);
             switch (status) {
@@ -153,11 +148,11 @@ pub const Map = struct {
     // https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
     pub fn find_path_to_target(self: *Map) usize {
         var allocator = std.heap.direct_allocator;
-        var Pend = std.AutoHashMap(usize, void).init(allocator);
+        var Pend = std.AutoHashMap(Pos, void).init(allocator);
         defer Pend.deinit();
-        var Dist = std.AutoHashMap(usize, usize).init(allocator);
+        var Dist = std.AutoHashMap(Pos, usize).init(allocator);
         defer Dist.deinit();
-        var Path = std.AutoHashMap(usize, usize).init(allocator);
+        var Path = std.AutoHashMap(Pos, Pos).init(allocator);
         defer Path.deinit();
 
         // Fill Dist and Pend for all nodes
@@ -166,31 +161,29 @@ pub const Map = struct {
             var x: usize = self.pmin.x;
             while (x <= self.pmax.x) : (x += 1) {
                 const p = Pos.init(x, y);
-                const u = p.encode();
-                _ = Dist.put(u, std.math.maxInt(usize)) catch unreachable;
-                _ = Pend.put(u, {}) catch unreachable;
+                _ = Dist.put(p, std.math.maxInt(usize)) catch unreachable;
+                _ = Pend.put(p, {}) catch unreachable;
             }
         }
-        const s = self.pcur.encode();
-        const t = self.poxy.encode();
-        _ = Dist.put(s, 0) catch unreachable;
+        _ = Dist.put(self.pcur, 0) catch unreachable;
         while (Pend.count() != 0) {
-            // Search a pending node with minimal distance
-            var u: usize = undefined;
+            // Search for a pending node with minimal distance
+            var u: Pos = undefined;
             var dmin: usize = std.math.maxInt(usize);
             var it = Pend.iterator();
             while (it.next()) |v| {
-                if (!Dist.contains(v.key)) {
+                const p = v.key;
+                if (!Dist.contains(p)) {
                     continue;
                 }
-                const found = Dist.get(v.key).?;
+                const found = Dist.get(p).?;
                 if (dmin > found.value) {
                     dmin = found.value;
                     u = found.key;
                 }
             }
             _ = Pend.remove(u);
-            if (u == t) {
+            if (u.equal(self.poxy)) {
                 // node chosen is our target, we can stop searching now
                 break;
             }
@@ -201,10 +194,7 @@ pub const Map = struct {
             var j: u8 = 1;
             while (j <= 4) : (j += 1) {
                 const d = @intToEnum(Dir, j);
-                var vpos: Pos = undefined;
-                vpos.decode(u);
-                vpos = Dir.move(vpos, d);
-                const v = vpos.encode();
+                var v = Dir.move(u, d);
                 if (!self.cells.contains(v)) continue;
                 const tile = self.cells.get(v).?.value;
                 if (tile != Tile.Empty) continue;
@@ -219,9 +209,9 @@ pub const Map = struct {
 
         // now count the steps in the path from target to source
         var dist: usize = 0;
-        var n = t;
+        var n = self.poxy;
         while (true) {
-            if (n == s) break;
+            if (n.equal(self.pcur)) break;
             n = Path.get(n).?.value;
             dist += 1;
         }
@@ -249,7 +239,7 @@ pub const Map = struct {
     pub fn fill_with_oxygen(self: *Map) usize {
         var allocator = std.heap.direct_allocator;
 
-        var seen = std.AutoHashMap(usize, void).init(allocator);
+        var seen = std.AutoHashMap(Pos, void).init(allocator);
         defer seen.deinit();
 
         const PQ = std.PriorityQueue(FillData);
@@ -262,8 +252,7 @@ pub const Map = struct {
         while (Pend.count() != 0) {
             const data = Pend.remove();
             if (dmax < data.dist) dmax = data.dist;
-            const u = data.pos.encode();
-            _ = self.cells.put(u, Tile.Oxygen) catch unreachable;
+            _ = self.cells.put(data.pos, Tile.Oxygen) catch unreachable;
             // std.debug.warn("MD: {}\n", dmax);
             // self.show();
 
@@ -272,15 +261,13 @@ pub const Map = struct {
             var j: u8 = 1;
             while (j <= 4) : (j += 1) {
                 const d = @intToEnum(Dir, j);
-                var vpos = data.pos;
-                vpos = Dir.move(vpos, d);
-                const v = vpos.encode();
+                var v = Dir.move(data.pos, d);
                 if (!self.cells.contains(v)) continue;
                 const tile = self.cells.get(v).?.value;
                 if (tile != Tile.Empty) continue;
                 if (seen.contains(v)) continue;
                 _ = seen.put(v, {}) catch unreachable;
-                _ = Pend.add(FillData.init(vpos, dist)) catch unreachable;
+                _ = Pend.add(FillData.init(v, dist)) catch unreachable;
             }
         }
         return dmax;
@@ -296,7 +283,7 @@ pub const Map = struct {
             var x: usize = self.pmin.x;
             while (x <= self.pmax.x) : (x += 1) {
                 const p = Pos.init(x, y);
-                const g = self.cells.get(p.encode());
+                const g = self.cells.get(p);
                 var t: u8 = ' ';
                 if (g != null) {
                     switch (g.?.value) {
