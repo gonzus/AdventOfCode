@@ -3,6 +3,8 @@ const assert = std.debug.assert;
 const Computer = @import("./computer.zig").Computer;
 
 pub const Pos = struct {
+    const OFFSET: usize = 10000;
+
     x: usize,
     y: usize,
 
@@ -14,12 +16,12 @@ pub const Pos = struct {
     }
 
     pub fn encode(self: Pos) usize {
-        return self.x * 10000 + self.y;
+        return self.x * OFFSET + self.y;
     }
 
     pub fn decode(self: *Pos, encoded: usize) void {
-        self.y = encoded % 10000;
-        self.x = encoded / 10000;
+        self.y = encoded % OFFSET;
+        self.x = encoded / OFFSET;
     }
 };
 
@@ -27,7 +29,7 @@ pub const Map = struct {
     cells: std.AutoHashMap(usize, Tile),
     computer: Computer,
     pcur: Pos,
-    ptgt: Pos,
+    poxy: Pos,
     pmin: Pos,
     pmax: Pos,
 
@@ -54,10 +56,10 @@ pub const Map = struct {
         var self = Map{
             .cells = std.AutoHashMap(usize, Tile).init(std.heap.direct_allocator),
             .computer = Computer.init(true),
-            .pcur = Pos{ .x = 1000, .y = 1000 },
-            .ptgt = undefined,
-            .pmin = Pos{ .x = 999999, .y = 999999 },
-            .pmax = Pos{ .x = 0, .y = 0 },
+            .poxy = undefined,
+            .pcur = Pos.init(Pos.OFFSET / 2, Pos.OFFSET / 2),
+            .pmin = Pos.init(std.math.maxInt(usize), std.math.maxInt(usize)),
+            .pmax = Pos.init(0, 0),
         };
         return self;
     }
@@ -67,7 +69,7 @@ pub const Map = struct {
         self.cells.deinit();
     }
 
-    pub fn parse(self: *Map, str: []const u8) void {
+    pub fn parse_program(self: *Map, str: []const u8) void {
         self.computer.parse(str);
     }
 
@@ -79,16 +81,17 @@ pub const Map = struct {
         if (self.pmax.y < pos.y) self.pmax.y = pos.y;
     }
 
-    pub fn walk(self: *Map) void {
+    pub fn walk_around(self: *Map) void {
+        std.debug.warn("START droid at {} {}\n", self.pcur.x, self.pcur.y);
         self.mark_and_walk(Tile.Empty);
     }
 
     fn mark_and_walk(self: *Map, mark: Tile) void {
         self.set_pos(self.pcur, mark);
         // self.show();
-        if (mark == Tile.Wall) return;
+        if (mark != Tile.Empty) return;
 
-        const pold = self.pcur;
+        const pcur = self.pcur;
         var j: u8 = 1;
         while (j <= 4) : (j += 1) {
             var dx: i32 = 0;
@@ -113,8 +116,8 @@ pub const Map = struct {
                     r = Dir.W;
                 },
             }
-            self.pcur.x = @intCast(usize, @intCast(i32, pold.x) + dx);
-            self.pcur.y = @intCast(usize, @intCast(i32, pold.y) + dy);
+            self.pcur.x = @intCast(usize, @intCast(i32, pcur.x) + dx);
+            self.pcur.y = @intCast(usize, @intCast(i32, pcur.y) + dy);
             if (self.cells.contains(self.pcur.encode())) continue;
 
             const status = self.tryMove(d);
@@ -129,119 +132,110 @@ pub const Map = struct {
                     _ = self.tryMove(r);
                 },
                 Status.MovedToTarget => {
-                    std.debug.warn("TARGET {} {}\n", self.pcur.x, self.pcur.y);
-                    self.ptgt = self.pcur;
+                    std.debug.warn("FOUND oxygen system at {} {}\n", self.pcur.x, self.pcur.y);
                     self.mark_and_walk(Tile.Empty);
+                    self.poxy = self.pcur;
                     _ = self.tryMove(r);
                 },
             }
         }
-        self.pcur = pold;
+        self.pcur = pcur;
     }
 
     pub fn tryMove(self: *Map, d: Dir) Status {
         self.computer.enqueueInput(@enumToInt(d));
         self.computer.run();
         const output = self.computer.getOutput();
-        if (output.? == 2) std.debug.warn("======= FUCK 2\n");
         const status = @intToEnum(Status, @intCast(u8, output.?));
-        // std.debug.warn("TRY: {} {} - {} : {}\n", self.pcur.x, self.pcur.y, d, status);
         return status;
     }
 
+    // Long live the master, Edsger W. Dijkstra
+    // https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
     pub fn find_path_to_target(self: *Map) usize {
-        //  1  function Dijkstra(Graph, source):
         var allocator = std.heap.direct_allocator;
-        var Q = std.AutoHashMap(usize, void).init(allocator);
-        var D = std.AutoHashMap(usize, usize).init(allocator);
-        var P = std.AutoHashMap(usize, usize).init(allocator);
+        var Pend = std.AutoHashMap(usize, void).init(allocator);
+        defer Pend.deinit();
+        var Dist = std.AutoHashMap(usize, usize).init(allocator);
+        defer Dist.deinit();
+        var Path = std.AutoHashMap(usize, usize).init(allocator);
+        defer Path.deinit();
 
+        // Fill Dist and Pend for all nodes
         var y: usize = self.pmin.y;
         while (y <= self.pmax.y) : (y += 1) {
             var x: usize = self.pmin.x;
             while (x <= self.pmax.x) : (x += 1) {
                 const p = Pos.init(x, y);
-                const v = p.encode();
-                _ = D.put(v, std.math.maxInt(usize)) catch unreachable;
-                _ = Q.put(v, {}) catch unreachable;
+                const u = p.encode();
+                _ = Dist.put(u, std.math.maxInt(usize)) catch unreachable;
+                _ = Pend.put(u, {}) catch unreachable;
             }
         }
         const s = self.pcur.encode();
-        const t = self.ptgt.encode();
-        _ = D.put(s, 0) catch unreachable;
-        while (Q.count() != 0) {
+        const t = self.poxy.encode();
+        _ = Dist.put(s, 0) catch unreachable;
+        while (Pend.count() != 0) {
+            // Search a pending node with minimal distance
             var u: usize = undefined;
-            var m: usize = std.math.maxInt(usize);
-            var it = Q.iterator();
+            var dmin: usize = std.math.maxInt(usize);
+            var it = Pend.iterator();
             while (it.next()) |v| {
-                if (!D.contains(v.key)) {
+                if (!Dist.contains(v.key)) {
                     continue;
                 }
-                const z = D.get(v.key).?;
-                if (m > z.value) {
-                    m = z.value;
-                    u = z.key;
+                const found = Dist.get(v.key).?;
+                if (dmin > found.value) {
+                    dmin = found.value;
+                    u = found.key;
                 }
             }
-            std.debug.warn("MIN u {} {}\n", u, m);
+            _ = Pend.remove(u);
             if (u == t) {
+                // node chosen is our target, we can stop searching now
                 break;
             }
-            _ = Q.remove(u);
-            const du = D.get(u).?.value;
-            std.debug.warn("DIST u {} = {}\n", u, du);
+
+            // update dist for all neighbours of u
+            // add closest neighbour of u to the path
+            const du = Dist.get(u).?.value;
             var j: u8 = 1;
             while (j <= 4) : (j += 1) {
                 var dx: i32 = 0;
                 var dy: i32 = 0;
                 const d = @intToEnum(Dir, j);
                 switch (d) {
-                    Dir.N => {
-                        dy = -1;
-                    },
-                    Dir.S => {
-                        dy = 1;
-                    },
-                    Dir.W => {
-                        dx = -1;
-                    },
-                    Dir.E => {
-                        dx = 1;
-                    },
+                    Dir.N => dy = -1,
+                    Dir.S => dy = 1,
+                    Dir.W => dx = -1,
+                    Dir.E => dx = 1,
                 }
                 var vpos: Pos = undefined;
                 vpos.decode(u);
                 vpos.x = @intCast(usize, @intCast(i32, vpos.x) + dx);
                 vpos.y = @intCast(usize, @intCast(i32, vpos.y) + dy);
                 const v = vpos.encode();
-                std.debug.warn("NEIGHBOR v {} @ {} {}\n", v, vpos.x, vpos.y);
                 if (!self.cells.contains(v)) continue;
-                std.debug.warn("NEIGHBOR v FOUND\n");
                 const tile = self.cells.get(v).?.value;
-                if (tile == Tile.Wall) continue;
-                std.debug.warn("NEIGHBOR v NOT WALL\n");
-                const dv = D.get(v).?.value;
+                if (tile != Tile.Empty) continue;
+                const dv = Dist.get(v).?.value;
                 const alt = du + 1;
-                std.debug.warn("NEIGHBOR v {} = {}\n", v, alt);
                 if (alt < dv) {
-                    _ = D.put(v, alt) catch unreachable;
-                    _ = P.put(v, u) catch unreachable;
+                    _ = Dist.put(v, alt) catch unreachable;
+                    _ = Path.put(v, u) catch unreachable;
                 }
             }
         }
 
+        // now count the steps in the path from target to source
         var dist: usize = 0;
         var n = t;
         while (true) {
             if (n == s) break;
-            n = P.get(n).?.value;
+            n = Path.get(n).?.value;
             dist += 1;
         }
         return dist;
-    }
-
-    fn lessThanFD(l: FillData, r: FillData) bool {
-        return l.dist < r.dist;
     }
 
     const FillData = struct {
@@ -254,8 +248,14 @@ pub const Map = struct {
                 .dist = dist,
             };
         }
+
+        fn lessThan(l: FillData, r: FillData) bool {
+            return l.dist < r.dist;
+        }
     };
 
+    // https://en.wikipedia.org/wiki/Flood_fill
+    // Basically a BFS walk, remembering the distance to the source
     pub fn fill_with_oxygen(self: *Map) usize {
         var allocator = std.heap.direct_allocator;
 
@@ -263,18 +263,21 @@ pub const Map = struct {
         defer seen.deinit();
 
         const PQ = std.PriorityQueue(FillData);
-        var Q = PQ.init(allocator, lessThanFD);
-        defer Q.deinit();
+        var Pend = PQ.init(allocator, FillData.lessThan);
+        defer Pend.deinit();
 
-        var md: usize = 0;
-        _ = Q.add(FillData.init(self.ptgt, 0)) catch unreachable;
-        while (Q.count() != 0) {
-            const data = Q.remove();
+        // We start from the oxygen system position, which has already been filled with oxygen
+        var dmax: usize = 0;
+        _ = Pend.add(FillData.init(self.poxy, 0)) catch unreachable;
+        while (Pend.count() != 0) {
+            const data = Pend.remove();
+            if (dmax < data.dist) dmax = data.dist;
             const u = data.pos.encode();
             _ = self.cells.put(u, Tile.Oxygen) catch unreachable;
-            if (md < data.dist) md = data.dist;
-            std.debug.warn("MD: {}\n", md);
-            self.show();
+            // std.debug.warn("MD: {}\n", dmax);
+            // self.show();
+
+            // any neighbours will be filled at the same larger distance
             const dist = data.dist + 1;
             var j: u8 = 1;
             while (j <= 4) : (j += 1) {
@@ -282,18 +285,10 @@ pub const Map = struct {
                 var dy: i32 = 0;
                 const d = @intToEnum(Dir, j);
                 switch (d) {
-                    Dir.N => {
-                        dy = -1;
-                    },
-                    Dir.S => {
-                        dy = 1;
-                    },
-                    Dir.W => {
-                        dx = -1;
-                    },
-                    Dir.E => {
-                        dx = 1;
-                    },
+                    Dir.N => dy = -1,
+                    Dir.S => dy = 1,
+                    Dir.W => dx = -1,
+                    Dir.E => dx = 1,
                 }
                 var vpos = data.pos;
                 vpos.x = @intCast(usize, @intCast(i32, vpos.x) + dx);
@@ -304,10 +299,10 @@ pub const Map = struct {
                 if (tile != Tile.Empty) continue;
                 if (seen.contains(v)) continue;
                 _ = seen.put(v, {}) catch unreachable;
-                _ = Q.add(FillData.init(vpos, dist)) catch unreachable;
+                _ = Pend.add(FillData.init(vpos, dist)) catch unreachable;
             }
         }
-        return md;
+        return dmax;
     }
 
     pub fn show(self: Map) void {
@@ -338,7 +333,6 @@ pub const Map = struct {
 };
 
 test "foo" {
-    std.debug.warn("\n");
     var map = Map.init();
     defer map.deinit();
 
@@ -359,13 +353,11 @@ test "foo" {
             if (line[x] == '#') t = Map.Tile.Wall;
             if (line[x] == 'O') {
                 t = Map.Tile.Oxygen;
-                map.ptgt = p;
+                map.poxy = p;
             }
             map.set_pos(p, t);
         }
     }
-    map.show();
     const result = map.fill_with_oxygen();
-    std.debug.warn("Fill in {} minutes\n", result);
     assert(result == 4);
 }

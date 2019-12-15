@@ -15,11 +15,11 @@ pub fn main() !void {
         var map = Map.init();
         defer map.deinit();
 
-        map.parse(line);
-        map.walk();
-        map.show();
+        map.parse_program(line);
+        map.walk_around();
+        // map.show();
         const time = map.fill_with_oxygen();
-        try out.print("Filling took {} minutes\n", time);
+        try out.print("Filling from oxygen system took {} minutes\n", time);
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }

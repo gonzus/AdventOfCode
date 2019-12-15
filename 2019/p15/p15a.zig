@@ -15,11 +15,11 @@ pub fn main() !void {
         var map = Map.init();
         defer map.deinit();
 
-        map.parse(line);
-        map.walk();
-        map.show();
+        map.parse_program(line);
+        map.walk_around();
+        // map.show();
         const dist = map.find_path_to_target();
-        try out.print("Distance {} from S to T\n", dist);
+        try out.print("Shortest distance from droid to oxygen system is {}\n", dist);
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }
