@@ -144,6 +144,28 @@ pub const Map = struct {
         return status;
     }
 
+    const PosDist = struct {
+        pos: Pos,
+        dist: usize,
+
+        pub fn init(pos: Pos, dist: usize) PosDist {
+            return PosDist{
+                .pos = pos,
+                .dist = dist,
+            };
+        }
+
+        fn lessThan(l: PosDist, r: PosDist) bool {
+            if (l.dist < r.dist) return true;
+            if (l.dist > r.dist) return false;
+            if (l.pos.x < r.pos.x) return true;
+            if (l.pos.x > r.pos.x) return false;
+            if (l.pos.y < r.pos.y) return true;
+            if (l.pos.y > r.pos.y) return false;
+            return false;
+        }
+    };
+
     // Long live the master, Edsger W. Dijkstra
     // https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
     pub fn find_path_to_target(self: *Map) usize {
@@ -168,6 +190,9 @@ pub const Map = struct {
         _ = Dist.put(self.pcur, 0) catch unreachable;
         while (Pend.count() != 0) {
             // Search for a pending node with minimal distance
+            // TODO: we could use a PriorityQueue here to quickly get at the
+            // node, but we will also need to update the node's distance later,
+            // which would mean re-shuffling the PQ; not sure how to do this.
             var u: Pos = undefined;
             var dmin: usize = std.math.maxInt(usize);
             var it = Pend.iterator();
@@ -218,22 +243,6 @@ pub const Map = struct {
         return dist;
     }
 
-    const FillData = struct {
-        pos: Pos,
-        dist: usize,
-
-        pub fn init(pos: Pos, dist: usize) FillData {
-            return FillData{
-                .pos = pos,
-                .dist = dist,
-            };
-        }
-
-        fn lessThan(l: FillData, r: FillData) bool {
-            return l.dist < r.dist;
-        }
-    };
-
     // https://en.wikipedia.org/wiki/Flood_fill
     // Basically a BFS walk, remembering the distance to the source
     pub fn fill_with_oxygen(self: *Map) usize {
@@ -242,13 +251,13 @@ pub const Map = struct {
         var seen = std.AutoHashMap(Pos, void).init(allocator);
         defer seen.deinit();
 
-        const PQ = std.PriorityQueue(FillData);
-        var Pend = PQ.init(allocator, FillData.lessThan);
+        const PQ = std.PriorityQueue(PosDist);
+        var Pend = PQ.init(allocator, PosDist.lessThan);
         defer Pend.deinit();
 
         // We start from the oxygen system position, which has already been filled with oxygen
         var dmax: usize = 0;
-        _ = Pend.add(FillData.init(self.poxy, 0)) catch unreachable;
+        _ = Pend.add(PosDist.init(self.poxy, 0)) catch unreachable;
         while (Pend.count() != 0) {
             const data = Pend.remove();
             if (dmax < data.dist) dmax = data.dist;
@@ -267,7 +276,7 @@ pub const Map = struct {
                 if (tile != Tile.Empty) continue;
                 if (seen.contains(v)) continue;
                 _ = seen.put(v, {}) catch unreachable;
-                _ = Pend.add(FillData.init(v, dist)) catch unreachable;
+                _ = Pend.add(PosDist.init(v, dist)) catch unreachable;
             }
         }
         return dmax;
