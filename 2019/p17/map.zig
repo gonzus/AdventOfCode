@@ -23,8 +23,9 @@ pub const Pos = struct {
 pub const Map = struct {
     cells: std.AutoHashMap(Pos, Tile),
     computer: Computer,
+    robot_dir: Dir,
+    robot_tumbling: bool,
     pcur: Pos,
-    poxy: Pos,
     pmin: Pos,
     pmax: Pos,
 
@@ -53,26 +54,65 @@ pub const Map = struct {
             }
             return q;
         }
+
+        pub fn turn(c: Dir, w: Dir) ?Turn {
+            var t: ?Turn = null;
+            switch (c) {
+                Dir.N => {
+                    switch (w) {
+                        Dir.N => t = null,
+                        Dir.S => t = null,
+                        Dir.W => t = Turn.L,
+                        Dir.E => t = Turn.R,
+                    }
+                },
+                Dir.S => {
+                    switch (w) {
+                        Dir.N => t = null,
+                        Dir.S => t = null,
+                        Dir.W => t = Turn.R,
+                        Dir.E => t = Turn.L,
+                    }
+                },
+                Dir.W => {
+                    switch (w) {
+                        Dir.N => t = Turn.R,
+                        Dir.S => t = Turn.L,
+                        Dir.W => t = null,
+                        Dir.E => t = null,
+                    }
+                },
+                Dir.E => {
+                    switch (w) {
+                        Dir.N => t = Turn.L,
+                        Dir.S => t = Turn.R,
+                        Dir.W => t = null,
+                        Dir.E => t = null,
+                    }
+                },
+            }
+            return t;
+        }
     };
 
-    pub const Status = enum(u8) {
-        HitWall = 0,
-        Moved = 1,
-        MovedToTarget = 2,
+    pub const Turn = enum(u8) {
+        L = 'L',
+        R = 'R',
     };
 
     pub const Tile = enum(u8) {
-        Empty = 0,
-        Wall = 1,
-        Oxygen = 2,
+        Empty = '.',
+        Scaffold = '#',
+        Robot = '*',
     };
 
     pub fn init() Map {
         var self = Map{
             .cells = std.AutoHashMap(Pos, Tile).init(std.heap.direct_allocator),
             .computer = Computer.init(true),
-            .poxy = undefined,
-            .pcur = Pos.init(Pos.OFFSET / 2, Pos.OFFSET / 2),
+            .robot_dir = undefined,
+            .robot_tumbling = false,
+            .pcur = undefined,
             .pmin = Pos.init(std.math.maxInt(usize), std.math.maxInt(usize)),
             .pmax = Pos.init(0, 0),
         };
@@ -84,8 +124,209 @@ pub const Map = struct {
         self.cells.deinit();
     }
 
-    pub fn parse_program(self: *Map, str: []const u8) void {
-        self.computer.parse(str);
+    pub fn run_to_get_map(self: *Map) void {
+        var y: usize = 0;
+        var x: usize = 0;
+        main: while (true) {
+            self.computer.run();
+            while (true) {
+                const output = self.computer.getOutput();
+                // std.debug.warn("COMPUTER output {}\n", output);
+                if (output == null) break;
+                var c = @intCast(u8, output.?);
+                if (c == '\n') {
+                    if (x == 0) break :main;
+                    y += 1;
+                    x = 0;
+                    continue;
+                }
+                if (c == '^') {
+                    self.robot_dir = Dir.N;
+                    c = '*';
+                }
+                if (c == 'v') {
+                    self.robot_dir = Dir.S;
+                    c = '*';
+                }
+                if (c == '<') {
+                    self.robot_dir = Dir.W;
+                    c = '*';
+                }
+                if (c == '>') {
+                    self.robot_dir = Dir.E;
+                    c = '*';
+                }
+                if (c == 'X') {
+                    self.robot_tumbling = true;
+                    c = '*';
+                }
+                const t = @intToEnum(Tile, c);
+                const p = Pos.init(x + Pos.OFFSET / 2, y + Pos.OFFSET / 2);
+                self.set_pos(p, t);
+                x += 1;
+            }
+            if (self.computer.halted) break;
+        }
+    }
+
+    pub fn walk(self: *Map, route: *std.Buffer) usize {
+        var sum: usize = 0;
+        var seen = std.AutoHashMap(Pos, void).init(std.heap.direct_allocator);
+        var p: Pos = self.pcur;
+        var d: Dir = undefined;
+        var r: ?Dir = null;
+        while (true) {
+            var found: bool = false;
+            var j: u8 = 1;
+            while (j <= 4) : (j += 1) {
+                d = @intToEnum(Dir, j);
+                if (r != null and d == r.?) continue;
+                const n = Dir.move(p, d);
+                if (self.get_pos(n) == Tile.Scaffold) {
+                    found = true;
+                    p = n;
+                    r = Dir.reverse(d);
+                    break;
+                }
+            }
+            if (!found) break;
+            const t = Dir.turn(self.robot_dir, d);
+            if (t != null) {
+                // std.debug.warn("TURN from {} to {} => {}\n", self.robot_dir, d, t.?);
+                const c = @enumToInt(t.?);
+                route.appendByte(c) catch unreachable;
+                route.appendByte(',') catch unreachable;
+                self.robot_dir = d;
+            }
+            // std.debug.warn("WALK 1 {} {}\n", p.x - Pos.OFFSET / 2, p.y - Pos.OFFSET / 2);
+            if (seen.contains(p)) {
+                // std.debug.warn("CROSSING {} {}\n", p.x, p.y);
+                const alignment = (p.x - Pos.OFFSET / 2) * (p.y - Pos.OFFSET / 2);
+                sum += alignment;
+            } else {
+                _ = seen.put(p, {}) catch unreachable;
+            }
+            var steps: usize = 1;
+            while (true) {
+                const n = Dir.move(p, d);
+                if (self.get_pos(n) != Tile.Scaffold) {
+                    break;
+                }
+                p = n;
+                steps += 1;
+                // std.debug.warn("WALK 2 {} {}\n", p.x - Pos.OFFSET / 2, p.y - Pos.OFFSET / 2);
+                if (seen.contains(p)) {
+                    // std.debug.warn("CROSSING {} {}\n", p.x, p.y);
+                    const alignment = (p.x - Pos.OFFSET / 2) * (p.y - Pos.OFFSET / 2);
+                    sum += alignment;
+                } else {
+                    _ = seen.put(p, {}) catch unreachable;
+                }
+            }
+            // std.debug.warn("MOVE {} steps\n", steps);
+            var str: [30]u8 = undefined;
+            const len = usizeToStr(steps, str[0..]);
+            var k: usize = len;
+            while (true) {
+                k -= 1;
+                route.appendByte(str[k]) catch unreachable;
+                if (k == 0) break;
+            }
+            route.appendByte(',') catch unreachable;
+        }
+        return sum;
+    }
+
+    pub fn program_and_run(self: *Map) i64 {
+        // TODO: found these "by hand" -- shameful!
+        const program =
+            \\C,B,B,A,A,C,C,B,B,A
+            \\R,12,R,4,L,6,L,8,L,8
+            \\R,12,R,4,L,12
+            \\L,12,R,4,R,4
+            \\n
+        ;
+        var it = std.mem.separate(program, "\n");
+        while (it.next()) |line| {
+            var j: usize = 0;
+            while (j < line.len) : (j += 1) {
+                self.computer.enqueueInput(line[j]);
+            }
+            self.computer.enqueueInput('\n');
+        }
+        while (!self.computer.halted)
+            self.computer.run();
+
+        std.debug.warn("== PROGRAM OUTPUT ==\n");
+        var dust: i64 = 0;
+        while (true) {
+            const result = self.computer.getOutput();
+            if (result == null) break;
+            if (result.? >= 0 and result.? < 256) {
+                const c = @intCast(u8, result.?);
+                std.debug.warn("{c}", c);
+            } else {
+                dust = result.?;
+            }
+        }
+        return dust;
+    }
+
+    pub fn split_route(self: *Map, route: []const u8) usize {
+        std.debug.warn("SPLIT {} bytes: [{}]\n", route.len, route);
+        var seen = std.StringHashMap(usize).init(std.heap.direct_allocator);
+
+        var j: usize = 0;
+        while (j < route.len) {
+            var commas: usize = 0;
+            var k: usize = j + 1;
+            while (k < route.len) : (k += 1) {
+                if (route[k] == ',') commas += 1;
+                if (commas >= 6) break;
+            }
+            const slice = route[j..k];
+            const top = route.len - slice.len;
+            var count: usize = 0;
+            // std.debug.warn("SLICE [{}] with {} bytes, top byte {}\n", slice, slice.len, top);
+            k += 1;
+            while (k < top) : (k += 1) {
+                // std.debug.warn("CMP pos {}\n", k);
+                if (std.mem.compare(u8, slice, route[k .. k + slice.len]) == std.mem.Compare.Equal) {
+                    count += 1;
+                    if (count == 1) {
+                        std.debug.warn("SLICE #0 {} bytes at {}-{}: [{}]\n", slice.len, j, j + slice.len, slice);
+                    }
+                    std.debug.warn("MATCH #{} {} bytes at {}-{}: [{}]\n", count, slice.len, k, k + slice.len, slice);
+                }
+            }
+            commas = 0;
+            while (j < route.len) : (j += 1) {
+                if (route[j] == ',') commas += 1;
+                if (commas >= 2) break;
+            }
+            j += 1;
+        }
+        return 0;
+    }
+
+    fn usizeToStr(n: usize, str: []u8) usize {
+        var m: usize = n;
+        var p: usize = 0;
+        while (true) {
+            const d = @intCast(u8, m % 10);
+            m /= 10;
+            str[p] = d + '0';
+            p += 1;
+            if (m == 0) break;
+        }
+        return p;
+    }
+
+    pub fn get_pos(self: *Map, pos: Pos) Tile {
+        if (!self.cells.contains(pos)) {
+            return Tile.Empty;
+        }
+        return self.cells.get(pos).?.value;
     }
 
     pub fn set_pos(self: *Map, pos: Pos, mark: Tile) void {
@@ -94,198 +335,16 @@ pub const Map = struct {
         if (self.pmin.y > pos.y) self.pmin.y = pos.y;
         if (self.pmax.x < pos.x) self.pmax.x = pos.x;
         if (self.pmax.y < pos.y) self.pmax.y = pos.y;
-    }
-
-    pub fn walk_around(self: *Map) void {
-        std.debug.warn("START droid at {} {}\n", self.pcur.x, self.pcur.y);
-        self.mark_and_walk(Tile.Empty);
-    }
-
-    fn mark_and_walk(self: *Map, mark: Tile) void {
-        self.set_pos(self.pcur, mark);
-        // self.show();
-        if (mark != Tile.Empty) return;
-
-        const pcur = self.pcur;
-        var j: u8 = 1;
-        while (j <= 4) : (j += 1) {
-            const d = @intToEnum(Dir, j);
-            const r = Dir.reverse(d);
-            self.pcur = Dir.move(pcur, d);
-            if (self.cells.contains(self.pcur)) continue;
-
-            const status = self.tryMove(d);
-            switch (status) {
-                Status.HitWall => {
-                    // std.debug.warn("WALL {} {}\n", self.pcur.x, self.pcur.y);
-                    self.mark_and_walk(Tile.Wall);
-                },
-                Status.Moved => {
-                    // std.debug.warn("EMPTY {} {}\n", self.pcur.x, self.pcur.y);
-                    self.mark_and_walk(Tile.Empty);
-                    _ = self.tryMove(r);
-                },
-                Status.MovedToTarget => {
-                    std.debug.warn("FOUND oxygen system at {} {}\n", self.pcur.x, self.pcur.y);
-                    self.mark_and_walk(Tile.Empty);
-                    self.poxy = self.pcur;
-                    _ = self.tryMove(r);
-                },
-            }
+        if (mark == Tile.Robot) {
+            self.pcur = pos;
         }
-        self.pcur = pcur;
-    }
-
-    pub fn tryMove(self: *Map, d: Dir) Status {
-        self.computer.enqueueInput(@enumToInt(d));
-        self.computer.run();
-        const output = self.computer.getOutput();
-        const status = @intToEnum(Status, @intCast(u8, output.?));
-        return status;
-    }
-
-    const PosDist = struct {
-        pos: Pos,
-        dist: usize,
-
-        pub fn init(pos: Pos, dist: usize) PosDist {
-            return PosDist{
-                .pos = pos,
-                .dist = dist,
-            };
-        }
-
-        fn lessThan(l: PosDist, r: PosDist) bool {
-            if (l.dist < r.dist) return true;
-            if (l.dist > r.dist) return false;
-            if (l.pos.x < r.pos.x) return true;
-            if (l.pos.x > r.pos.x) return false;
-            if (l.pos.y < r.pos.y) return true;
-            if (l.pos.y > r.pos.y) return false;
-            return false;
-        }
-    };
-
-    // Long live the master, Edsger W. Dijkstra
-    // https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
-    pub fn find_path_to_target(self: *Map) usize {
-        var allocator = std.heap.direct_allocator;
-        var Pend = std.AutoHashMap(Pos, void).init(allocator);
-        defer Pend.deinit();
-        var Dist = std.AutoHashMap(Pos, usize).init(allocator);
-        defer Dist.deinit();
-        var Path = std.AutoHashMap(Pos, Pos).init(allocator);
-        defer Path.deinit();
-
-        // Fill Dist and Pend for all nodes
-        var y: usize = self.pmin.y;
-        while (y <= self.pmax.y) : (y += 1) {
-            var x: usize = self.pmin.x;
-            while (x <= self.pmax.x) : (x += 1) {
-                const p = Pos.init(x, y);
-                _ = Dist.put(p, std.math.maxInt(usize)) catch unreachable;
-                _ = Pend.put(p, {}) catch unreachable;
-            }
-        }
-        _ = Dist.put(self.pcur, 0) catch unreachable;
-        while (Pend.count() != 0) {
-            // Search for a pending node with minimal distance
-            // TODO: we could use a PriorityQueue here to quickly get at the
-            // node, but we will also need to update the node's distance later,
-            // which would mean re-shuffling the PQ; not sure how to do this.
-            var u: Pos = undefined;
-            var dmin: usize = std.math.maxInt(usize);
-            var it = Pend.iterator();
-            while (it.next()) |v| {
-                const p = v.key;
-                if (!Dist.contains(p)) {
-                    continue;
-                }
-                const found = Dist.get(p).?;
-                if (dmin > found.value) {
-                    dmin = found.value;
-                    u = found.key;
-                }
-            }
-            _ = Pend.remove(u);
-            if (u.equal(self.poxy)) {
-                // node chosen is our target, we can stop searching now
-                break;
-            }
-
-            // update dist for all neighbours of u
-            // add closest neighbour of u to the path
-            const du = Dist.get(u).?.value;
-            var j: u8 = 1;
-            while (j <= 4) : (j += 1) {
-                const d = @intToEnum(Dir, j);
-                var v = Dir.move(u, d);
-                if (!self.cells.contains(v)) continue;
-                const tile = self.cells.get(v).?.value;
-                if (tile != Tile.Empty) continue;
-                const dv = Dist.get(v).?.value;
-                const alt = du + 1;
-                if (alt < dv) {
-                    _ = Dist.put(v, alt) catch unreachable;
-                    _ = Path.put(v, u) catch unreachable;
-                }
-            }
-        }
-
-        // now count the steps in the path from target to source
-        var dist: usize = 0;
-        var n = self.poxy;
-        while (true) {
-            if (n.equal(self.pcur)) break;
-            n = Path.get(n).?.value;
-            dist += 1;
-        }
-        return dist;
-    }
-
-    // https://en.wikipedia.org/wiki/Flood_fill
-    // Basically a BFS walk, remembering the distance to the source
-    pub fn fill_with_oxygen(self: *Map) usize {
-        var allocator = std.heap.direct_allocator;
-
-        var seen = std.AutoHashMap(Pos, void).init(allocator);
-        defer seen.deinit();
-
-        const PQ = std.PriorityQueue(PosDist);
-        var Pend = PQ.init(allocator, PosDist.lessThan);
-        defer Pend.deinit();
-
-        // We start from the oxygen system position, which has already been filled with oxygen
-        var dmax: usize = 0;
-        _ = Pend.add(PosDist.init(self.poxy, 0)) catch unreachable;
-        while (Pend.count() != 0) {
-            const data = Pend.remove();
-            if (dmax < data.dist) dmax = data.dist;
-            _ = self.cells.put(data.pos, Tile.Oxygen) catch unreachable;
-            // std.debug.warn("MD: {}\n", dmax);
-            // self.show();
-
-            // any neighbours will be filled at the same larger distance
-            const dist = data.dist + 1;
-            var j: u8 = 1;
-            while (j <= 4) : (j += 1) {
-                const d = @intToEnum(Dir, j);
-                var v = Dir.move(data.pos, d);
-                if (!self.cells.contains(v)) continue;
-                const tile = self.cells.get(v).?.value;
-                if (tile != Tile.Empty) continue;
-                if (seen.contains(v)) continue;
-                _ = seen.put(v, {}) catch unreachable;
-                _ = Pend.add(PosDist.init(v, dist)) catch unreachable;
-            }
-        }
-        return dmax;
     }
 
     pub fn show(self: Map) void {
         const sx = self.pmax.x - self.pmin.x + 1;
         const sy = self.pmax.y - self.pmin.y + 1;
         std.debug.warn("MAP: {} x {} - {} {} - {} {}\n", sx, sy, self.pmin.x, self.pmin.y, self.pmax.x, self.pmax.y);
+        std.debug.warn("ROBOT: {} {}\n", self.pcur.x, self.pcur.y);
         var y: usize = self.pmin.y;
         while (y <= self.pmax.y) : (y += 1) {
             std.debug.warn("{:4} | ", y);
@@ -295,13 +354,21 @@ pub const Map = struct {
                 const g = self.cells.get(p);
                 var t: u8 = ' ';
                 if (g != null) {
-                    switch (g.?.value) {
-                        Tile.Empty => t = '.',
-                        Tile.Wall => t = '#',
-                        Tile.Oxygen => t = 'O',
+                    const c = g.?.value;
+                    t = @enumToInt(c);
+                }
+                if (p.equal(self.pcur)) {
+                    t = switch (self.robot_dir) {
+                        Dir.N => '^',
+                        Dir.S => 'v',
+                        Dir.W => '<',
+                        Dir.E => '>',
+                    };
+                    if (self.robot_tumbling) {
+                        t = 'X';
                     }
                 }
-                if (x == self.pcur.x and y == self.pcur.y) t = 'D';
+
                 std.debug.warn("{c}", t);
             }
             std.debug.warn("\n");
@@ -309,38 +376,133 @@ pub const Map = struct {
     }
 };
 
-test "foo" {
+test "find intersections and alignments" {
+    const data =
+        \\..#..........
+        \\..#..........
+        \\#######...###
+        \\#.#...#...#.#
+        \\#############
+        \\..#...#...#..
+        \\..#####...^..
+    ;
+
     var map = Map.init();
     defer map.deinit();
 
-    const data =
-        \\ ##
-        \\#..##
-        \\#.#..#
-        \\#.O.#
-        \\ ###
-    ;
     var y: usize = 0;
     var itl = std.mem.separate(data, "\n");
     while (itl.next()) |line| : (y += 1) {
         var x: usize = 0;
         while (x < line.len) : (x += 1) {
-            const p = Pos.init(x, y);
+            const p = Pos.init(x + Pos.OFFSET / 2, y + Pos.OFFSET / 2);
             var t: Map.Tile = Map.Tile.Empty;
-            if (line[x] == '#') t = Map.Tile.Wall;
-            if (line[x] == 'O') {
-                t = Map.Tile.Oxygen;
-                map.poxy = p;
+            if (line[x] == '#') t = Map.Tile.Scaffold;
+            if (line[x] == '^') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_dir = Map.Dir.N;
+            }
+            if (line[x] == 'v') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_dir = Map.Dir.S;
+            }
+            if (line[x] == '<') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_dir = Map.Dir.W;
+            }
+            if (line[x] == '>') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_dir = Map.Dir.E;
+            }
+            if (line[x] == 'X') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_tumbling = true;
             }
             map.set_pos(p, t);
         }
     }
-    const result = map.fill_with_oxygen();
-    assert(result == 4);
+
+    const allocator = std.debug.global_allocator;
+    var route = std.Buffer.initSize(allocator, 0) catch unreachable;
+    defer route.deinit();
+
+    const result = map.walk(&route);
+    assert(result == 76);
 }
 
-test "bar" {
-    for (@typeInfo(Map.Dir).Enum.fields) |field| {
-        std.debug.warn("{} {}\n", field.name, field.value);
+test "find correct route" {
+    const data =
+        \\#######...#####
+        \\#.....#...#...#
+        \\#.....#...#...#
+        \\......#...#...#
+        \\......#...###.#
+        \\......#.....#.#
+        \\^########...#.#
+        \\......#.#...#.#
+        \\......#########
+        \\........#...#..
+        \\....#########..
+        \\....#...#......
+        \\....#...#......
+        \\....#...#......
+        \\....#####......
+    ;
+
+    var map = Map.init();
+    defer map.deinit();
+
+    var y: usize = 0;
+    var itl = std.mem.separate(data, "\n");
+    while (itl.next()) |line| : (y += 1) {
+        var x: usize = 0;
+        while (x < line.len) : (x += 1) {
+            const p = Pos.init(x + Pos.OFFSET / 2, y + Pos.OFFSET / 2);
+            var t: Map.Tile = Map.Tile.Empty;
+            if (line[x] == '#') t = Map.Tile.Scaffold;
+            if (line[x] == '^') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_dir = Map.Dir.N;
+            }
+            if (line[x] == 'v') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_dir = Map.Dir.S;
+            }
+            if (line[x] == '<') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_dir = Map.Dir.W;
+            }
+            if (line[x] == '>') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_dir = Map.Dir.E;
+            }
+            if (line[x] == 'X') {
+                t = Map.Tile.Robot;
+                map.pcur = p;
+                map.robot_tumbling = true;
+            }
+            map.set_pos(p, t);
+        }
     }
+
+    const allocator = std.debug.global_allocator;
+    var route = std.Buffer.initSize(allocator, 0) catch unreachable;
+    defer route.deinit();
+
+    _ = map.walk(&route);
+    const slice = route.toOwnedSlice();
+    const wanted = "R,8,R,8,R,4,R,4,R,8,L,6,L,2,R,4,R,4,R,8,R,8,R,8,L,6,L,2";
+    const wanted_comma = wanted ++ ",";
+
+    assert(std.mem.compare(u8, slice, wanted) == std.mem.Compare.Equal or
+        std.mem.compare(u8, slice, wanted_comma) == std.mem.Compare.Equal);
 }

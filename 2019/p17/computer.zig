@@ -90,7 +90,7 @@ pub const Computer = struct {
 
     pub fn init(reentrant: bool) Computer {
         const mem_size = 100 * 1024;
-        const io_size = 100 * 1024;
+        const io_size = 10 * 1024 * 1024;
         var self = Computer{
             .rom = IntBuf.init(mem_size),
             .ram = IntBuf.init(mem_size),
@@ -119,6 +119,13 @@ pub const Computer = struct {
             const instr = std.fmt.parseInt(i64, what, 10) catch unreachable;
             self.rom.put(instr);
         }
+        self.clear();
+    }
+
+    pub fn hack(self: *Computer, pos: usize, val: i64) void {
+        const value: i64 = 2;
+        std.debug.warn("HACKING ROM: pos {} changing from {} to {}\n", pos, self.rom.data[pos], val);
+        self.rom.data[pos] = val;
         self.clear();
     }
 

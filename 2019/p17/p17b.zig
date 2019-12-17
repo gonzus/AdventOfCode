@@ -22,9 +22,11 @@ pub fn main() !void {
         map.computer.hack(0, 2);
         map.run_to_get_map();
         // map.show();
-        const result = map.walk(&route);
-        try out.print("Sum of alignments: {}\n", result);
-        // Sum of alignments: 6672
+        _ = map.walk(&route);
+        // _ = map.split_route(route.toOwnedSlice());
+        const result = map.program_and_run();
+        try out.print("Computer reported dust as {}\n", result);
+        // Computer reported dust as 923017
     } else |err| {
         // try out.print("Error, {}!\n", err);
     }
