@@ -15,9 +15,11 @@ pub fn main() !void {
         var fft = FFT.init();
         defer fft.deinit();
 
-        fft.parse(line, 10000);
         var output: []u8 = allocator.alloc(u8, line.len * 10000) catch @panic("FUCK\n");
+        defer allocator.free(output);
+
         const offset: usize = 5973431;
+        fft.parse(line, 10000);
         fft.run_phases(100, output[0..], 10000 * line.len - offset);
         std.debug.warn("First 8 characters of output after offset {}: ", offset);
         var j: usize = 0;

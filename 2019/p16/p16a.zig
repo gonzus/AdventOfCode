@@ -15,8 +15,10 @@ pub fn main() !void {
         var fft = FFT.init();
         defer fft.deinit();
 
-        fft.parse(line, 1);
         var output: []u8 = allocator.alloc(u8, line.len) catch @panic("FUCK\n");
+        defer allocator.free(output);
+
+        fft.parse(line, 1);
         fft.run_phases(100, output[0..], line.len);
         // Your puzzle answer was 37153056.
         std.debug.warn("First 8 characters of output: ");
