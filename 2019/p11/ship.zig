@@ -110,8 +110,7 @@ pub const Hull = struct {
     }
 };
 
-test "simple" {
-    std.debug.warn("\n");
+test "simple hull control" {
     var hull = Hull.init(Hull.Color.Black);
     defer hull.deinit();
 

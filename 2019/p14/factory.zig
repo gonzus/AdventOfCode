@@ -228,7 +228,7 @@ pub const Factory = struct {
     }
 };
 
-test "simple 1" {
+test "ore needed 1" {
     const data =
         \\10 ORE => 10 A
         \\1 ORE => 1 B
@@ -250,7 +250,7 @@ test "simple 1" {
     assert(needed == 31);
 }
 
-test "simple 2" {
+test "ore needed 2" {
     const data =
         \\9 ORE => 2 A
         \\8 ORE => 3 B
@@ -273,7 +273,7 @@ test "simple 2" {
     assert(needed == 165);
 }
 
-test "simple 3" {
+test "ore needed 3" {
     const data =
         \\157 ORE => 5 NZVS
         \\165 ORE => 6 DCFZ
@@ -298,7 +298,7 @@ test "simple 3" {
     assert(needed == 13312);
 }
 
-test "simple 4" {
+test "ore needed 4" {
     const data =
         \\2 VPVL, 7 FWMGM, 2 CXFTF, 11 MNCFX => 1 STKFG
         \\17 NVRVD, 3 JNWZP => 8 VPVL
@@ -326,7 +326,7 @@ test "simple 4" {
     assert(needed == 180697);
 }
 
-test "simple 5" {
+test "ore needed 5" {
     const data =
         \\171 ORE => 8 CNZTR
         \\7 ZLQW, 3 BMBT, 9 XCVML, 26 XMNCP, 1 WPTQ, 2 MZWV, 1 RJRHP => 4 PLWSL
@@ -359,7 +359,7 @@ test "simple 5" {
     assert(needed == 2210736);
 }
 
-test "search 3" {
+test "fuel possible to make 3" {
     const data =
         \\157 ORE => 5 NZVS
         \\165 ORE => 6 DCFZ
@@ -383,7 +383,7 @@ test "search 3" {
     assert(result == 82892753);
 }
 
-test "search 4" {
+test "fuel possible to make 4" {
     const data =
         \\2 VPVL, 7 FWMGM, 2 CXFTF, 11 MNCFX => 1 STKFG
         \\17 NVRVD, 3 JNWZP => 8 VPVL
@@ -410,7 +410,7 @@ test "search 4" {
     assert(result == 5586022);
 }
 
-test "search 5" {
+test "fuel possible to make 5" {
     const data =
         \\171 ORE => 8 CNZTR
         \\7 ZLQW, 3 BMBT, 9 XCVML, 26 XMNCP, 1 WPTQ, 2 MZWV, 1 RJRHP => 4 PLWSL

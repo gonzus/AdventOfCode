@@ -177,7 +177,7 @@ pub const Board = struct {
     }
 };
 
-test "without blocks" {
+test "count tiles without blocks" {
     // std.debug.warn("\n");
     var board = Board.init(false);
     defer board.deinit();
@@ -193,7 +193,7 @@ test "without blocks" {
     assert(count == 1);
 }
 
-test "with blocks" {
+test "count tiles with blocks" {
     // std.debug.warn("\n");
     var board = Board.init(false);
     defer board.deinit();

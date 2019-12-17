@@ -147,7 +147,7 @@ pub const FFT = struct {
     }
 };
 
-test "foo" {
+test "run short phases" {
     std.debug.warn("\n");
     var fft = FFT.init();
     defer fft.deinit();
@@ -161,7 +161,7 @@ test "foo" {
     assert(std.mem.compare(u8, wanted[3..], output[3..]) == std.mem.Compare.Equal);
 }
 
-test "bar" {
+test "run medium phases 1" {
     // 19617804207202209144916044189917 becomes 73745418.
     // 69317163492948606335995924319873 becomes 52432133.
     std.debug.warn("\n");
@@ -176,7 +176,8 @@ test "bar" {
     const wanted = [_]u8{ 2, 4, 1, 7, 6, 1, 7, 6 };
     assert(std.mem.compare(u8, wanted, output[0..wanted.len]) == std.mem.Compare.Equal);
 }
-test "bar" {
+
+test "run medium phases 2" {
     std.debug.warn("\n");
     var fft = FFT.init();
     defer fft.deinit();
@@ -190,7 +191,7 @@ test "bar" {
     assert(std.mem.compare(u8, wanted, output[0..wanted.len]) == std.mem.Compare.Equal);
 }
 
-test "bar" {
+test "run medium phases 3" {
     std.debug.warn("\n");
     var fft = FFT.init();
     defer fft.deinit();

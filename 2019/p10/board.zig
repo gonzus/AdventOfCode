@@ -199,7 +199,6 @@ pub const Board = struct {
 };
 
 test "best position 1" {
-    std.debug.warn("\n");
     const data: []const u8 =
         \\.#..#
         \\.....
@@ -216,7 +215,6 @@ test "best position 1" {
 }
 
 test "best position 2" {
-    std.debug.warn("\n");
     const data: []const u8 =
         \\......#.#.
         \\#..#.#....
@@ -238,7 +236,6 @@ test "best position 2" {
 }
 
 test "best position 3" {
-    std.debug.warn("\n");
     const data: []const u8 =
         \\#.#...#.#.
         \\.###....#.
@@ -260,7 +257,6 @@ test "best position 3" {
 }
 
 test "best position 4" {
-    std.debug.warn("\n");
     const data: []const u8 =
         \\.#..#..###
         \\####.###.#
@@ -282,7 +278,6 @@ test "best position 4" {
 }
 
 test "best position 5" {
-    std.debug.warn("\n");
     const data: []const u8 =
         \\.#..##.###...#######
         \\##.############..##.
@@ -314,7 +309,6 @@ test "best position 5" {
 }
 
 test "scan small" {
-    std.debug.warn("\n");
     const data: []const u8 =
         \\.#....#####...#..
         \\##...##.#####..##
@@ -330,7 +324,6 @@ test "scan small" {
 }
 
 test "scan medium" {
-    std.debug.warn("\n");
     const data: []const u8 =
         \\.#..##.###...#######
         \\##.############..##.

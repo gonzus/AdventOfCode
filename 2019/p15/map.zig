@@ -309,7 +309,7 @@ pub const Map = struct {
     }
 };
 
-test "foo" {
+test "fill with oxygen" {
     var map = Map.init();
     defer map.deinit();
 
