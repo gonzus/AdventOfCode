@@ -506,3 +506,32 @@ test "find correct route" {
     assert(std.mem.compare(u8, slice, wanted) == std.mem.Compare.Equal or
         std.mem.compare(u8, slice, wanted_comma) == std.mem.Compare.Equal);
 }
+
+test "split program matches" {
+    const original = "L,12,R,4,R,4,R,12,R,4,L,12,R,12,R,4,L,12,R,12,R,4,L,6,L,8,L,8,R,12,R,4,L,6,L,8,L,8,L,12,R,4,R,4,L,12,R,4,R,4,R,12,R,4,L,12,R,12,R,4,L,12,R,12,R,4,L,6,L,8,L,8";
+    const main = "C,B,B,A,A,C,C,B,B,A";
+    const routines =
+        \\R,12,R,4,L,6,L,8,L,8
+        \\R,12,R,4,L,12
+        \\L,12,R,4,R,4
+    ;
+
+    var j: usize = 0;
+    var routine: [3][]const u8 = undefined;
+    var itr = std.mem.separate(routines, "\n");
+    while (itr.next()) |line| : (j += 1) {
+        routine[j] = line;
+    }
+
+    var output: [original.len * 2]u8 = undefined;
+    var pos: usize = 0;
+    var itm = std.mem.separate(main, ",");
+    while (itm.next()) |name| {
+        const index = name[0] - 'A';
+        std.mem.copy(u8, output[pos..], routine[index]);
+        pos += routine[index].len;
+        std.mem.copy(u8, output[pos..], ",");
+        pos += 1;
+    }
+    assert(std.mem.compare(u8, original, output[0..original.len]) == std.mem.Compare.Equal);
+}
