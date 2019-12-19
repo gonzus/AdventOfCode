@@ -1,5 +1,3 @@
-first: all
-
 DATA = ../data/input$(DAY).txt
 PROGRAMS = p$(DAY)a p$(DAY)b
 
@@ -26,5 +24,21 @@ endef
 $(foreach prg,$(PROGRAMS),$(eval $(call make-aoc-prg-target,$(prg))))
 $(foreach mod,$(MODULES) ,$(eval $(call make-aoc-mod-target,$(mod))))
 
-clean::
+.PHONY: clean
+clean:: ## clean all
 	rm -fr zig-cache *.o *.swp
+
+.PHONY: all
+all:: ## build all parts of this problem
+
+.PHONY: run
+run:: ## run all parts of this problem
+
+.PHONY: test
+test:: ## test all modules
+
+# Borrowed from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
+.PHONY: help
+help: ## display this help section
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "\033[36m%-38s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+.DEFAULT_GOAL := all
