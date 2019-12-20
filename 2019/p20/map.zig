@@ -158,10 +158,6 @@ pub const Map = struct {
         var allocator = std.heap.direct_allocator;
         var seen = std.AutoHashMap(Pos, void).init(allocator);
         defer seen.deinit();
-        var fuck = std.AutoHashMap(usize, void).init(allocator);
-        defer fuck.deinit();
-
-        defer seen.deinit();
 
         const lAA = Label.encode('A', 'A');
         const lZZ = Label.encode('Z', 'Z');
@@ -233,18 +229,6 @@ pub const Map = struct {
                         _ = self.portals.put(p0, p1) catch unreachable;
                         _ = self.portals.put(p1, p0) catch unreachable;
                         _ = self.two.remove(label);
-
-                        // std.debug.warn("FUCKS: {}\n", fuck.count());
-                        // var itf = fuck.iterator();
-                        // while (itf.next()) |kv| {
-                        //     std.debug.warn("- [{}]\n", kv.key);
-                        // }
-                        if (fuck.contains(label)) {
-                            std.debug.warn("FUCKITY FUCK [{}]\n", label);
-                            Label.decode(label);
-                        }
-                        _ = fuck.put(label, {}) catch unreachable;
-                        // std.debug.warn("ADDING FUCK [{}]\n", label);
                     } else {
                         // found first endpoint of a portal
                         // std.debug.warn("PORTAL FIRST [{}] {}\n", label, p0);
@@ -350,14 +334,13 @@ pub const Map = struct {
         var Path = std.AutoHashMap(PortalInfo, PortalInfo).init(allocator);
         defer Path.deinit();
 
-        // Fill Dist and Pend for all nodes
+        // Fill Pend for all nodes
         var depth: usize = 0;
         while (depth < MAX_DEPTH) : (depth += 1) {
             var itg = self.graph.iterator();
             while (itg.next()) |kvg| {
                 const p = kvg.key;
                 const pi = PortalInfo.init(p, depth);
-                _ = Dist.put(pi, std.math.maxInt(usize)) catch unreachable;
                 _ = Pend.put(pi, {}) catch unreachable;
             }
             if (!recursive) break;
@@ -396,9 +379,6 @@ pub const Map = struct {
 
             // update dist for all neighbours of u
             // add closest neighbour of u to the path
-            if (!Dist.contains(pu)) {
-                std.debug.warn("WTF no distance for {}\n", u);
-            }
             const du = Dist.get(pu).?.value;
             const neighbours = self.graph.get(u).?.value;
             // std.debug.warn("CONSIDER {} {} depth {} distance {} neighbours {}\n", u.x - 1000, u.y - 1000, pu.depth, du, neighbours.count());
@@ -436,7 +416,8 @@ pub const Map = struct {
                     alt += 1;
                 }
                 var pv = PortalInfo.init(v, @intCast(usize, nd));
-                var dv = Dist.get(pv).?.value;
+                var dv: usize = std.math.maxInt(usize);
+                if (Dist.contains(pv)) dv = Dist.get(pv).?.value;
                 if (alt < dv) {
                     // std.debug.warn("UPDATE {} {} distance {}\n", v.x - 1000, v.y - 1000, alt);
                     _ = Dist.put(pv, alt) catch unreachable;
