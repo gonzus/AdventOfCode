@@ -139,7 +139,6 @@ pub const Computer = struct {
 
     pub fn clear(self: *Computer) void {
         if (self.debug) std.debug.warn("RESET\n");
-        std.debug.warn("RESET\n");
         self.ram = self.rom;
         self.halted = false;
         self.pc = 0;
