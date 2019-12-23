@@ -90,7 +90,7 @@ pub const Computer = struct {
 
     pub fn init(reentrant: bool) Computer {
         const mem_size = 10 * 1024;
-        const io_size = 1 * 1024;
+        const io_size = 10 * 1024;
         var self = Computer{
             .rom = IntBuf.init(mem_size),
             .ram = IntBuf.init(mem_size),

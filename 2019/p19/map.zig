@@ -57,7 +57,7 @@ pub const Map = struct {
             return Tile.Stationary;
         }
         const v = @intCast(u8, output.?);
-        std.debug.warn("RUN {} {} => {}\n", p.x, p.y, v);
+        // std.debug.warn("RUN {} {} => {}\n", p.x, p.y, v);
         const t = @intToEnum(Tile, v);
         return t;
     }
