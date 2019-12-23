@@ -53,6 +53,7 @@ pub const Network = struct {
         var j: usize = 0;
         j = 0;
         while (j < SIZE) : (j += 1) {
+            self.computers[j].clear();
             const input = @intCast(i64, j);
             // std.debug.warn("C {} enqueue {}\n", j, input);
             self.computers[j].enqueueInput(input);
