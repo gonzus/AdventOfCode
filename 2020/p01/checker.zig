@@ -42,9 +42,6 @@ pub const Checker = struct {
             var it2 = self.seen.iterator();
             while (it2.next()) |kv2| {
                 const other = kv2.key;
-                // if (other == value) {
-                //     continue;
-                // }
                 const delta = wanted - value - other;
                 if (self.seen.contains(delta)) {
                     return value * other * delta;
@@ -59,8 +56,15 @@ test "sample" {
     var checker = Checker.init();
     defer checker.deinit();
 
-    const data: []const u8 = "1721,979,366,299,675,1456";
-    var it = std.mem.split(data, ",");
+    const data: []const u8 =
+        \\1721
+        \\979
+        \\366
+        \\299
+        \\675
+        \\1456
+    ;
+    var it = std.mem.split(data, "\n");
     while (it.next()) |line| {
         const value = std.fmt.parseInt(i32, line, 10) catch unreachable;
         checker.add(value);
