@@ -2,7 +2,7 @@ const std = @import("std");
 const Scanner = @import("./scanner.zig").Scanner;
 
 pub fn main() anyerror!void {
-    var scanner = Scanner.init(false);
+    var scanner = Scanner.init(true);
     defer scanner.deinit();
 
     const inp = std.io.bufferedInStream(std.io.getStdIn().inStream()).inStream();
