@@ -54,40 +54,29 @@ pub const Password = struct {
 
     fn parse_line(line: []const u8) Data {
         var data = Data.init();
-        var pos_field: usize = 0;
-        var it_field = std.mem.split(line, " ");
-        fields: while (it_field.next()) |field| {
-            pos_field += 1;
-            if (pos_field == 1) {
-                var pos_spec: usize = 0;
-                var it_spec = std.mem.split(field, "-");
-                while (it_spec.next()) |spec| {
-                    pos_spec += 1;
-                    if (pos_spec == 1) {
-                        data.n1 = std.fmt.parseInt(usize, spec, 10) catch unreachable;
-                        continue;
-                    }
-                    if (pos_spec == 2) {
-                        data.n2 = std.fmt.parseInt(usize, spec, 10) catch unreachable;
-                        continue;
-                    }
-                    std.debug.warn("TOO MANY SPECS\n", .{});
-                    data.chr = 0;
-                    break :fields;
-                }
+        var pos: usize = 0;
+        var it = std.mem.tokenize(line, " -:");
+        while (it.next()) |field| {
+            pos += 1;
+            if (pos == 1) {
+                data.n1 = std.fmt.parseInt(usize, field, 10) catch unreachable;
                 continue;
             }
-            if (pos_field == 2) {
+            if (pos == 2) {
+                data.n2 = std.fmt.parseInt(usize, field, 10) catch unreachable;
+                continue;
+            }
+            if (pos == 3) {
                 data.chr = field[0];
                 continue;
             }
-            if (pos_field == 3) {
+            if (pos == 4) {
                 data.pass = field;
                 continue;
             }
             std.debug.warn("TOO MANY PARTS\n", .{});
             data.chr = 0;
-            break :fields;
+            break;
         }
         return data;
     }
