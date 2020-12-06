@@ -57,13 +57,14 @@ pub const Scanner = struct {
 
     pub fn done(self: *Scanner) void {
         // std.debug.warn("DONE\n", .{});
+        self.count[Field.CID.pos()] = 1; // always ok
         var total: usize = 0;
         for (self.count) |count| {
             if (count > 0) {
                 total += 1;
             }
         }
-        if (total >= 8 or (total == 7 and self.count[Field.CID.pos()] < 1)) {
+        if (total >= 8) {
             self.total_valid += 1;
         }
 
