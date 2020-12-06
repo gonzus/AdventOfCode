@@ -57,9 +57,9 @@ pub const Map = struct {
         var pos = Pos.init(0, 0);
         var count: usize = 0;
         while (pos.y < self.rows) {
-            const tile = self.cells.get(pos);
-            if (tile != null) {
-                if (tile.? == Tile.Tree) {
+            const found = self.cells.get(pos);
+            if (found) |t| {
+                if (t.value == Tile.Tree) {
                     // std.debug.warn("TREE {}x{}\n", .{ pos.x, pos.y });
                     count += 1;
                 }
@@ -87,16 +87,16 @@ pub const Map = struct {
             std.debug.warn("{:4} | ", .{y});
             var x: usize = 0;
             while (x < self.cols) : (x += 1) {
-                var t: u8 = '.';
+                var tile: u8 = '.';
                 const pos = Pos.init(x, y);
-                const tile = self.cells.get(pos);
-                if (tile != null) {
-                    switch (tile.?) {
-                        Tile.Empty => t = '.',
-                        Tile.Tree => t = '#',
+                const found = self.cells.get(pos);
+                if (found) |t| {
+                    switch (t.value) {
+                        Tile.Empty => tile = '.',
+                        Tile.Tree => tile = '#',
                     }
                 }
-                std.debug.warn("{c}", .{t});
+                std.debug.warn("{c}", .{tile});
             }
             std.debug.warn("\n", .{});
         }
