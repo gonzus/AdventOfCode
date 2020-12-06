@@ -81,12 +81,8 @@ pub const Scanner = struct {
         if (str.len != 9) {
             return false;
         }
-        var pos: usize = 0;
-        while (pos < str.len) : (pos += 1) {
-            const valid = str[pos] >= '0' and str[pos] <= '9';
-            if (!valid) return false;
-        }
-        return true;
+        var valid: i32 = std.fmt.parseInt(i32, str, 10) catch -1;
+        return valid >= 0;
     }
 
     // ecl (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
@@ -109,14 +105,8 @@ pub const Scanner = struct {
         if (str[0] != '#') {
             return false;
         }
-        var pos: usize = 1;
-        while (pos <= 6 and pos < str.len) : (pos += 1) {
-            const valid = ((str[pos] >= '0' and str[pos] <= '9') or
-                (str[pos] >= 'a' and str[pos] <= 'f') or
-                (str[pos] >= 'A' and str[pos] <= 'F'));
-            if (!valid) return false;
-        }
-        return true;
+        var valid: i32 = std.fmt.parseInt(i32, str[1..], 16) catch -1;
+        return valid >= 0;
     }
 
     // byr (Birth Year) - four digits; at least 1920 and at most 2002.
@@ -130,20 +120,12 @@ pub const Scanner = struct {
     //   If cm, the number must be at least 150 and at most 193.
     //   If in, the number must be at least 59 and at most 76.
     fn check_num_unit(self: Scanner, str: []const u8, unit: ?[]const u8, min: usize, max: usize) bool {
-        var val: usize = 0;
-        var pos: usize = 0;
-        while (pos < str.len) : (pos += 1) {
-            if (str[pos] >= '0' and str[pos] <= '9') {
-                val *= 10;
-                val += str[pos] - '0';
-            } else {
-                break;
-            }
-        }
-        if (val < min or val > max) {
+        const top = str.len - if (unit != null) unit.?.len else 0;
+        var value: i32 = std.fmt.parseInt(i32, str[0..top], 10) catch -1;
+        if (value < min or value > max) {
             return false;
         }
-        if (unit != null and !std.mem.eql(u8, str[pos..], unit.?)) {
+        if (unit != null and !std.mem.eql(u8, str[top..], unit.?)) {
             return false;
         }
         return true;
