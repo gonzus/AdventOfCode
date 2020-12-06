@@ -59,7 +59,7 @@ pub const Map = struct {
         while (pos.y < self.rows) {
             const found = self.cells.get(pos);
             if (found) |t| {
-                if (t.value == Tile.Tree) {
+                if (t == Tile.Tree) {
                     // std.debug.warn("TREE {}x{}\n", .{ pos.x, pos.y });
                     count += 1;
                 }
@@ -91,7 +91,7 @@ pub const Map = struct {
                 const pos = Pos.init(x, y);
                 const found = self.cells.get(pos);
                 if (found) |t| {
-                    switch (t.value) {
+                    switch (t) {
                         Tile.Empty => tile = '.',
                         Tile.Tree => tile = '#',
                     }
