@@ -12,7 +12,7 @@ pub fn main() anyerror!void {
     }
     luggage.compute_parents();
 
-    const containers = luggage.sum_can_contain("shiny", "gold");
+    const containers = luggage.sum_can_contain("shiny gold");
 
     const out = std.io.getStdOut().outStream();
     try out.print("Total containers: {}\n", .{containers});
