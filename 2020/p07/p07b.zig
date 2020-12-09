@@ -11,7 +11,7 @@ pub fn main() anyerror!void {
         luggage.add_rule(line);
     }
 
-    const contained = luggage.count_contained_bags("shiny", "gold");
+    const contained = luggage.count_contained_bags("shiny gold");
 
     const out = std.io.getStdOut().outStream();
     try out.print("Total contained: {}\n", .{contained});
