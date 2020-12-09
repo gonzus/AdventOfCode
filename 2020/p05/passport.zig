@@ -3,11 +3,13 @@ const testing = std.testing;
 
 pub const Passport = struct {
     seen: std.AutoHashMap(usize, void),
+    top: usize,
 
     pub fn init() Passport {
         const allocator = std.heap.page_allocator;
         var self = Passport{
             .seen = std.AutoHashMap(usize, void).init(allocator),
+            .top = 0,
         };
         return self;
     }
@@ -22,12 +24,13 @@ pub const Passport = struct {
         const id = row * 8 + col;
         // std.debug.warn("LINE [{}] = {} * {} = {}\n", .{ line, row, col, id });
         self.add(id);
+        if (self.top < id) self.top = id;
         return id;
     }
 
     pub fn find_missing(self: *Passport) usize {
         var candidate: usize = 1;
-        while (candidate < 10000) : (candidate += 1) {
+        while (candidate <= self.top) : (candidate += 1) {
             if (self.seen.contains(candidate)) {
                 continue;
             }

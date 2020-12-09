@@ -46,7 +46,7 @@ pub const Password = struct {
                 .n1 = 0,
                 .n2 = 0,
                 .chr = 0,
-                .pass = "",
+                .pass = undefined,
             };
             return self;
         }
