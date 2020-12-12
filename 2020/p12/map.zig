@@ -7,6 +7,15 @@ pub const Map = struct {
         Waypoint,
     };
 
+    // +---------------->
+    // |        y--     X
+    // |        N
+    // |        ^
+    // |  W  <  X  >  E
+    // |  x--   v     x++
+    // |        S
+    // |        y++
+    // v Y
     pub const Dir = enum(u8) {
         E = 0,
         N = 1,
@@ -124,7 +133,7 @@ pub const Map = struct {
     }
 };
 
-test "sample autonomous" {
+test "sample direction" {
     const data: []const u8 =
         \\F10
         \\N3
