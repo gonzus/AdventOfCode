@@ -71,7 +71,7 @@ pub const Adapter = struct {
     fn check_and_sort(self: *Adapter) void {
         if (self.sorted) return;
         self.ratings.append(self.top + 3) catch unreachable;
-        std.sort.sort(usize, self.ratings.items, {}, cmpRatings);
+        std.sort.sort(usize, self.ratings.items, {}, comptime std.sort.asc(usize));
     }
 
     fn compute_deltas(self: Adapter, deltas: *std.ArrayList(usize)) void {
@@ -87,10 +87,6 @@ pub const Adapter = struct {
             deltas.*.append(delta) catch unreachable;
             previous = current;
         }
-    }
-
-    fn cmpRatings(_: void, l: usize, r: usize) bool {
-        return l < r;
     }
 };
 
