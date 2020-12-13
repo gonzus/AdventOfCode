@@ -142,48 +142,33 @@ pub const Map = struct {
     }
 
     fn countAround(self: *Map, pos: Pos) usize {
-        var bumps = [_]bool{false} ** 9;
-        bumps[get_delta(0, 0)] = true;
-        var step: isize = 0;
         var count: usize = 0;
-        while (true) {
-            step += 1;
-            var dy: isize = -1;
-            while (dy <= 1) : (dy += 1) {
-                const sy = @intCast(isize, pos.y) + dy * step;
-                var dx: isize = -1;
-                while (dx <= 1) : (dx += 1) {
-                    const delta = get_delta(dx, dy);
-                    if (bumps[delta]) continue;
+        var dy: isize = -1;
+        while (dy <= 1) : (dy += 1) {
+            var dx: isize = -1;
+            while (dx <= 1) : (dx += 1) {
+                if (dy == 0 and dx == 0) continue;
 
-                    var bumped = false;
-                    const sx = @intCast(isize, pos.x) + dx * step;
-                    if (sy < 0 or sy >= self.rows) bumped = true;
-                    if (sx < 0 or sx >= self.cols) bumped = true;
+                var sy = @intCast(isize, pos.y);
+                var sx = @intCast(isize, pos.x);
+                var step: usize = 0;
+                while (true) : (step += 1) {
+                    if (self.immediate and step >= 1) break;
+                    sy += dy;
+                    sx += dx;
+                    if (sy < 0 or sy >= self.rows) break;
+                    if (sx < 0 or sx >= self.cols) break;
 
-                    if (!bumped) {
-                        const ny = @intCast(usize, sy);
-                        const nx = @intCast(usize, sx);
-                        const np = Pos.init(nx, ny);
-                        if (!self.cells.contains(np)) continue;
-                        const nt = self.cells.get(np).?;
-                        if (nt == Tile.Floor) continue;
-
-                        bumped = true;
-                        if (nt == Tile.Used) count += 1;
-                    }
-
-                    bumps[delta] = bumped;
+                    const ny = @intCast(usize, sy);
+                    const nx = @intCast(usize, sx);
+                    const np = Pos.init(nx, ny);
+                    if (!self.cells.contains(np)) continue;
+                    const nt = self.cells.get(np).?;
+                    if (nt == Tile.Floor) continue;
+                    if (nt == Tile.Used) count += 1;
+                    break;
                 }
             }
-            if (self.immediate) break;
-
-            var cb: usize = 0;
-            var cp: usize = 0;
-            while (cp < bumps.len) : (cp += 1) {
-                if (bumps[cp]) cb += 1;
-            }
-            if (cb == bumps.len) break;
         }
         return count;
     }
