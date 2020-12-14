@@ -6,7 +6,9 @@ const allocator = std.heap.page_allocator;
 pub const Map = struct {
     rows: usize,
     cols: usize,
-    cells: std.AutoHashMap(Pos, Tile),
+    cells: [2]std.AutoHashMap(Pos, Tile),
+    curr: usize,
+    next: usize,
     immediate: bool,
 
     pub const Tile = enum(u8) {
@@ -31,14 +33,19 @@ pub const Map = struct {
         var self = Map{
             .rows = 0,
             .cols = 0,
-            .cells = std.AutoHashMap(Pos, Tile).init(allocator),
+            .cells = undefined,
+            .curr = 0,
+            .next = 1,
             .immediate = immediate,
         };
+        self.cells[0] = std.AutoHashMap(Pos, Tile).init(allocator);
+        self.cells[1] = std.AutoHashMap(Pos, Tile).init(allocator);
         return self;
     }
 
     pub fn deinit(self: *Map) void {
-        self.cells.deinit();
+        self.cells[1].deinit();
+        self.cells[0].deinit();
     }
 
     pub fn add_line(self: *Map, line: []const u8) void {
@@ -58,7 +65,7 @@ pub const Map = struct {
             };
             if (tile == Tile.Floor) continue;
             const pos = Pos.init(x, self.rows);
-            _ = self.cells.put(pos, tile) catch unreachable;
+            _ = self.cells[self.curr].put(pos, tile) catch unreachable;
         }
         self.rows += 1;
     }
@@ -72,7 +79,7 @@ pub const Map = struct {
             while (x < self.cols) : (x += 1) {
                 var label: u8 = '.';
                 const pos = Pos.init(x, y);
-                const found = self.cells.get(pos);
+                const found = self.cells[self.curr].get(pos);
                 if (found) |t| {
                     label = switch (t) {
                         Tile.Floor => '.',
@@ -86,15 +93,17 @@ pub const Map = struct {
         }
     }
 
-    pub fn next(self: *Map) bool {
-        var cells = std.AutoHashMap(Pos, Tile).init(allocator);
+    pub fn step(self: *Map) bool {
         var y: usize = 0;
         while (y < self.rows) : (y += 1) {
             var x: usize = 0;
             while (x < self.cols) : (x += 1) {
                 const pos = Pos.init(x, y);
-                if (!self.cells.contains(pos)) continue;
-                const tile = self.cells.get(pos).?;
+                if (self.cells[self.next].contains(pos)) {
+                    _ = self.cells[self.next].remove(pos);
+                }
+                if (!self.cells[self.curr].contains(pos)) continue;
+                const tile = self.cells[self.curr].get(pos).?;
                 if (tile == Tile.Floor) continue;
                 const occupied = self.countAround(pos);
                 var future = tile;
@@ -105,20 +114,20 @@ pub const Map = struct {
                 if (tile == Tile.Used and occupied >= top) {
                     future = Tile.Empty;
                 }
-                _ = cells.put(pos, future) catch unreachable;
+                _ = self.cells[self.next].put(pos, future) catch unreachable;
             }
         }
-        const equal = self.isEqual(cells);
-        if (!equal) {
-            self.cells.deinit();
-            self.cells = cells;
+        const stable = self.isStable();
+        if (!stable) {
+            self.curr = 1 - self.curr;
+            self.next = 1 - self.next;
         }
-        return equal;
+        return stable;
     }
 
     pub fn run_until_stable(self: *Map) usize {
         while (true) {
-            const equal = self.next();
+            const equal = self.step();
             if (equal) break;
         }
         var count: usize = 0;
@@ -127,7 +136,7 @@ pub const Map = struct {
             var x: usize = 0;
             while (x < self.cols) : (x += 1) {
                 const pos = Pos.init(x, y);
-                if (self.cells.get(pos)) |t| {
+                if (self.cells[self.curr].get(pos)) |t| {
                     if (t == Tile.Used) {
                         count += 1;
                     }
@@ -151,9 +160,9 @@ pub const Map = struct {
 
                 var sy = @intCast(isize, pos.y);
                 var sx = @intCast(isize, pos.x);
-                var step: usize = 0;
-                while (true) : (step += 1) {
-                    if (self.immediate and step >= 1) break;
+                var diff: usize = 0;
+                while (true) : (diff += 1) {
+                    if (self.immediate and diff >= 1) break;
                     sy += dy;
                     sx += dx;
                     if (sy < 0 or sy >= self.rows) break;
@@ -162,8 +171,8 @@ pub const Map = struct {
                     const ny = @intCast(usize, sy);
                     const nx = @intCast(usize, sx);
                     const np = Pos.init(nx, ny);
-                    if (!self.cells.contains(np)) continue;
-                    const nt = self.cells.get(np).?;
+                    if (!self.cells[self.curr].contains(np)) continue;
+                    const nt = self.cells[self.curr].get(np).?;
                     if (nt == Tile.Floor) continue;
                     if (nt == Tile.Used) count += 1;
                     break;
@@ -173,18 +182,18 @@ pub const Map = struct {
         return count;
     }
 
-    fn isEqual(self: *Map, cells: std.AutoHashMap(Pos, Tile)) bool {
+    fn isStable(self: *Map) bool {
         var y: usize = 0;
         while (y < self.rows) : (y += 1) {
             var x: usize = 0;
             while (x < self.cols) : (x += 1) {
                 const pos = Pos.init(x, y);
                 var tl = Tile.Floor;
-                if (self.cells.get(pos)) |t| {
+                if (self.cells[self.curr].get(pos)) |t| {
                     tl = t;
                 }
                 var tr = Tile.Floor;
-                if (cells.get(pos)) |t| {
+                if (self.cells[self.next].get(pos)) |t| {
                     tr = t;
                 }
                 if (tl != tr) {
@@ -276,27 +285,27 @@ test "sample immediate" {
 
     // var equal: bool = false;
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(equal);
 
@@ -329,31 +338,31 @@ test "sample ranged" {
 
     // var equal: bool = false;
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(!equal);
 
-    // equal = map.next();
+    // equal = map.step();
     // map.show();
     // testing.expect(equal);
 
