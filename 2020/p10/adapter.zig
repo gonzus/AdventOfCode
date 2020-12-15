@@ -31,14 +31,17 @@ pub const Adapter = struct {
     pub fn get_one_by_three(self: *Adapter) usize {
         self.check_and_sort();
 
-        var deltas = std.ArrayList(usize).init(allocator);
-        defer deltas.deinit();
-        self.compute_deltas(&deltas);
-
         var counts = [_]usize{0} ** 4;
+        var previous: usize = 0;
         var p: usize = 0;
-        while (p < deltas.items.len) : (p += 1) {
-            counts[deltas.items[p]] += 1;
+        while (p < self.ratings.items.len) : (p += 1) {
+            const current = self.ratings.items[p];
+            const delta = current - previous;
+            if (delta > 3) {
+                @panic("Too big");
+            }
+            counts[delta] += 1;
+            previous = current;
         }
         return counts[1] * counts[3];
     }
@@ -46,47 +49,34 @@ pub const Adapter = struct {
     pub fn count_valid(self: *Adapter) usize {
         self.check_and_sort();
 
-        var deltas = std.ArrayList(usize).init(allocator);
-        defer deltas.deinit();
-        self.compute_deltas(&deltas);
+        var ways = std.AutoHashMap(usize, usize).init(allocator);
+        defer ways.deinit();
 
-        var count: usize = 1;
-        var ones: usize = 0;
         var p: usize = 0;
-        while (p < deltas.items.len) : (p += 1) {
-            if (deltas.items[p] == 1) {
-                ones += 1;
-                continue;
+        _ = ways.put(0, 1) catch unreachable;
+        while (p < self.ratings.items.len) : (p += 1) {
+            var rating = self.ratings.items[p];
+            var count: usize = 0;
+            var pos: usize = 1;
+            while (pos <= 3) : (pos += 1) {
+                if (rating < pos) continue; // too close to the beginning
+                const needed = rating - pos;
+                if (!ways.contains(needed)) continue; // don't have this adapter
+                count += ways.get(needed).?; // this adapter contributes these many ways
             }
-
-            if (ones > 1) {
-                const factor = (ones * (ones - 1)) / 2 + 1;
-                count *= factor;
-            }
-            ones = 0;
+            _ = ways.put(rating, count) catch unreachable;
+            // std.debug.warn("WAYS {} = {}\n", .{ rating, count });
         }
-        return count;
+
+        return ways.get(self.top).?;
     }
 
     fn check_and_sort(self: *Adapter) void {
         if (self.sorted) return;
-        self.ratings.append(self.top + 3) catch unreachable;
+        self.sorted = true;
+        self.top += 3;
+        self.ratings.append(self.top) catch unreachable;
         std.sort.sort(usize, self.ratings.items, {}, comptime std.sort.asc(usize));
-    }
-
-    fn compute_deltas(self: Adapter, deltas: *std.ArrayList(usize)) void {
-        var p: usize = 0;
-        var previous: usize = 0;
-        while (p < self.ratings.items.len) : (p += 1) {
-            const current = self.ratings.items[p];
-            const delta = current - previous;
-            if (delta > 3) {
-                std.debug.warn("TOO BIG: {} {} {}\n", .{ current, previous, delta });
-                @panic("Too big");
-            }
-            deltas.*.append(delta) catch unreachable;
-            previous = current;
-        }
     }
 };
 
