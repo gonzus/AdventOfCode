@@ -59,8 +59,6 @@ pub const Decoder = struct {
     }
 
     fn set_mask(self: *Decoder, mask: []const u8) void {
-        const p1: u64 = 1;
-        const n1: u64 = ~p1;
         self.fpos = 0;
         self.mask0 = 0;
         self.mask1 = 0;
@@ -76,7 +74,7 @@ pub const Decoder = struct {
             }
             if (c == '0') {
                 if (self.mode == Mode.Address) continue;
-                self.mask0 &= n1;
+                self.mask0 &= ~(@as(u64, 1));
                 continue;
             }
             if (c == '1') {
@@ -109,8 +107,7 @@ pub const Decoder = struct {
             return;
         }
         const bit: u6 = self.floats[pos];
-        const p1: u64 = 1;
-        const mask0: u64 = @shlExact(p1, bit);
+        const mask0: u64 = @as(u64, 1) << bit;
         const mask1: u64 = ~mask0;
         self.set_mem_multiple(addr & mask1, value, pos + 1);
         self.set_mem_multiple(addr | mask0, value, pos + 1);

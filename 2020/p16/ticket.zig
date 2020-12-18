@@ -198,9 +198,8 @@ pub const DB = struct {
                         }
                     }
                     if (!valid) continue;
-                    const p1: u64 = 1;
                     const shift: u6 = @intCast(u6, code);
-                    ticket_mask |= @shlExact(p1, shift);
+                    ticket_mask |= @as(u64, 1) << shift;
                 }
                 // std.debug.warn("TICKET {} MASK {b}\n", .{ pt, ticket_mask });
                 field_mask &= ticket_mask;
