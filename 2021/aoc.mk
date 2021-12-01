@@ -10,15 +10,18 @@ endef
 
 define make-aoc-prg-target
   $1: $1.zig $(MODULES)
-	zig build-exe $1.zig
+	zig build-exe -mcpu=baseline $1.zig
   $1_clean:
 	rm -f $1
   $1_run: $1
 	./$1 < $(DATA)
+  $1_valgrind: $1
+	valgrind ./$1 < $(DATA)
 
   all:: $1
   clean:: $1_clean
   run:: $1_run
+  valgrind:: $1_valgrind
 endef
 
 $(foreach prg,$(PROGRAMS),$(eval $(call make-aoc-prg-target,$(prg))))
@@ -33,6 +36,9 @@ all:: ## build all parts of this problem
 
 .PHONY: run
 run:: ## run all parts of this problem
+
+.PHONY: valgrind
+valgrind:: ## valgrind all parts of this problem
 
 .PHONY: test
 test:: ## test all modules
