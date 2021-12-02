@@ -47,7 +47,9 @@ pub const Map = struct {
         return self;
     }
 
-    pub fn deinit(self: *Map) void {}
+    pub fn deinit(self: *Map) void {
+        _ = self;
+    }
 
     pub fn run_action(self: *Map, line: []const u8) void {
         const action = line[0];
@@ -145,13 +147,13 @@ test "sample direction" {
     var map = Map.init(Map.Navigation.Direction);
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.run_action(line);
     }
 
     const distance = map.manhattan_distance();
-    testing.expect(distance == 25);
+    try testing.expect(distance == 25);
 }
 
 test "sample waypoint" {
@@ -166,11 +168,11 @@ test "sample waypoint" {
     var map = Map.init(Map.Navigation.Waypoint);
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.run_action(line);
     }
 
     const distance = map.manhattan_distance();
-    testing.expect(distance == 286);
+    try testing.expect(distance == 286);
 }

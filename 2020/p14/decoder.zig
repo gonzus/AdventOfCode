@@ -33,7 +33,7 @@ pub const Decoder = struct {
     }
 
     pub fn add_line(self: *Decoder, line: []const u8) void {
-        var it = std.mem.tokenize(line, " =");
+        var it = std.mem.tokenize(u8, line, " =");
         const cmd = it.next().?;
         const val = it.next().?;
         if (std.mem.eql(u8, cmd, "mask")) {
@@ -53,7 +53,7 @@ pub const Decoder = struct {
         var sum: usize = 0;
         var it = self.mem.iterator();
         while (it.next()) |kv| {
-            sum += kv.value;
+            sum += kv.value_ptr.*;
         }
         return sum;
     }
@@ -133,13 +133,13 @@ test "sample value" {
     var decoder = Decoder.init(Decoder.Mode.Value);
     defer decoder.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         decoder.add_line(line);
     }
 
     const sum = decoder.sum_all_values();
-    testing.expect(sum == 165);
+    try testing.expect(sum == 165);
 }
 
 test "sample address" {
@@ -153,11 +153,11 @@ test "sample address" {
     var decoder = Decoder.init(Decoder.Mode.Address);
     defer decoder.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         decoder.add_line(line);
     }
 
     const sum = decoder.sum_all_values();
-    testing.expect(sum == 208);
+    try testing.expect(sum == 208);
 }

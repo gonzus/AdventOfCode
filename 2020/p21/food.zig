@@ -17,7 +17,7 @@ pub const Food = struct {
 
         pub fn show(self: Mask) void {
             var print = false;
-            for (self.bits) |v, j| {
+            for (self.bits) |_, j| {
                 const p = 256 - j - 1;
                 const b = self.bits[p];
                 print = print or b == 1;
@@ -85,7 +85,7 @@ pub const Food = struct {
     pub fn add_line(self: *Food, line: []const u8) void {
         var zone: usize = 0;
         var mask = Mask.init();
-        var it = std.mem.tokenize(line, " ,()");
+        var it = std.mem.tokenize(u8, line, " ,()");
         while (it.next()) |str| {
             if (std.mem.eql(u8, str, "contains")) {
                 self.lines.append(mask) catch unreachable;
@@ -110,7 +110,7 @@ pub const Food = struct {
                 } else {
                     // std.debug.warn("ALLERGEN OLD {} {}:", .{ code, str });
                     var entry = self.allergens.getEntry(code).?;
-                    allergen = &entry.value;
+                    allergen = &entry.value_ptr.*;
                     allergen.*.mask.and_with(mask);
                 }
                 // allergen.*.mask.show();
@@ -125,8 +125,8 @@ pub const Food = struct {
         var foods = [_]u8{1} ** 256;
         var it1 = self.allergens.iterator();
         while (it1.next()) |kv| {
-            const allergen = kv.value;
-            const allergen_name = self.allergens_st.get_str(allergen.code);
+            const allergen = kv.value_ptr.*;
+            // const allergen_name = self.allergens_st.get_str(allergen.code);
             // std.debug.print("ALLERGEN {} {} removes", .{ allergen.code, allergen_name });
             for (allergen.mask.bits) |b, p| {
                 if (b == 0) continue;
@@ -139,7 +139,7 @@ pub const Food = struct {
         var total: usize = 0;
         for (foods) |b, p| {
             if (p >= self.foods_st.size()) continue;
-            const food_name = self.foods_st.get_str(p);
+            // const food_name = self.foods_st.get_str(p);
             if (b == 0) {
                 // std.debug.print("FOOD {} {} is inert\n", .{ p, food_name });
                 continue;
@@ -170,7 +170,7 @@ pub const Food = struct {
             var changes: usize = 0;
             var it = self.allergens.iterator();
             while (it.next()) |kv| {
-                const allergen = kv.value;
+                const allergen = kv.value_ptr.*;
                 if (mapped[allergen.code]) continue;
                 var count_food: usize = 0;
                 var food_code: usize = 0;
@@ -181,8 +181,8 @@ pub const Food = struct {
                 }
                 if (count_food != 1) continue;
 
-                const allergen_name = self.allergens_st.get_str(allergen.code);
-                const food_name = self.foods_st.get_str(food_code);
+                // const allergen_name = self.allergens_st.get_str(allergen.code);
+                // const food_name = self.foods_st.get_str(food_code);
                 // std.debug.warn("ALLERGEN {} MAPS TO FOOD {}\n", .{ allergen_name, food_name });
                 mapped[allergen.code] = true;
                 data[mapped_count].food_code = food_code;
@@ -192,8 +192,8 @@ pub const Food = struct {
 
                 var it2 = self.allergens.iterator();
                 while (it2.next()) |kv2| {
-                    if (kv2.key == allergen.code) continue;
-                    kv2.value.mask.clr(food_code);
+                    if (kv2.key_ptr.* == allergen.code) continue;
+                    kv2.value_ptr.*.mask.clr(food_code);
                 }
             }
             if (changes == 0) break;
@@ -233,13 +233,13 @@ test "sample part a" {
     var food = Food.init();
     defer food.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         food.add_line(line);
     }
 
     const count = food.count_without_allergens();
-    testing.expect(count == 5);
+    try testing.expect(count == 5);
 }
 
 test "sample with gonzo names" {
@@ -253,13 +253,13 @@ test "sample with gonzo names" {
     var food = Food.init();
     defer food.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         food.add_line(line);
     }
 
     const count = food.count_without_allergens();
-    testing.expect(count == 5);
+    try testing.expect(count == 5);
 }
 
 test "sample part b" {
@@ -273,12 +273,12 @@ test "sample part b" {
     var food = Food.init();
     defer food.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         food.add_line(line);
     }
 
     var buf: [1024]u8 = undefined;
     var list = food.map_foods_to_allergens(&buf);
-    testing.expect(std.mem.eql(u8, list, "mxmxvkd,sqjhc,fvjkl"));
+    try testing.expect(std.mem.eql(u8, list, "mxmxvkd,sqjhc,fvjkl"));
 }

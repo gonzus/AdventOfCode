@@ -24,7 +24,7 @@ pub const Puzzle = struct {
     }
 
     pub fn run(self: *Puzzle, seed: []const u8, turns: usize) usize {
-        var it = std.mem.tokenize(seed, ",");
+        var it = std.mem.tokenize(u8, seed, ",");
         var first: bool = true;
         var curr: usize = 0;
         while (it.next()) |num| {
@@ -64,7 +64,7 @@ test "sample short 1" {
     defer puzzle.deinit();
 
     const number = puzzle.run(data, 2020);
-    testing.expect(number == 436);
+    try testing.expect(number == 436);
 }
 
 test "sample short 2" {
@@ -74,7 +74,7 @@ test "sample short 2" {
     defer puzzle.deinit();
 
     const number = puzzle.run(data, 2020);
-    testing.expect(number == 1);
+    try testing.expect(number == 1);
 }
 
 test "sample short 3" {
@@ -84,7 +84,7 @@ test "sample short 3" {
     defer puzzle.deinit();
 
     const number = puzzle.run(data, 2020);
-    testing.expect(number == 10);
+    try testing.expect(number == 10);
 }
 
 test "sample short 4" {
@@ -94,7 +94,7 @@ test "sample short 4" {
     defer puzzle.deinit();
 
     const number = puzzle.run(data, 2020);
-    testing.expect(number == 27);
+    try testing.expect(number == 27);
 }
 
 test "sample short 5" {
@@ -104,7 +104,7 @@ test "sample short 5" {
     defer puzzle.deinit();
 
     const number = puzzle.run(data, 2020);
-    testing.expect(number == 78);
+    try testing.expect(number == 78);
 }
 
 test "sample short 6" {
@@ -114,7 +114,7 @@ test "sample short 6" {
     defer puzzle.deinit();
 
     const number = puzzle.run(data, 2020);
-    testing.expect(number == 438);
+    try testing.expect(number == 438);
 }
 
 test "sample short 7" {
@@ -124,7 +124,7 @@ test "sample short 7" {
     defer puzzle.deinit();
 
     const number = puzzle.run(data, 2020);
-    testing.expect(number == 1836);
+    try testing.expect(number == 1836);
 }
 
 // ------------------------------------------------------------------
@@ -138,7 +138,7 @@ test "sample short 7" {
 //     defer puzzle.deinit();
 //
 //     const number = puzzle.run(data, 30000000);
-//     testing.expect(number == 175594);
+//     try testing.expect(number == 175594);
 // }
 //
 // test "sample long 2" {
@@ -148,7 +148,7 @@ test "sample short 7" {
 //     defer puzzle.deinit();
 //
 //     const number = puzzle.run(data, 30000000);
-//     testing.expect(number == 2578);
+//     try testing.expect(number == 2578);
 // }
 //
 // test "sample long 3" {
@@ -158,7 +158,7 @@ test "sample short 7" {
 //     defer puzzle.deinit();
 //
 //     const number = puzzle.run(data, 30000000);
-//     testing.expect(number == 3544142);
+//     try testing.expect(number == 3544142);
 // }
 //
 // test "sample long 4" {
@@ -168,7 +168,7 @@ test "sample short 7" {
 //     defer puzzle.deinit();
 //
 //     const number = puzzle.run(data, 30000000);
-//     testing.expect(number == 261214);
+//     try testing.expect(number == 261214);
 // }
 //
 // test "sample long 5" {
@@ -178,7 +178,7 @@ test "sample short 7" {
 //     defer puzzle.deinit();
 //
 //     const number = puzzle.run(data, 30000000);
-//     testing.expect(number == 6895259);
+//     try testing.expect(number == 6895259);
 // }
 //
 // test "sample long 6" {
@@ -188,7 +188,7 @@ test "sample short 7" {
 //     defer puzzle.deinit();
 //
 //     const number = puzzle.run(data, 30000000);
-//     testing.expect(number == 18);
+//     try testing.expect(number == 18);
 // }
 //
 // test "sample long 7" {
@@ -198,5 +198,5 @@ test "sample short 7" {
 //     defer puzzle.deinit();
 //
 //     const number = puzzle.run(data, 30000000);
-//     testing.expect(number == 362);
+//     try testing.expect(number == 362);
 // }

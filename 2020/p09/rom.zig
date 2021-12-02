@@ -109,15 +109,15 @@ test "sample" {
     defer rom.deinit();
 
     var bad: usize = 0;
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         bad = rom.add_number(line);
         if (bad > 0) {
             break;
         }
     }
-    testing.expect(bad == 127);
+    try testing.expect(bad == 127);
 
     const sum = rom.find_contiguous_sum(127);
-    testing.expect(sum == 62);
+    try testing.expect(sum == 62);
 }

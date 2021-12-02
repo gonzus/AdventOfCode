@@ -19,7 +19,9 @@ pub const Customs = struct {
         return self;
     }
 
-    pub fn deinit(self: *Customs) void {}
+    pub fn deinit(self: *Customs) void {
+        _ = self;
+    }
 
     pub fn add_line(self: *Customs, line: []const u8) void {
         // std.debug.warn("LINE [{}]\n", .{line});
@@ -44,7 +46,6 @@ pub const Customs = struct {
 
     pub fn done(self: *Customs) void {
         // std.debug.warn("DONE\n", .{});
-        var total: usize = 0;
         for (self.count) |count| {
             if (self.count_any and count > 0) {
                 self.total_sum += 1;
@@ -54,7 +55,7 @@ pub const Customs = struct {
         }
 
         self.line_count = 0;
-        for (self.count) |count, pos| {
+        for (self.count) |_, pos| {
             self.count[pos] = 0;
         }
     }
@@ -86,14 +87,14 @@ test "sample any" {
     var customs = Customs.init(true);
     defer customs.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         customs.add_line(line);
     }
     customs.done();
 
     const total_sum = customs.get_total_sum();
-    testing.expect(total_sum == 11);
+    try testing.expect(total_sum == 11);
 }
 
 test "sample all" {
@@ -118,12 +119,12 @@ test "sample all" {
     var customs = Customs.init(false);
     defer customs.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         customs.add_line(line);
     }
     customs.done();
 
     const total_sum = customs.get_total_sum();
-    testing.expect(total_sum == 6);
+    try testing.expect(total_sum == 6);
 }

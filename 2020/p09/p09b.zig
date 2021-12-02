@@ -6,7 +6,7 @@ pub fn main() anyerror!void {
     defer rom.deinit();
 
     var bad: usize = 0;
-    const inp = std.io.bufferedInStream(std.io.getStdIn().inStream()).inStream();
+    const inp = std.io.getStdIn().reader();
     var buf: [1024]u8 = undefined;
     while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         bad = rom.add_number(line);
@@ -16,6 +16,6 @@ pub fn main() anyerror!void {
     }
     const sum = rom.find_contiguous_sum(bad);
 
-    const out = std.io.getStdOut().outStream();
+    const out = std.io.getStdOut().writer();
     try out.print("Sum: {}\n", .{sum});
 }

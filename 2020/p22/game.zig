@@ -57,7 +57,7 @@ pub const Game = struct {
                 p += s.len;
             }
             const s = self.buf[0..p];
-            return self.buf[0..p];
+            return s;
         }
 
         pub fn score(self: Cards) usize {
@@ -101,13 +101,15 @@ pub const Game = struct {
         return self;
     }
 
-    pub fn deinit(self: *Game) void {}
+    pub fn deinit(self: *Game) void {
+        _ = self;
+    }
 
     pub fn add_line(self: *Game, line: []const u8) void {
         if (line.len == 0) return;
 
         if (std.mem.startsWith(u8, line, "Player ")) {
-            var it = std.mem.tokenize(line, " :");
+            var it = std.mem.tokenize(u8, line, " :");
             _ = it.next().?;
             const player = std.fmt.parseInt(usize, it.next().?, 10) catch unreachable;
             self.turn = player - 1;
@@ -119,7 +121,6 @@ pub const Game = struct {
     }
 
     pub fn play(self: *Game) usize {
-        var cards = self.cards;
         const winner = self.play_recursive(0, &self.cards);
         const score = self.get_score(winner);
         return score;
@@ -209,13 +210,13 @@ test "sample part a" {
     var game = Game.init(Game.Mode.Simple);
     defer game.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         game.add_line(line);
     }
 
     const score = game.play();
-    testing.expect(score == 306);
+    try testing.expect(score == 306);
 }
 
 test "sample part b" {
@@ -238,11 +239,11 @@ test "sample part b" {
     var game = Game.init(Game.Mode.Recursive);
     defer game.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         game.add_line(line);
     }
 
     const score = game.play();
-    testing.expect(score == 291);
+    try testing.expect(score == 291);
 }

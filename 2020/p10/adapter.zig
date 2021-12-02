@@ -98,16 +98,16 @@ test "sample small" {
     var adapter = Adapter.init();
     defer adapter.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         adapter.add_rating(line);
     }
 
     const one_by_three = adapter.get_one_by_three();
-    testing.expect(one_by_three == 35);
+    try testing.expect(one_by_three == 35);
 
     const valid = adapter.count_valid();
-    testing.expect(valid == 8);
+    try testing.expect(valid == 8);
 }
 
 test "sample large" {
@@ -148,14 +148,14 @@ test "sample large" {
     var adapter = Adapter.init();
     defer adapter.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         adapter.add_rating(line);
     }
 
     const one_by_three = adapter.get_one_by_three();
-    testing.expect(one_by_three == 220);
+    try testing.expect(one_by_three == 220);
 
     const valid = adapter.count_valid();
-    testing.expect(valid == 19208);
+    try testing.expect(valid == 19208);
 }

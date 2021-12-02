@@ -121,14 +121,14 @@ test "sample single" {
     var map = Map.init();
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.add_line(line);
     }
     // map.show();
 
     const count = map.traverse(3, 1);
-    testing.expect(count == 7);
+    try testing.expect(count == 7);
 }
 
 test "sample several" {
@@ -149,7 +149,7 @@ test "sample several" {
     var map = Map.init();
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.add_line(line);
     }
@@ -164,5 +164,5 @@ test "sample several" {
     };
 
     const product = map.traverse_several(specs[0..]);
-    testing.expect(product == 336);
+    try testing.expect(product == 336);
 }

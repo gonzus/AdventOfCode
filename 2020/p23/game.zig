@@ -165,10 +165,10 @@ test "sample part a" {
     // game.show();
 
     game.play(10);
-    testing.expect(game.get_state() == 92658374);
+    try testing.expect(game.get_state() == 92658374);
 
     game.play(90);
-    testing.expect(game.get_state() == 67384529);
+    try testing.expect(game.get_state() == 67384529);
 }
 
 test "sample part b" {
@@ -179,5 +179,5 @@ test "sample part b" {
     // game.show();
 
     game.play(10_000_000);
-    testing.expect(game.find_stars() == 149245887792);
+    try testing.expect(game.find_stars() == 149245887792);
 }

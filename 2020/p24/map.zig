@@ -162,7 +162,7 @@ pub const Map = struct {
         var count: usize = 0;
         var it = self.tiles[self.curr].iterator();
         while (it.next()) |kv| {
-            if (kv.value != color) continue;
+            if (kv.value_ptr.* != color) continue;
             count += 1;
         }
         return count;
@@ -270,13 +270,13 @@ test "sample part a" {
     var map = Map.init();
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.process_tile(line);
     }
 
     const black = map.count_black();
-    testing.expect(black == 10);
+    try testing.expect(black == 10);
 }
 
 test "sample part b" {
@@ -306,50 +306,50 @@ test "sample part b" {
     var map = Map.init();
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.process_tile(line);
     }
 
-    testing.expect(map.count_black() == 10);
+    try testing.expect(map.count_black() == 10);
 
     map.run(1);
-    testing.expect(map.count_black() == 15);
+    try testing.expect(map.count_black() == 15);
     map.run(1);
-    testing.expect(map.count_black() == 12);
+    try testing.expect(map.count_black() == 12);
     map.run(1);
-    testing.expect(map.count_black() == 25);
+    try testing.expect(map.count_black() == 25);
     map.run(1);
-    testing.expect(map.count_black() == 14);
+    try testing.expect(map.count_black() == 14);
     map.run(1);
-    testing.expect(map.count_black() == 23);
+    try testing.expect(map.count_black() == 23);
     map.run(1);
-    testing.expect(map.count_black() == 28);
+    try testing.expect(map.count_black() == 28);
     map.run(1);
-    testing.expect(map.count_black() == 41);
+    try testing.expect(map.count_black() == 41);
     map.run(1);
-    testing.expect(map.count_black() == 37);
+    try testing.expect(map.count_black() == 37);
     map.run(1);
-    testing.expect(map.count_black() == 49);
+    try testing.expect(map.count_black() == 49);
     map.run(1);
-    testing.expect(map.count_black() == 37);
+    try testing.expect(map.count_black() == 37);
 
     map.run(10);
-    testing.expect(map.count_black() == 132);
+    try testing.expect(map.count_black() == 132);
     map.run(10);
-    testing.expect(map.count_black() == 259);
+    try testing.expect(map.count_black() == 259);
     map.run(10);
-    testing.expect(map.count_black() == 406);
+    try testing.expect(map.count_black() == 406);
     map.run(10);
-    testing.expect(map.count_black() == 566);
+    try testing.expect(map.count_black() == 566);
     map.run(10);
-    testing.expect(map.count_black() == 788);
+    try testing.expect(map.count_black() == 788);
     map.run(10);
-    testing.expect(map.count_black() == 1106);
+    try testing.expect(map.count_black() == 1106);
     map.run(10);
-    testing.expect(map.count_black() == 1373);
+    try testing.expect(map.count_black() == 1373);
     map.run(10);
-    testing.expect(map.count_black() == 1844);
+    try testing.expect(map.count_black() == 1844);
     map.run(10);
-    testing.expect(map.count_black() == 2208);
+    try testing.expect(map.count_black() == 2208);
 }

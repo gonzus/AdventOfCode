@@ -9,7 +9,6 @@ pub const Scanner = struct {
     count: [SIZE]usize,
 
     pub fn init(validate: bool) Scanner {
-        const allocator = std.heap.page_allocator;
         var self = Scanner{
             .validate = validate,
             .total_valid = 0,
@@ -18,13 +17,15 @@ pub const Scanner = struct {
         return self;
     }
 
-    pub fn deinit(self: *Scanner) void {}
+    pub fn deinit(self: *Scanner) void {
+        _ = self;
+    }
 
     pub fn add_line(self: *Scanner, line: []const u8) void {
         // std.debug.warn("LINE [{}]\n", .{line});
         var field_count: usize = 0;
         var field: ?Field = null;
-        var it = std.mem.tokenize(line, " :");
+        var it = std.mem.tokenize(u8, line, " :");
         while (it.next()) |str| {
             field_count += 1;
             if (field == null) {
@@ -68,7 +69,7 @@ pub const Scanner = struct {
             self.total_valid += 1;
         }
 
-        for (self.count) |count, pos| {
+        for (self.count) |_, pos| {
             self.count[pos] = 0;
         }
     }
@@ -79,6 +80,7 @@ pub const Scanner = struct {
 
     // pid (Passport ID) - a nine-digit number, including leading zeroes.
     fn check_pid(self: Scanner, str: []const u8) bool {
+        _ = self;
         if (str.len != 9) {
             return false;
         }
@@ -88,6 +90,7 @@ pub const Scanner = struct {
 
     // ecl (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
     fn check_ecl(self: Scanner, str: []const u8) bool {
+        _ = self;
         if (std.mem.eql(u8, str, "amb")) return true;
         if (std.mem.eql(u8, str, "blu")) return true;
         if (std.mem.eql(u8, str, "brn")) return true;
@@ -100,6 +103,7 @@ pub const Scanner = struct {
 
     // hcl (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
     fn check_hcl(self: Scanner, str: []const u8) bool {
+        _ = self;
         if (str.len != 7) {
             return false;
         }
@@ -121,6 +125,7 @@ pub const Scanner = struct {
     //   If cm, the number must be at least 150 and at most 193.
     //   If in, the number must be at least 59 and at most 76.
     fn check_num_unit(self: Scanner, str: []const u8, unit: ?[]const u8, min: usize, max: usize) bool {
+        _ = self;
         const top = str.len - if (unit != null) unit.?.len else 0;
         var value: i32 = std.fmt.parseInt(i32, str[0..top], 10) catch -1;
         if (value < min or value > max) {
@@ -180,14 +185,14 @@ test "sample no validation" {
     var scanner = Scanner.init(false);
     defer scanner.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         scanner.add_line(line);
     }
     scanner.done();
 
     const count = scanner.valid_count();
-    testing.expect(count == 2);
+    try testing.expect(count == 2);
 }
 
 test "sample invalid" {
@@ -210,14 +215,14 @@ test "sample invalid" {
     var scanner = Scanner.init(true);
     defer scanner.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         scanner.add_line(line);
     }
     scanner.done();
 
     const count = scanner.valid_count();
-    testing.expect(count == 0);
+    try testing.expect(count == 0);
 }
 
 test "sample valid" {
@@ -239,12 +244,12 @@ test "sample valid" {
     var scanner = Scanner.init(true);
     defer scanner.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         scanner.add_line(line);
     }
     scanner.done();
 
     const count = scanner.valid_count();
-    testing.expect(count == 4);
+    try testing.expect(count == 4);
 }

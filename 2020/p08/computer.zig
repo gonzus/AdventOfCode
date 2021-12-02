@@ -34,10 +34,12 @@ pub const Computer = struct {
         return self;
     }
 
-    pub fn deinit(self: *Computer) void {}
+    pub fn deinit(self: *Computer) void {
+        _ = self;
+    }
 
     pub fn add_instr(self: *Computer, line: []const u8) void {
-        var it = std.mem.tokenize(line, " ");
+        var it = std.mem.tokenize(u8, line, " ");
 
         const sop = it.next().?;
         var op = Op.None;
@@ -124,14 +126,14 @@ test "sample first dupe" {
     var computer = Computer.init();
     defer computer.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         computer.add_instr(line);
     }
     _ = computer.run_to_first_dupe();
 
     const accum = computer.get_accumulator();
-    testing.expect(accum == 5);
+    try testing.expect(accum == 5);
 }
 
 test "sample change one instr" {
@@ -150,12 +152,12 @@ test "sample change one instr" {
     var computer = Computer.init();
     defer computer.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         computer.add_instr(line);
     }
     computer.change_one_instr_until_success();
 
     const accum = computer.get_accumulator();
-    testing.expect(accum == 8);
+    try testing.expect(accum == 8);
 }

@@ -35,10 +35,12 @@ pub const Map = struct {
             return self;
         }
 
-        pub fn deinit(self: *Tile) void {}
+        pub fn deinit(self: *Tile) void {
+            _ = self;
+        }
 
         pub fn set(self: *Tile, data: []const u8) void {
-            var it = std.mem.split(data, "\n");
+            var it = std.mem.split(u8, data, "\n");
             while (it.next()) |line| {
                 for (line) |c, j| {
                     const t = if (c == '.') '.' else c;
@@ -216,7 +218,7 @@ pub const Map = struct {
         }
 
         if (line[0] == 'T') {
-            var it = std.mem.tokenize(line, " :");
+            var it = std.mem.tokenize(u8, line, " :");
             _ = it.next().?;
             self.current_tile.id = std.fmt.parseInt(usize, it.next().?, 10) catch unreachable;
             return;
@@ -243,7 +245,7 @@ pub const Map = struct {
         std.debug.warn("Map with {} tiles\n", .{self.tiles.count()});
         var it = self.tiles.iterator();
         while (it.next()) |kv| {
-            kv.value.show();
+            kv.value_ptr.*.show();
         }
     }
 
@@ -265,7 +267,7 @@ pub const Map = struct {
             var pos: Pos = undefined;
             var itp = pending.iterator();
             while (itp.next()) |kvp| {
-                pos = kvp.key;
+                pos = kvp.key_ptr.*;
                 empty = false;
                 _ = pending.remove(pos);
                 break;
@@ -274,7 +276,7 @@ pub const Map = struct {
 
             var itt = self.tiles.iterator();
             while (itt.next()) |kvt| {
-                var tile = &kvt.value;
+                var tile = &kvt.value_ptr.*;
                 if (used.contains(tile.id)) continue; // tile already placed
 
                 const posU = Pos.init(pos.x - 0, pos.y - 1);
@@ -288,10 +290,10 @@ pub const Map = struct {
 
                 // check if tile fits in pos
                 var fits = true;
-                if (entryU) |e| fits = fits and self.fits_neighbor(tile, e.value, 0);
-                if (entryD) |e| fits = fits and self.fits_neighbor(tile, e.value, 2);
-                if (entryL) |e| fits = fits and self.fits_neighbor(tile, e.value, 3);
-                if (entryR) |e| fits = fits and self.fits_neighbor(tile, e.value, 1);
+                if (entryU) |e| fits = fits and self.fits_neighbor(tile, e.value_ptr.*, 0);
+                if (entryD) |e| fits = fits and self.fits_neighbor(tile, e.value_ptr.*, 2);
+                if (entryL) |e| fits = fits and self.fits_neighbor(tile, e.value_ptr.*, 3);
+                if (entryR) |e| fits = fits and self.fits_neighbor(tile, e.value_ptr.*, 1);
                 if (!fits) continue; // tile did not fit in
 
                 // std.debug.warn("MATCH {} for pos {}\n", .{ tile.id, pos });
@@ -300,16 +302,16 @@ pub const Map = struct {
                 _ = used.put(tile.id, {}) catch unreachable; // remember tile as used
 
                 // add four neighbors to pending, if they are empty
-                if (entryU) |e| {} else {
+                if (entryU) |_| {} else {
                     _ = pending.put(posU, {}) catch unreachable;
                 }
-                if (entryD) |e| {} else {
+                if (entryD) |_| {} else {
                     _ = pending.put(posD, {}) catch unreachable;
                 }
-                if (entryL) |e| {} else {
+                if (entryL) |_| {} else {
                     _ = pending.put(posL, {}) catch unreachable;
                 }
-                if (entryR) |e| {} else {
+                if (entryR) |_| {} else {
                     _ = pending.put(posR, {}) catch unreachable;
                 }
                 break;
@@ -418,7 +420,6 @@ pub const Map = struct {
 
     pub fn product_four_corners(self: *Map) usize {
         var product: usize = 1;
-        var id: usize = 0;
 
         product *= self.grid.tiles.get(Pos.init(self.grid.min.x, self.grid.min.y)).?;
         product *= self.grid.tiles.get(Pos.init(self.grid.min.x, self.grid.max.y)).?;
@@ -662,7 +663,7 @@ test "sample part a" {
     var map = Map.init();
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.add_line(line);
     }
@@ -671,7 +672,7 @@ test "sample part a" {
     map.find_layout();
 
     const product = map.product_four_corners();
-    testing.expect(product == 20899048083289);
+    try testing.expect(product == 20899048083289);
 }
 
 test "sample part b" {
@@ -799,7 +800,7 @@ test "sample part b" {
     var map = Map.init();
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.add_line(line);
     }
@@ -808,5 +809,5 @@ test "sample part b" {
     map.find_layout();
 
     const roughness = map.find_image_in_grid(&image);
-    testing.expect(roughness == 273);
+    try testing.expect(roughness == 273);
 }

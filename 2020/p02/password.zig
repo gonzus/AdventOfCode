@@ -7,9 +7,12 @@ pub const Password = struct {
         return self;
     }
 
-    pub fn deinit(self: *Password) void {}
+    pub fn deinit(self: *Password) void {
+        _ = self;
+    }
 
     pub fn check_count(self: Password, line: []const u8) bool {
+        _ = self;
         const data = parse_line(line);
         var cnt: usize = 0;
         var pos: usize = 0;
@@ -23,6 +26,7 @@ pub const Password = struct {
     }
 
     pub fn check_pos(self: Password, line: []const u8) bool {
+        _ = self;
         const data = parse_line(line);
         var cnt: usize = 0;
         if (data.pass.len >= data.n1 and data.pass[data.n1 - 1] == data.chr) {
@@ -55,7 +59,7 @@ pub const Password = struct {
     fn parse_line(line: []const u8) Data {
         var data = Data.init();
         var pos: usize = 0;
-        var it = std.mem.tokenize(line, " -:");
+        var it = std.mem.tokenize(u8, line, " -:");
         while (it.next()) |field| {
             pos += 1;
             if (pos == 1) {
@@ -94,14 +98,14 @@ test "sample count" {
     defer password.deinit();
 
     var count: usize = 0;
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         if (password.check_count(line)) {
             count += 1;
         }
     }
 
-    testing.expect(count == valid);
+    try testing.expect(count == valid);
 }
 
 test "sample pos" {
@@ -116,12 +120,12 @@ test "sample pos" {
     defer password.deinit();
 
     var count: usize = 0;
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         if (password.check_pos(line)) {
             count += 1;
         }
     }
 
-    testing.expect(count == valid);
+    try testing.expect(count == valid);
 }

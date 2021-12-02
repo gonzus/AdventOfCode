@@ -26,7 +26,9 @@ pub const Evaluator = struct {
         };
     }
 
-    pub fn deinit(self: *Evaluator) void {}
+    pub fn deinit(self: *Evaluator) void {
+        _ = self;
+    }
 
     pub fn reset(self: *Evaluator) void {
         self.pn = 0;
@@ -129,38 +131,38 @@ test "samples part a" {
     var evaluator = Evaluator.init(Evaluator.Precedence.None);
     defer evaluator.deinit();
 
-    testing.expect(evaluator.eval("1 + 2 * 3 + 4 * 5 + 6") == 71);
-    testing.expect(evaluator.eval("1 + (2 * 3) + (4 * (5 + 6))") == 51);
-    testing.expect(evaluator.eval("2 * 3 + (4 * 5)") == 26);
-    testing.expect(evaluator.eval("5 + (8 * 3 + 9 + 3 * 4 * 3)") == 437);
-    testing.expect(evaluator.eval("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))") == 12240);
-    testing.expect(evaluator.eval("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2") == 13632);
+    try testing.expect(evaluator.eval("1 + 2 * 3 + 4 * 5 + 6") == 71);
+    try testing.expect(evaluator.eval("1 + (2 * 3) + (4 * (5 + 6))") == 51);
+    try testing.expect(evaluator.eval("2 * 3 + (4 * 5)") == 26);
+    try testing.expect(evaluator.eval("5 + (8 * 3 + 9 + 3 * 4 * 3)") == 437);
+    try testing.expect(evaluator.eval("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))") == 12240);
+    try testing.expect(evaluator.eval("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2") == 13632);
 }
 
 test "samples normal precedence" {
     var evaluator = Evaluator.init(Evaluator.Precedence.MulBeforeAdd);
     defer evaluator.deinit();
 
-    testing.expect(evaluator.eval("1 + 2 * 3 + 4 * 5 + 6") == 33);
-    testing.expect(evaluator.eval("1 + (2 * 3) + (4 * (5 + 6))") == 51);
-    testing.expect(evaluator.eval("2 * 3 + (4 * 5)") == 26);
-    testing.expect(evaluator.eval("5 + (8 * 3 + 9 + 3 * 4 * 3)") == 74);
-    testing.expect(evaluator.eval("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))") == 5490);
-    testing.expect(evaluator.eval("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2") == 3208);
-    testing.expect(evaluator.eval("(6 + 6 * 8) + 4 * 3 + (8 * 2 + 2 * 3) * (7 * (8 * 4)) * 9") == 44418);
+    try testing.expect(evaluator.eval("1 + 2 * 3 + 4 * 5 + 6") == 33);
+    try testing.expect(evaluator.eval("1 + (2 * 3) + (4 * (5 + 6))") == 51);
+    try testing.expect(evaluator.eval("2 * 3 + (4 * 5)") == 26);
+    try testing.expect(evaluator.eval("5 + (8 * 3 + 9 + 3 * 4 * 3)") == 74);
+    try testing.expect(evaluator.eval("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))") == 5490);
+    try testing.expect(evaluator.eval("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2") == 3208);
+    try testing.expect(evaluator.eval("(6 + 6 * 8) + 4 * 3 + (8 * 2 + 2 * 3) * (7 * (8 * 4)) * 9") == 44418);
 }
 
 test "samples part b" {
     var evaluator = Evaluator.init(Evaluator.Precedence.AddBeforeMul);
     defer evaluator.deinit();
 
-    testing.expect(evaluator.eval("1 + 2 * 3 + 4 * 5 + 6") == 231);
-    testing.expect(evaluator.eval("1 + (2 * 3) + (4 * (5 + 6))") == 51);
-    testing.expect(evaluator.eval("2 * 3 + (4 * 5)") == 46);
-    testing.expect(evaluator.eval("5 + (8 * 3 + 9 + 3 * 4 * 3)") == 1445);
-    testing.expect(evaluator.eval("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))") == 669060);
-    testing.expect(evaluator.eval("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2") == 23340);
+    try testing.expect(evaluator.eval("1 + 2 * 3 + 4 * 5 + 6") == 231);
+    try testing.expect(evaluator.eval("1 + (2 * 3) + (4 * (5 + 6))") == 51);
+    try testing.expect(evaluator.eval("2 * 3 + (4 * 5)") == 46);
+    try testing.expect(evaluator.eval("5 + (8 * 3 + 9 + 3 * 4 * 3)") == 1445);
+    try testing.expect(evaluator.eval("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))") == 669060);
+    try testing.expect(evaluator.eval("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2") == 23340);
 
     // this is how I found out a bug
-    testing.expect(evaluator.eval("(6 + 6 * 8) + 4 * 3 + (8 * 2 + 2 * 3) * (7 * (8 * 4)) * 9") == 19958400);
+    try testing.expect(evaluator.eval("(6 + 6 * 8) + 4 * 3 + (8 * 2 + 2 * 3) * (7 * (8 * 4)) * 9") == 19958400);
 }

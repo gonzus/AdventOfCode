@@ -87,14 +87,14 @@ pub const DB = struct {
             return;
         }
         if (self.zone == 0) {
-            var it_colon = std.mem.tokenize(line, ":");
+            var it_colon = std.mem.tokenize(u8, line, ":");
             const name = it_colon.next().?;
             const code = self.fields.add(name);
             // std.debug.warn("FIELD {} {}\n", .{ code, name });
             var rule = Rule.init(code);
 
             const rest = it_colon.next().?;
-            var it = std.mem.tokenize(rest, " -");
+            var it = std.mem.tokenize(u8, rest, " -");
             rule.ranges[0].min = std.fmt.parseInt(usize, it.next().?, 10) catch unreachable;
             rule.ranges[0].max = std.fmt.parseInt(usize, it.next().?, 10) catch unreachable;
             _ = it.next().?; // "or"
@@ -106,7 +106,7 @@ pub const DB = struct {
         }
         if (self.zone == 1 or self.zone == 2) {
             var ticket = Ticket.init();
-            var it = std.mem.tokenize(line, ",");
+            var it = std.mem.tokenize(u8, line, ",");
             while (it.next()) |str| {
                 const value = std.fmt.parseInt(usize, str, 10) catch unreachable;
                 ticket.values.append(value) catch unreachable;
@@ -157,7 +157,7 @@ pub const DB = struct {
     fn is_value_valid(self: *DB, value: usize) bool {
         var itr = self.rules.iterator();
         while (itr.next()) |kv| {
-            const rule = kv.value;
+            const rule = kv.value_ptr.*;
             var pr: usize = 0;
             while (pr < 2) : (pr += 1) {
                 if (value >= rule.ranges[pr].min and
@@ -185,8 +185,8 @@ pub const DB = struct {
                 const value = ticket.values.items[pf];
                 var itr = self.rules.iterator();
                 while (itr.next()) |kv| {
-                    const code = kv.key;
-                    const rule = kv.value;
+                    const code = kv.key_ptr.*;
+                    const rule = kv.value_ptr.*;
                     var valid = false;
                     var pr: usize = 0;
                     while (pr < 2) : (pr += 1) {
@@ -219,7 +219,7 @@ pub const DB = struct {
                 if (mask == 0) @panic("MASK");
                 if (@popCount(usize, mask) != 1) continue;
                 const code = @ctz(usize, mask);
-                const name = self.fields.get_str(code);
+                // const name = self.fields.get_str(code);
                 // std.debug.warn("FIELD {} IS {b} {} {}\n", .{ pg, mask, code, name });
                 guess.*.code = code;
                 count += 1;
@@ -228,7 +228,7 @@ pub const DB = struct {
                     if (po == pg) continue;
                     var other = &self.guessed.items[po];
                     if (other.*.code != std.math.maxInt(usize)) continue;
-                    const old = other.*.mask;
+                    // const old = other.*.mask;
                     other.*.mask &= ~mask;
                     // std.debug.warn("RESET FIELD {} {b} -> {b}\n", .{ po, old, other.*.mask });
                 }
@@ -258,12 +258,12 @@ test "sample part a" {
     var db = DB.init();
     defer db.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         db.add_line(line);
     }
     const tser = db.ticket_scanning_error_rate();
-    testing.expect(tser == 71);
+    try testing.expect(tser == 71);
 }
 
 test "sample part b" {
@@ -284,10 +284,10 @@ test "sample part b" {
     var db = DB.init();
     defer db.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         db.add_line(line);
     }
     const product = db.multiply_fields("flight");
-    testing.expect(product == 143);
+    try testing.expect(product == 143);
 }

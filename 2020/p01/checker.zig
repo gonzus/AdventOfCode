@@ -26,7 +26,7 @@ pub const Checker = struct {
     pub fn check2(self: Checker, wanted: i32) i32 {
         var it = self.seen.iterator();
         while (it.next()) |kv| {
-            const value = kv.key;
+            const value = kv.key_ptr.*;
             const delta = wanted - value;
             if (self.seen.contains(delta)) {
                 return value * delta;
@@ -38,10 +38,10 @@ pub const Checker = struct {
     pub fn check3(self: Checker, wanted: i32) i32 {
         var it1 = self.seen.iterator();
         while (it1.next()) |kv1| {
-            const value = kv1.key;
+            const value = kv1.key_ptr.*;
             var it2 = self.seen.iterator();
             while (it2.next()) |kv2| {
-                const other = kv2.key;
+                const other = kv2.key_ptr.*;
                 const delta = wanted - value - other;
                 if (self.seen.contains(delta)) {
                     return value * other * delta;
@@ -64,12 +64,12 @@ test "sample" {
         \\675
         \\1456
     ;
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         const value = std.fmt.parseInt(i32, line, 10) catch unreachable;
         checker.add(value);
     }
 
-    testing.expect(checker.check2(2020) == 514579);
-    testing.expect(checker.check3(2020) == 241861950);
+    try testing.expect(checker.check2(2020) == 514579);
+    try testing.expect(checker.check3(2020) == 241861950);
 }

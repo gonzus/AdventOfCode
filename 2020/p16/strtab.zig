@@ -56,9 +56,9 @@ test "basic" {
     const pos: usize = 0;
 
     _ = strtab.add(str);
-    testing.expect(strtab.get_pos(str).? == pos);
-    testing.expect(std.mem.eql(u8, strtab.get_str(pos).?, str));
-    testing.expect(strtab.size() == 1);
+    try testing.expect(strtab.get_pos(str).? == pos);
+    try testing.expect(std.mem.eql(u8, strtab.get_str(pos).?, str));
+    try testing.expect(strtab.size() == 1);
 }
 
 test "no overwrites" {
@@ -77,11 +77,11 @@ test "no overwrites" {
         len += 1;
         const str = buf[0..len];
         // std.debug.warn("ADD [{}]\n", .{str});
-        _ = strtab.add(buf[0..len]);
+        _ = strtab.add(str);
     }
 
     const size = strtab.size();
-    testing.expect(size == 10);
+    try testing.expect(size == 10);
     while (c < 10) : (c += 1) {
         var len: usize = 0;
         std.mem.copy(u8, buf[len..], prefix);
@@ -91,6 +91,6 @@ test "no overwrites" {
         const str = buf[0..len];
         const got = strtab.get_str(c).?;
         // std.debug.warn("GOT [{}] EXPECT [{}]\n", .{ got, str });
-        testing.expect(std.mem.eql(u8, got, str));
+        try testing.expect(std.mem.eql(u8, got, str));
     }
 }

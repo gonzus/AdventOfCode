@@ -68,12 +68,12 @@ pub const Validator = struct {
         }
 
         if (self.zone == 0) {
-            var it_colon = std.mem.tokenize(line, ":");
+            var it_colon = std.mem.tokenize(u8, line, ":");
             const code = std.fmt.parseInt(usize, it_colon.next().?, 10) catch unreachable;
             var ruleset = RuleSet.init();
-            var it_pipe = std.mem.tokenize(it_colon.next().?, "|");
+            var it_pipe = std.mem.tokenize(u8, it_colon.next().?, "|");
             PIPE: while (it_pipe.next()) |rules| {
-                var it_space = std.mem.tokenize(rules, " ");
+                var it_space = std.mem.tokenize(u8, rules, " ");
                 var rule = Rule.init();
                 while (it_space.next()) |r| {
                     if (r[0] == '"') {
@@ -243,13 +243,13 @@ test "sample part a" {
     var validator = Validator.init();
     defer validator.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         validator.add_line(line);
     }
 
     const count = validator.count_valid();
-    testing.expect(count == 2);
+    try testing.expect(count == 2);
 }
 
 test "samples part b" {
@@ -306,26 +306,26 @@ test "samples part b" {
         var validator = Validator.init();
         defer validator.deinit();
 
-        var it = std.mem.split(data, "\n");
+        var it = std.mem.split(u8, data, "\n");
         while (it.next()) |line| {
             validator.add_line(line);
         }
 
         const count = validator.count_valid();
-        testing.expect(count == 3);
+        try testing.expect(count == 3);
     }
     {
         var validator = Validator.init();
         defer validator.deinit();
 
-        var it = std.mem.split(data, "\n");
+        var it = std.mem.split(u8, data, "\n");
         while (it.next()) |line| {
             validator.add_line(line);
         }
 
         validator.fixup_rules();
         const count = validator.count_valid();
-        testing.expect(count == 12);
+        try testing.expect(count == 12);
     }
 }
 
@@ -345,12 +345,12 @@ test "gonzo" {
     var validator = Validator.init();
     defer validator.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         validator.add_line(line);
     }
     // validator.show();
 
     const count = validator.count_valid();
-    testing.expect(count == 1);
+    try testing.expect(count == 1);
 }

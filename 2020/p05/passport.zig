@@ -46,6 +46,7 @@ pub const Passport = struct {
     }
 
     fn parse_binary(self: *Passport, str: []const u8) usize {
+        _ = self;
         var value: usize = 0;
         for (str) |c| {
             value *= 2;
@@ -75,13 +76,13 @@ test "sample no validation" {
     var passport = Passport.init();
     defer passport.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        var itf = std.mem.tokenize(line, " ");
+        var itf = std.mem.tokenize(u8, line, " ");
         const pstr = itf.next().?;
         const istr = itf.next().?;
         const expected = std.fmt.parseInt(usize, istr, 10) catch unreachable;
         const id = passport.parse(pstr);
-        testing.expect(id == expected);
+        try testing.expect(id == expected);
     }
 }

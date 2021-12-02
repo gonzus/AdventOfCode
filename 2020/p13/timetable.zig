@@ -26,7 +26,7 @@ pub const Timetable = struct {
         }
 
         var pos: usize = 0;
-        var it = std.mem.tokenize(line, ",");
+        var it = std.mem.tokenize(u8, line, ",");
         while (it.next()) |str| : (pos += 1) {
             if (str[0] == 'x') continue;
             const id = std.fmt.parseInt(usize, str, 10) catch unreachable;
@@ -39,7 +39,7 @@ pub const Timetable = struct {
         var min: usize = std.math.maxInt(usize);
         var it = self.buses.iterator();
         while (it.next()) |kv| {
-            const id = kv.value;
+            const id = kv.value_ptr.*;
             const next = self.departure % id;
             const wait = id - next;
             const departure = self.departure + wait;
@@ -60,8 +60,8 @@ pub const Timetable = struct {
 
         var it = self.buses.iterator();
         while (it.next()) |kv| {
-            const pos = kv.key;
-            const id = kv.value;
+            const pos = kv.key_ptr.*;
+            const id = kv.value_ptr.*;
             divs.append(id) catch unreachable;
 
             const rem: usize = if (pos == 0) 0 else id - pos % id;
@@ -130,20 +130,20 @@ test "sample earliest bus" {
     var timetable = Timetable.init();
     defer timetable.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         timetable.add_line(line);
     }
 
     const product = timetable.product_for_earliest_bus();
-    testing.expect(product == 295);
+    try testing.expect(product == 295);
 }
 
 test "chinese reminder" {
     const n = [_]usize{ 3, 5, 7 };
     const a = [_]usize{ 2, 3, 2 };
     const cr = chinese_remainder(n[0..], a[0..]);
-    testing.expect(cr == 23);
+    try testing.expect(cr == 23);
 }
 
 test "sample earliest departure 1" {
@@ -155,13 +155,13 @@ test "sample earliest departure 1" {
     var timetable = Timetable.init();
     defer timetable.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         timetable.add_line(line);
     }
 
     const timestamp = timetable.earliest_departure();
-    testing.expect(timestamp == 1068781);
+    try testing.expect(timestamp == 1068781);
 }
 
 test "sample earliest departure 2" {
@@ -173,13 +173,13 @@ test "sample earliest departure 2" {
     var timetable = Timetable.init();
     defer timetable.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         timetable.add_line(line);
     }
 
     const timestamp = timetable.earliest_departure();
-    testing.expect(timestamp == 3417);
+    try testing.expect(timestamp == 3417);
 }
 
 test "sample earliest departure 3" {
@@ -191,13 +191,13 @@ test "sample earliest departure 3" {
     var timetable = Timetable.init();
     defer timetable.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         timetable.add_line(line);
     }
 
     const timestamp = timetable.earliest_departure();
-    testing.expect(timestamp == 754018);
+    try testing.expect(timestamp == 754018);
 }
 
 test "sample earliest departure 4" {
@@ -209,13 +209,13 @@ test "sample earliest departure 4" {
     var timetable = Timetable.init();
     defer timetable.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         timetable.add_line(line);
     }
 
     const timestamp = timetable.earliest_departure();
-    testing.expect(timestamp == 779210);
+    try testing.expect(timestamp == 779210);
 }
 
 test "sample earliest departure 5" {
@@ -227,13 +227,13 @@ test "sample earliest departure 5" {
     var timetable = Timetable.init();
     defer timetable.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         timetable.add_line(line);
     }
 
     const timestamp = timetable.earliest_departure();
-    testing.expect(timestamp == 1261476);
+    try testing.expect(timestamp == 1261476);
 }
 
 test "sample earliest departure 6" {
@@ -245,11 +245,11 @@ test "sample earliest departure 6" {
     var timetable = Timetable.init();
     defer timetable.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         timetable.add_line(line);
     }
 
     const timestamp = timetable.earliest_departure();
-    testing.expect(timestamp == 1202161486);
+    try testing.expect(timestamp == 1202161486);
 }

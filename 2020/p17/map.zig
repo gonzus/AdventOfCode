@@ -247,7 +247,7 @@ test "sample part a" {
     var map = Map.init(Map.Space.Dim3);
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.add_line(line);
     }
@@ -384,7 +384,7 @@ test "sample part a" {
     // map.show();
 
     const count = map.run(6);
-    testing.expect(count == 112);
+    try testing.expect(count == 112);
 }
 
 test "sample part b" {
@@ -397,7 +397,7 @@ test "sample part b" {
     var map = Map.init(Map.Space.Dim4);
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.add_line(line);
     }
@@ -656,5 +656,5 @@ test "sample part b" {
     // map.show();
 
     const count = map.run(6);
-    testing.expect(count == 848);
+    try testing.expect(count == 848);
 }

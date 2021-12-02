@@ -42,7 +42,7 @@ pub const Luggage = struct {
         var count: usize = 0;
         var buf: [100]u8 = undefined;
         var parent: *Bag = undefined;
-        var it = std.mem.tokenize(line, " .,");
+        var it = std.mem.tokenize(u8, line, " .,");
         while (it.next()) |str| {
             pos += 1;
             if (pos == 1) {
@@ -86,10 +86,10 @@ pub const Luggage = struct {
     pub fn compute_parents(self: *Luggage) void {
         var itp = self.bags.iterator();
         while (itp.next()) |kvp| {
-            const parent = kvp.value.*;
+            const parent = kvp.value_ptr.*.*;
             var itc = parent.children.iterator();
             while (itc.next()) |kvc| {
-                var child = self.bags.get(kvc.key).?;
+                var child = self.bags.get(kvc.key_ptr.*).?;
                 _ = child.parents.put(parent.code, {}) catch unreachable;
             }
         }
@@ -112,7 +112,7 @@ pub const Luggage = struct {
         const bag = self.bags.get(code).?;
         var it = bag.parents.iterator();
         while (it.next()) |kv| {
-            const parent = kv.key;
+            const parent = kv.key_ptr.*;
             count += self.sum_can_contain_by_code(parent, seen);
         }
         return count;
@@ -128,8 +128,8 @@ pub const Luggage = struct {
         const bag = self.bags.get(code).?;
         var it = bag.children.iterator();
         while (it.next()) |kv| {
-            const child = kv.key;
-            count += kv.value * self.count_contained_bags_by_code(child);
+            const child = kv.key_ptr.*;
+            count += kv.value_ptr.* * self.count_contained_bags_by_code(child);
         }
         return count;
     }
@@ -138,11 +138,11 @@ pub const Luggage = struct {
         std.debug.warn("Luggage with {} bags\n", .{self.bags.count()});
         var itp = self.bags.iterator();
         while (itp.next()) |kvp| {
-            const bag: Bag = kvp.value.*;
+            const bag: Bag = kvp.value_ptr.*.*;
             std.debug.warn(" [{}]\n", .{self.colors.get_str(bag.code).?});
             var itc = bag.children.iterator();
             while (itc.next()) |kvc| {
-                std.debug.warn("   can contain {} [{}]\n", .{ kvc.value, self.colors.get_str(kvc.key).? });
+                std.debug.warn("   can contain {} [{}]\n", .{ kvc.value_ptr.*, self.colors.get_str(kvc.key_ptr.*).? });
             }
         }
     }
@@ -164,7 +164,7 @@ test "sample parents" {
     var luggage = Luggage.init();
     defer luggage.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         luggage.add_rule(line);
     }
@@ -172,7 +172,7 @@ test "sample parents" {
     luggage.compute_parents();
 
     const containers = luggage.sum_can_contain("shiny gold");
-    testing.expect(containers == 4);
+    try testing.expect(containers == 4);
 }
 
 test "sample children 1" {
@@ -191,14 +191,14 @@ test "sample children 1" {
     var luggage = Luggage.init();
     defer luggage.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         luggage.add_rule(line);
     }
     // luggage.show();
 
     const contained = luggage.count_contained_bags("shiny gold");
-    testing.expect(contained == 32);
+    try testing.expect(contained == 32);
 }
 
 test "sample children 2" {
@@ -215,12 +215,12 @@ test "sample children 2" {
     var luggage = Luggage.init();
     defer luggage.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         luggage.add_rule(line);
     }
     // luggage.show();
 
     const contained = luggage.count_contained_bags("shiny gold");
-    testing.expect(contained == 126);
+    try testing.expect(contained == 126);
 }

@@ -277,7 +277,7 @@ test "sample immediate" {
     var map = Map.init(true);
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.add_line(line);
     }
@@ -287,30 +287,30 @@ test "sample immediate" {
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(equal);
+    // try testing.expect(equal);
 
     const count = map.run_until_stable();
-    testing.expect(count == 37);
+    try testing.expect(count == 37);
 }
 
 test "sample ranged" {
@@ -330,7 +330,7 @@ test "sample ranged" {
     var map = Map.init(false);
     defer map.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.add_line(line);
     }
@@ -340,32 +340,32 @@ test "sample ranged" {
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(!equal);
+    // try testing.expect(!equal);
 
     // equal = map.step();
     // map.show();
-    // testing.expect(equal);
+    // try testing.expect(equal);
 
     const count = map.run_until_stable();
-    testing.expect(count == 26);
+    try testing.expect(count == 26);
 }

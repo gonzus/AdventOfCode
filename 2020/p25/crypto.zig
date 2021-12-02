@@ -64,7 +64,9 @@ pub const Crypto = struct {
         return self;
     }
 
-    pub fn deinit(self: *Crypto) void {}
+    pub fn deinit(self: *Crypto) void {
+        _ = self;
+    }
 
     pub fn add_public_key(self: *Crypto, line: []const u8) void {
         const public_key = std.fmt.parseInt(usize, line, 10) catch unreachable;
@@ -99,11 +101,11 @@ test "sample part a" {
     var crypto = Crypto.init();
     defer crypto.deinit();
 
-    var it = std.mem.split(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         crypto.add_public_key(line);
     }
 
     const encryption_key = crypto.guess_encryption_key();
-    testing.expect(encryption_key == 14897079);
+    try testing.expect(encryption_key == 14897079);
 }
