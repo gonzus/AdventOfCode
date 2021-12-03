@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 
-const allocator = std.heap.page_allocator;
+const allocator = std.testing.allocator;
 
 pub const Submarine = struct {
     pub const Mode = enum {
