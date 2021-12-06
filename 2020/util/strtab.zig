@@ -52,7 +52,7 @@ pub const StringTable = struct {
 };
 
 test "basic" {
-    const allocator = std.heap.page_allocator;
+    const allocator = std.testing.allocator;
     var strtab = StringTable.init(allocator);
     defer strtab.deinit();
 
@@ -66,7 +66,7 @@ test "basic" {
 }
 
 test "no overwrites" {
-    const allocator = std.heap.page_allocator;
+    const allocator = std.testing.allocator;
     var strtab = StringTable.init(allocator);
     defer strtab.deinit();
 
