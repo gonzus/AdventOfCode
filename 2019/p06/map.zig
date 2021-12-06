@@ -1,45 +1,42 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const StringTable = @import("./strtab.zig").StringTable;
+
+const allocator = std.testing.allocator;
 
 pub const Map = struct {
-    name_to_pos: std.StringHashMap(usize),
-    pos_to_name: [4096][]const u8,
-    body_parent: [4096]?usize,
-    pos: usize,
+    bodies: StringTable,
+    parent: [4096]?usize,
 
     pub fn init() Map {
         var self = Map{
-            .name_to_pos = std.StringHashMap(usize).init(std.heap.direct_allocator),
-            .pos_to_name = undefined,
-            .body_parent = undefined,
-            .pos = 0,
+            .bodies = StringTable.init(allocator),
+            .parent = undefined,
         };
         return self;
     }
 
-    pub fn deinit(self: Map) void {
-        self.name_to_pos.deinit();
+    pub fn deinit(self: *Map) void {
+        self.bodies.deinit();
     }
 
     pub fn add_orbit(self: *Map, str: []const u8) void {
-        var it = std.mem.separate(str, ")");
+        var it = std.mem.split(u8, str, ")");
         var parent: ?usize = null;
         while (it.next()) |what| {
-            const found = self.name_to_pos.contains(what);
-            const gop = self.name_to_pos.getOrPutValue(what, self.pos) catch unreachable;
-            const pos = gop.value;
-            if (!found) {
-                // std.debug.warn("BODY {} => {}\n", what, pos);
-                self.body_parent[pos] = null;
-                self.pos_to_name[pos] = what;
-                self.pos += 1;
+            var pos: usize = 0;
+            if (self.bodies.contains(what)) {
+                pos = self.bodies.get_pos(what).?;
+            } else {
+                pos = self.bodies.add(what);
+                self.parent[pos] = null;
             }
             if (parent == null) {
                 parent = pos;
             } else {
                 const child = pos;
-                self.body_parent[child] = parent.?;
-                // std.debug.warn("PARENT {} => {}\n", self.pos_to_name[child], self.pos_to_name[parent.?]);
+                self.parent[child] = parent.?;
+                // std.debug.warn("PARENT {s} => {s}\n", .{ self.bodies.get_str(child), self.bodies.get_str(parent.?) });
             }
         }
     }
@@ -47,48 +44,46 @@ pub const Map = struct {
     fn inc_orbit(self: *Map, pos: ?usize, distance: usize) usize {
         if (pos == null) return 0;
         const child = pos.?;
-        // std.debug.warn("ORBITS {} {}: +1\n", self.pos_to_name[child], distance);
-        const parent = self.body_parent[child];
+        // std.debug.warn("ORBITS {s} {}: +1\n", .{ self.bodies.get_str(child), distance });
+        const parent = self.parent[child];
         return 1 + self.inc_orbit(parent, distance + 1);
     }
 
     pub fn count_orbits(self: *Map) usize {
         var count: usize = 0;
         var j: usize = 0;
-        while (j < self.pos) : (j += 1) {
-            const parent = self.body_parent[j];
+        while (j < self.bodies.size()) : (j += 1) {
+            const parent = self.parent[j];
             count += self.inc_orbit(parent, 0);
         }
         return count;
     }
 
     pub fn count_hops(self: *Map, a: []const u8, b: []const u8) usize {
-        const pa = self.name_to_pos.get(a);
-        const pb = self.name_to_pos.get(b);
-        var ha = std.AutoHashMap(usize, usize).init(std.heap.direct_allocator);
+        var current: usize = self.bodies.get_pos(a).?;
+        var ha = std.AutoHashMap(usize, usize).init(allocator);
         defer ha.deinit();
 
-        var current: usize = pa.?.value;
         var count: usize = 0;
         while (true) {
-            const parent = self.body_parent[current];
+            const parent = self.parent[current];
             if (parent == null) break;
             count += 1;
             current = parent.?;
-            // std.debug.warn("HOP A {} {}\n", self.pos_to_name[current], count);
+            // std.debug.warn("HOP A {s} {}\n", .{ self.bodies.get_str(current), count });
             _ = ha.put(current, count) catch unreachable;
         }
 
-        current = pb.?.value;
+        current = self.bodies.get_pos(b).?;
         count = 0;
         while (true) {
-            const parent = self.body_parent[current];
+            const parent = self.parent[current];
             if (parent == null) break;
             count += 1;
             current = parent.?;
-            // std.debug.warn("HOP B {} {}\n", self.pos_to_name[current], count);
+            // std.debug.warn("HOP B {s} {}\n", .{ self.bodies.get_str(current), count });
             if (ha.contains(current)) {
-                count += ha.get(current).?.value;
+                count += ha.getEntry(current).?.value_ptr.*;
                 break;
             }
         }
@@ -113,7 +108,7 @@ test "total orbit count" {
     var map = Map.init();
     defer map.deinit();
 
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |what| {
         map.add_orbit(what);
     }
@@ -140,7 +135,7 @@ test "hop count" {
     var map = Map.init();
     defer map.deinit();
 
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |what| {
         map.add_orbit(what);
     }

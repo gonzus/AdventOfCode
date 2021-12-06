@@ -17,7 +17,9 @@ pub const Deck = struct {
         return self;
     }
 
-    pub fn deinit(self: *Deck) void {}
+    pub fn deinit(self: *Deck) void {
+        _ = self;
+    }
 
     pub fn get_card(self: *Deck, pos: isize) isize {
         var r = pos * self.step;
@@ -110,7 +112,7 @@ pub const Deck = struct {
         };
         for (ops) |op, index| {
             if (line.len < op.len) continue;
-            if (std.mem.compare(u8, line[0..op.len], op) == std.mem.Compare.Equal) {
+            if (std.mem.eql(u8, line[0..op.len], op)) {
                 var arg: isize = 0;
                 if (line.len > op.len) {
                     arg = std.fmt.parseInt(i32, line[op.len + 1 ..], 10) catch unreachable;
@@ -158,7 +160,7 @@ test "new deck dealt into new stack is reversed" {
         deck.deal_into_new_stack();
         var j: isize = 0;
         while (j < s) : (j += 1) {
-            const c = deck.get_card(s - j - 1);
+            // const c = deck.get_card(s - j - 1);
             // std.debug.warn("S {}: C {} is {}, expected {}\n", s, j, c, j);
             assert(deck.get_card(s - j - 1) == j);
         }
@@ -203,16 +205,16 @@ test "shuffle 1" {
     const SIZE = 10;
     var deck = Deck.init(SIZE);
     defer deck.deinit();
-    var itd = std.mem.separate(data, "\n");
+    var itd = std.mem.split(u8, data, "\n");
     while (itd.next()) |line| {
         deck.run_line(line);
     }
-    var ite = std.mem.separate(expected, " ");
+    var ite = std.mem.split(u8, expected, " ");
     var p: isize = 0;
     while (ite.next()) |s| : (p += 1) {
         const card = @intCast(isize, s[0] - '0');
         const got = deck.get_card(p);
-        assert(deck.get_card(p) == card);
+        assert(got == card);
     }
 }
 
@@ -227,16 +229,16 @@ test "shuffle 2" {
     const SIZE = 10;
     var deck = Deck.init(SIZE);
     defer deck.deinit();
-    var itd = std.mem.separate(data, "\n");
+    var itd = std.mem.split(u8, data, "\n");
     while (itd.next()) |line| {
         deck.run_line(line);
     }
-    var ite = std.mem.separate(expected, " ");
+    var ite = std.mem.split(u8, expected, " ");
     var p: isize = 0;
     while (ite.next()) |s| : (p += 1) {
         const card = @intCast(isize, s[0] - '0');
         const got = deck.get_card(p);
-        assert(deck.get_card(p) == card);
+        assert(got == card);
     }
 }
 
@@ -251,16 +253,16 @@ test "shuffle 3" {
     const SIZE = 10;
     var deck = Deck.init(SIZE);
     defer deck.deinit();
-    var itd = std.mem.separate(data, "\n");
+    var itd = std.mem.split(u8, data, "\n");
     while (itd.next()) |line| {
         deck.run_line(line);
     }
-    var ite = std.mem.separate(expected, " ");
+    var ite = std.mem.split(u8, expected, " ");
     var p: isize = 0;
     while (ite.next()) |s| : (p += 1) {
         const card = @intCast(isize, s[0] - '0');
         const got = deck.get_card(p);
-        assert(deck.get_card(p) == card);
+        assert(got == card);
     }
 }
 
@@ -282,15 +284,15 @@ test "shuffle 4" {
     const SIZE = 10;
     var deck = Deck.init(SIZE);
     defer deck.deinit();
-    var itd = std.mem.separate(data, "\n");
+    var itd = std.mem.split(u8, data, "\n");
     while (itd.next()) |line| {
         deck.run_line(line);
     }
-    var ite = std.mem.separate(expected, " ");
+    var ite = std.mem.split(u8, expected, " ");
     var p: isize = 0;
     while (ite.next()) |s| : (p += 1) {
         const card = @intCast(isize, s[0] - '0');
         const got = deck.get_card(p);
-        assert(deck.get_card(p) == card);
+        assert(got == card);
     }
 }

@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const allocator = std.heap.page_allocator;
 
 pub const Pos = struct {
     x: usize,
@@ -37,7 +38,7 @@ pub const Hull = struct {
 
     pub fn init(first_color: Color) Hull {
         var self = Hull{
-            .cells = std.AutoHashMap(usize, Color).init(std.heap.direct_allocator),
+            .cells = std.AutoHashMap(usize, Color).init(allocator),
             .curr = Pos{ .x = 500, .y = 500 },
             .pmin = Pos{ .x = std.math.maxInt(usize), .y = std.math.maxInt(usize) },
             .pmax = Pos{ .x = 0, .y = 0 },
@@ -59,7 +60,7 @@ pub const Hull = struct {
     pub fn get_color(self: *Hull, pos: Pos) Color {
         const label = pos.encode();
         if (self.cells.contains(label)) {
-            return self.cells.get(label).?.value;
+            return self.cells.get(label).?;
         }
         return Color.Black;
     }

@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const allocator = std.testing.allocator;
 
 const TargetInfo = struct {
     angle: f64,
@@ -8,7 +9,7 @@ const TargetInfo = struct {
     dist: usize,
     shot: bool,
 };
-fn cmpByAngle(l: TargetInfo, r: TargetInfo) bool {
+fn cmpByAngle(_: void, l: TargetInfo, r: TargetInfo) bool {
     if (l.angle < r.angle) return true;
     if (l.angle > r.angle) return false;
     return l.dist < r.dist;
@@ -28,10 +29,12 @@ pub const Board = struct {
         return self;
     }
 
-    pub fn deinit(self: Board) void {}
+    pub fn deinit(self: Board) void {
+        _ = self;
+    }
 
     pub fn add_lines(self: *Board, lines: []const u8) void {
-        var it = std.mem.separate(lines, "\n");
+        var it = std.mem.split(u8, lines, "\n");
         while (it.next()) |str| {
             self.add_line(str);
         }
@@ -79,7 +82,7 @@ pub const Board = struct {
         var minx: usize = 0;
         var miny: usize = 0;
 
-        var seen = std.AutoHashMap(usize, void).init(std.debug.global_allocator);
+        var seen = std.AutoHashMap(usize, void).init(allocator);
         defer seen.deinit();
 
         var srcy: usize = 0;
@@ -88,7 +91,7 @@ pub const Board = struct {
             while (srcx < self.maxx) : (srcx += 1) {
                 if (self.data[srcy][srcx] == 0) continue;
 
-                seen.clear();
+                seen.clearRetainingCapacity();
                 var tgty: usize = 0;
                 while (tgty < self.maxy) : (tgty += 1) {
                     var tgtx: usize = 0;
@@ -144,15 +147,15 @@ pub const Board = struct {
         }
 
         // we can now sort by angle; for positions with the same angle, the lowest distance wins
-        std.sort.sort(TargetInfo, data[0..pos], cmpByAngle);
+        std.sort.sort(TargetInfo, data[0..pos], {}, cmpByAngle);
 
         // we can now circle around as many times as necessary to hit the desired target
-        var seen = std.AutoHashMap(usize, void).init(std.debug.global_allocator);
+        var seen = std.AutoHashMap(usize, void).init(allocator);
         defer seen.deinit();
         var shot: usize = 0;
         while (shot < pos) {
             // on each turn we "forget" the previous targets
-            seen.clear();
+            seen.clearRetainingCapacity();
             var j: usize = 0;
             while (j < pos) : (j += 1) {
                 // skip positions we have already shot

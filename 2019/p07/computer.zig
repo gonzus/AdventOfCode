@@ -89,7 +89,7 @@ pub const Computer = struct {
             .reentrant = false,
             .halted = false,
         };
-        var it = std.mem.separate(str, ",");
+        var it = std.mem.split(u8, str, ",");
         while (it.next()) |what| {
             const instr = std.fmt.parseInt(i32, what, 10) catch unreachable;
             self.rom.put(instr);
@@ -98,7 +98,9 @@ pub const Computer = struct {
         return self;
     }
 
-    pub fn deinit(self: *Computer) void {}
+    pub fn deinit(self: *Computer) void {
+        _ = self;
+    }
 
     pub fn get(self: Computer, pos: usize) i32 {
         return self.ram.read(pos);
@@ -146,7 +148,7 @@ pub const Computer = struct {
             instr /= 10;
             const m2 = @intToEnum(MODE, instr % 10);
             instr /= 10;
-            const m3 = @intToEnum(MODE, instr % 10);
+            // const m3 = @intToEnum(MODE, instr % 10);
             instr /= 10;
             switch (op) {
                 OP.HALT => {

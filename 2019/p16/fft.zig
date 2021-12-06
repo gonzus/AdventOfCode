@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const allocator = std.testing.allocator;
 
 pub const FFT = struct {
     const base_pattern = [_]i8{ 0, 1, 0, -1 };
@@ -16,6 +17,7 @@ pub const FFT = struct {
     }
 
     fn get_pattern(self: *FFT, r: usize, p: usize) i8 {
+        _ = self;
         // row 0: 0 -> 0, 1 -> 1, ...
         // row 1: 0, 1 -> 0, 1, 2 _. 1
         // row 2: 0, 1, 2 -> 0, 3, 4, 5 -> 1
@@ -24,7 +26,6 @@ pub const FFT = struct {
     }
 
     pub fn parse(self: *FFT, str: []const u8, n: usize) void {
-        const allocator = std.heap.direct_allocator;
         self.signal = allocator.alloc(u8, str.len) catch @panic("FUCK\n");
         self.times = n;
         var j: usize = 0;
@@ -34,7 +35,6 @@ pub const FFT = struct {
     }
 
     pub fn deinit(self: *FFT) void {
-        const allocator = std.heap.direct_allocator;
         allocator.free(self.signal);
     }
 
@@ -74,7 +74,6 @@ pub const FFT = struct {
 
     pub fn run_phases(self: *FFT, n: usize, output: []u8, last: usize) void {
         // std.debug.warn("Signal size: {} * {}  = {}, interested in last {} elements\n", self.signal.len, self.times, self.signal.len * self.times, last);
-        const allocator = std.heap.direct_allocator;
         var buf: [2][]u8 = undefined;
         buf[0] = allocator.alloc(u8, self.signal.len * self.times) catch @panic("FUCK\n");
         defer allocator.free(buf[0]);
@@ -104,12 +103,11 @@ test "run short phases" {
     const data = "12345678";
     fft.parse(data, 1);
 
-    const allocator = std.heap.direct_allocator;
     var output: []u8 = allocator.alloc(u8, data.len) catch @panic("FUCK\n");
     defer allocator.free(output);
     fft.run_phases(4, output[0..], data.len - 3);
     const wanted = [_]u8{ 0, 1, 0, 2, 9, 4, 9, 8 };
-    assert(std.mem.compare(u8, wanted[3..], output[3..]) == std.mem.Compare.Equal);
+    assert(std.mem.eql(u8, wanted[3..], output[3..]));
 }
 
 test "run medium phases 1" {
@@ -118,12 +116,11 @@ test "run medium phases 1" {
     const data = "80871224585914546619083218645595";
     fft.parse(data, 1);
 
-    const allocator = std.heap.direct_allocator;
     var output: []u8 = allocator.alloc(u8, data.len) catch @panic("FUCK\n");
     defer allocator.free(output);
     fft.run_phases(100, output[0..], data.len);
     const wanted = [_]u8{ 2, 4, 1, 7, 6, 1, 7, 6 };
-    assert(std.mem.compare(u8, wanted, output[0..wanted.len]) == std.mem.Compare.Equal);
+    assert(std.mem.eql(u8, &wanted, output[0..wanted.len]));
 }
 
 test "run medium phases 2" {
@@ -132,12 +129,11 @@ test "run medium phases 2" {
     const data = "19617804207202209144916044189917";
     fft.parse(data, 1);
 
-    const allocator = std.heap.direct_allocator;
     var output: []u8 = allocator.alloc(u8, data.len) catch @panic("FUCK\n");
     defer allocator.free(output);
     fft.run_phases(100, output[0..], data.len);
     const wanted = [_]u8{ 7, 3, 7, 4, 5, 4, 1, 8 };
-    assert(std.mem.compare(u8, wanted, output[0..wanted.len]) == std.mem.Compare.Equal);
+    assert(std.mem.eql(u8, &wanted, output[0..wanted.len]));
 }
 
 test "run medium phases 3" {
@@ -146,10 +142,9 @@ test "run medium phases 3" {
     const data = "69317163492948606335995924319873";
     fft.parse(data, 1);
 
-    const allocator = std.heap.direct_allocator;
     var output: []u8 = allocator.alloc(u8, data.len) catch @panic("FUCK\n");
     defer allocator.free(output);
     fft.run_phases(100, output[0..], data.len);
     const wanted = [_]u8{ 5, 2, 4, 3, 2, 1, 3, 3 };
-    assert(std.mem.compare(u8, wanted, output[0..wanted.len]) == std.mem.Compare.Equal);
+    assert(std.mem.eql(u8, &wanted, output[0..wanted.len]));
 }

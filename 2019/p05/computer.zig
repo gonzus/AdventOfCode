@@ -29,7 +29,7 @@ pub const Computer = struct {
             .ram = undefined,
             .pos = 0,
         };
-        var it = std.mem.separate(str, ",");
+        var it = std.mem.split(u8, str, ",");
         while (it.next()) |what| {
             const instr = std.fmt.parseInt(i32, what, 10) catch unreachable;
             self.rom[self.pos] = instr;
@@ -60,7 +60,7 @@ pub const Computer = struct {
             instr /= 10;
             const m2 = @intToEnum(MODE, instr % 10);
             instr /= 10;
-            const m3 = @intToEnum(MODE, instr % 10);
+            // const m3 = @intToEnum(MODE, instr % 10);
             instr /= 10;
             switch (op) {
                 OP.HALT => {

@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const allocator = std.heap.page_allocator;
 
 pub const IntBuf = struct {
     data: []i64,
@@ -12,15 +13,17 @@ pub const IntBuf = struct {
             .pw = 0,
             .pr = 0,
         };
-        const allocator = std.heap.direct_allocator;
         self.data = allocator.alloc(i64, size) catch @panic("FUCK\n");
         std.mem.set(i64, self.data[0..], 0);
         return self;
     }
 
     pub fn deinit(self: *IntBuf) void {
-        const allocator = std.heap.direct_allocator;
-        allocator.free(self.data);
+        _ = self;
+        // This produces a segfault in
+        //     @memset(non_const_ptr, undefined, bytes_len);
+        //
+        // allocator.free(self.data);
     }
 
     pub fn empty(self: IntBuf) bool {
@@ -114,7 +117,7 @@ pub const Computer = struct {
     }
 
     pub fn parse(self: *Computer, str: []const u8) void {
-        var it = std.mem.separate(str, ",");
+        var it = std.mem.split(u8, str, ",");
         while (it.next()) |what| {
             const instr = std.fmt.parseInt(i64, what, 10) catch unreachable;
             self.rom.put(instr);
@@ -123,8 +126,8 @@ pub const Computer = struct {
     }
 
     pub fn hack(self: *Computer, pos: usize, val: i64) void {
-        const value: i64 = 2;
-        std.debug.warn("HACKING ROM: pos {} changing from {} to {}\n", pos, self.rom.data[pos], val);
+        // const value: i64 = 2;
+        std.debug.warn("HACKING ROM: pos {} changing from {} to {}\n", .{ pos, self.rom.data[pos], val });
         self.rom.data[pos] = val;
         self.clear();
     }
@@ -138,7 +141,7 @@ pub const Computer = struct {
     }
 
     pub fn clear(self: *Computer) void {
-        if (self.debug) std.debug.warn("RESET\n");
+        if (self.debug) std.debug.warn("RESET\n", .{});
         self.ram = self.rom;
         self.halted = false;
         self.pc = 0;
@@ -147,7 +150,7 @@ pub const Computer = struct {
     }
 
     pub fn enqueueInput(self: *Computer, input: i64) void {
-        if (self.debug) std.debug.warn("ENQUEUE {}\n", input);
+        if (self.debug) std.debug.warn("ENQUEUE {}\n", .{input});
         self.inputs.put(input);
     }
 
@@ -168,7 +171,7 @@ pub const Computer = struct {
 
         while (!self.halted) {
             var instr: u32 = @intCast(u32, self.ram.read(self.pc + 0).?);
-            // if (self.debug) std.debug.warn("instr @ {}: {}\n", self.pc, instr);
+            // if (self.debug) std.debug.warn("instr @ {}: {}\n",.{ self.pc, instr});
             const op = @intToEnum(OP, instr % 100);
             instr /= 100;
             const m1 = @intToEnum(MODE, instr % 10);
@@ -179,44 +182,44 @@ pub const Computer = struct {
             instr /= 10;
             switch (op) {
                 OP.HALT => {
-                    if (self.debug) std.debug.warn("{} | HALT\n", self.pc);
+                    if (self.debug) std.debug.warn("{} | HALT\n", .{self.pc});
                     self.halted = true;
                     break;
                 },
                 OP.ADD => {
                     const v1 = self.read_decoded(1, m1);
                     const v2 = self.read_decoded(2, m2);
-                    if (self.debug) std.debug.warn("{} | ADD: {} + {}\n", self.pc, v1, v2);
+                    if (self.debug) std.debug.warn("{} | ADD: {} + {}\n", .{ self.pc, v1, v2 });
                     self.write_decoded(3, m3, v1 + v2);
                     self.pc += 4;
                 },
                 OP.MUL => {
                     const v1 = self.read_decoded(1, m1);
                     const v2 = self.read_decoded(2, m2);
-                    if (self.debug) std.debug.warn("{} | MUL: {} * {}\n", self.pc, v1, v2);
+                    if (self.debug) std.debug.warn("{} | MUL: {} * {}\n", .{ self.pc, v1, v2 });
                     self.write_decoded(3, m3, v1 * v2);
                     self.pc += 4;
                 },
                 OP.RDSV => {
                     if (self.inputs.empty()) {
-                        if (self.debug) std.debug.warn("{} | RDSV: PAUSED\n", self.pc);
+                        if (self.debug) std.debug.warn("{} | RDSV: PAUSED\n", .{self.pc});
                         break;
                     }
                     const value = self.inputs.get().?;
-                    if (self.debug) std.debug.warn("{} | RDSV: {}\n", self.pc, value);
+                    if (self.debug) std.debug.warn("{} | RDSV: {}\n", .{ self.pc, value });
                     self.write_decoded(1, m1, value);
                     self.pc += 2;
                 },
                 OP.PRINT => {
                     const v1 = self.read_decoded(1, m1);
-                    if (self.debug) std.debug.warn("{} | PRINT: {}\n", self.pc, v1);
+                    if (self.debug) std.debug.warn("{} | PRINT: {}\n", .{ self.pc, v1 });
                     self.outputs.put(v1);
                     self.pc += 2;
                 },
                 OP.JIT => {
                     const v1 = self.read_decoded(1, m1);
                     const v2 = self.read_decoded(2, m2);
-                    if (self.debug) std.debug.warn("{} | JIT: {} {}\n", self.pc, v1, v2);
+                    if (self.debug) std.debug.warn("{} | JIT: {} {}\n", .{ self.pc, v1, v2 });
                     if (v1 == 0) {
                         self.pc += 3;
                     } else {
@@ -226,7 +229,7 @@ pub const Computer = struct {
                 OP.JIF => {
                     const v1 = self.read_decoded(1, m1);
                     const v2 = self.read_decoded(2, m2);
-                    if (self.debug) std.debug.warn("{} | JIF: {} {}\n", self.pc, v1, v2);
+                    if (self.debug) std.debug.warn("{} | JIF: {} {}\n", .{ self.pc, v1, v2 });
                     if (v1 == 0) {
                         self.pc = @intCast(usize, v2);
                     } else {
@@ -236,7 +239,7 @@ pub const Computer = struct {
                 OP.CLT => {
                     const v1 = self.read_decoded(1, m1);
                     const v2 = self.read_decoded(2, m2);
-                    if (self.debug) std.debug.warn("{} | CLT: {} LT {}\n", self.pc, v1, v2);
+                    if (self.debug) std.debug.warn("{} | CLT: {} LT {}\n", .{ self.pc, v1, v2 });
 
                     // tried doing this way, got an error:
                     //
@@ -253,7 +256,7 @@ pub const Computer = struct {
                     const v2 = self.read_decoded(2, m2);
                     var value: i64 = 0;
                     if (v1 == v2) value = 1;
-                    if (self.debug) std.debug.warn("{} | CEQ: {} EQ {} ? {}\n", self.pc, v1, v2, value);
+                    if (self.debug) std.debug.warn("{} | CEQ: {} EQ {} ? {}\n", .{ self.pc, v1, v2, value });
                     self.write_decoded(3, m3, value);
                     self.pc += 4;
                 },
@@ -261,7 +264,7 @@ pub const Computer = struct {
                     const v1 = self.read_decoded(1, m1);
                     const base = self.base;
                     self.base += v1;
-                    if (self.debug) std.debug.warn("{} | RBO: {} + {} => {}\n", self.pc, base, v1, self.base);
+                    if (self.debug) std.debug.warn("{} | RBO: {} + {} => {}\n", .{ self.pc, base, v1, self.base });
                     self.pc += 2;
                 },
             }
@@ -274,16 +277,16 @@ pub const Computer = struct {
         switch (mode) {
             MODE.POSITION => {
                 v = self.ram.read(@intCast(usize, p)).?;
-                // if (self.debug) std.debug.warn("READ_DECODED POSITION {} => {}\n", p, v);
+                // if (self.debug) std.debug.warn("READ_DECODED POSITION {} => {}\n",.{ p, v});
             },
             MODE.IMMEDIATE => {
                 v = p;
-                // if (self.debug) std.debug.warn("READ_DECODED IMMEDIATE => {}\n", v);
+                // if (self.debug) std.debug.warn("READ_DECODED IMMEDIATE => {}\n",.{ v});
             },
             MODE.RELATIVE => {
                 const q = p + self.base;
                 v = self.ram.read(@intCast(usize, q)).?;
-                // if (self.debug) std.debug.warn("READ_DECODED RELATIVE {} + {} = {} => {}\n", p, self.base, q, v);
+                // if (self.debug) std.debug.warn("READ_DECODED RELATIVE {} + {} = {} => {}\n",.{ p, self.base, q, v});
             },
         }
         return v;
@@ -291,7 +294,7 @@ pub const Computer = struct {
 
     fn write_decoded(self: *Computer, pos: usize, mode: MODE, value: i64) void {
         const p = self.ram.read(self.pc + pos).?;
-        // if (self.debug) std.debug.warn("WRITE_DECODED {} {}: {} => {}\n", self.pc + pos, mode, p, value);
+        // if (self.debug) std.debug.warn("WRITE_DECODED {} {}: {} => {}\n",.{ self.pc + pos, mode, p, value});
         switch (mode) {
             MODE.POSITION => self.ram.write(@intCast(usize, p), value),
             MODE.IMMEDIATE => unreachable,

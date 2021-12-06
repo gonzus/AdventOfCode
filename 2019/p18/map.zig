@@ -1,6 +1,13 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+// TODO
+// Cannot use testing allocator because I was too lazy to write the deinit()
+// method for Node (our graph).
+//
+// const allocator = std.testing.allocator;
+const allocator = std.heap.page_allocator;
+
 pub const Map = struct {
     pub const Pos = struct {
         const OFFSET: usize = 10000;
@@ -15,12 +22,12 @@ pub const Map = struct {
             };
         }
 
-        fn lessThan(l: Pos, r: Pos) bool {
-            if (l.x < r.x) return true;
-            if (l.x > r.x) return false;
-            if (l.y < r.y) return true;
-            if (l.y > r.y) return false;
-            return false;
+        fn cmp(l: Pos, r: Pos) std.math.Order {
+            if (l.x < r.x) return std.math.Order.lt;
+            if (l.x > r.x) return std.math.Order.gt;
+            if (l.y < r.y) return std.math.Order.lt;
+            if (l.y > r.y) return std.math.Order.gt;
+            return std.math.Order.eq;
         }
     };
 
@@ -33,7 +40,7 @@ pub const Map = struct {
             return Node{
                 .p = p,
                 .m = m,
-                .n = std.AutoHashMap(u64, void).init(std.heap.direct_allocator),
+                .n = std.AutoHashMap(u64, void).init(allocator),
             };
         }
 
@@ -49,12 +56,10 @@ pub const Map = struct {
             return label / 1000000;
         }
 
-        fn lessThan(l: Node, r: Node) bool {
-            if (l.m < r.m) return true;
-            if (l.m > r.m) return false;
-            if (Pos.lessThan(l.p, r.p)) return true;
-            if (Pos.lessThan(r.p, l.p)) return false;
-            return false;
+        fn cmp(l: Node, r: Node) std.math.Order {
+            if (l.m < r.m) return std.math.Order.lt;
+            if (l.m > r.m) return std.math.Order.gt;
+            return Pos.cmp(l.p, r.p);
         }
     };
 
@@ -69,12 +74,12 @@ pub const Map = struct {
             };
         }
 
-        fn lessThan(l: NodeInfo, r: NodeInfo) bool {
-            if (l.dist < r.dist) return true;
-            if (l.dist > r.dist) return false;
-            if (l.label < r.label) return true;
-            if (l.label > r.label) return false;
-            return false;
+        fn cmp(l: NodeInfo, r: NodeInfo) std.math.Order {
+            if (l.dist < r.dist) return std.math.Order.lt;
+            if (l.dist > r.dist) return std.math.Order.gt;
+            if (l.label < r.label) return std.math.Order.lt;
+            if (l.label > r.label) return std.math.Order.gt;
+            return std.math.Order.eq;
         }
     };
 
@@ -115,10 +120,10 @@ pub const Map = struct {
     pub fn init() Map {
         var self = Map{
             .py = 0,
-            .cells = std.AutoHashMap(Pos, Tile).init(std.heap.direct_allocator),
-            .keys = std.AutoHashMap(Pos, u8).init(std.heap.direct_allocator),
-            .doors = std.AutoHashMap(Pos, u8).init(std.heap.direct_allocator),
-            .nodes = std.AutoHashMap(u64, Node).init(std.heap.direct_allocator),
+            .cells = std.AutoHashMap(Pos, Tile).init(allocator),
+            .keys = std.AutoHashMap(Pos, u8).init(allocator),
+            .doors = std.AutoHashMap(Pos, u8).init(allocator),
+            .nodes = std.AutoHashMap(u64, Node).init(allocator),
             .pcur = Pos.init(Pos.OFFSET / 2, Pos.OFFSET / 2),
             .pmin = Pos.init(std.math.maxInt(usize), std.math.maxInt(usize)),
             .pmax = Pos.init(0, 0),
@@ -166,13 +171,11 @@ pub const Map = struct {
     }
 
     pub fn walk_map(self: *Map) void {
-        var allocator = std.heap.direct_allocator;
+        _ = self.get_all_keys();
+        self.nodes.clearRetainingCapacity();
 
-        const all_keys = self.get_all_keys();
-        self.nodes.clear();
-
-        const PQ = std.PriorityQueue(Node);
-        var Pend = PQ.init(allocator, Node.lessThan);
+        const PQ = std.PriorityQueue(Node, Node.cmp);
+        var Pend = PQ.init(allocator);
         defer Pend.deinit();
 
         // We start from the oxygen system position, which has already been filled with oxygen
@@ -188,7 +191,7 @@ pub const Map = struct {
                 const d = @intToEnum(Dir, j);
                 var v = Dir.move(curr.p, d);
                 if (!self.cells.contains(v)) continue;
-                const tile = self.cells.get(v).?.value;
+                const tile = self.cells.get(v).?;
                 var next: ?Node = null;
                 switch (tile) {
                     Tile.Wall => {},
@@ -196,7 +199,7 @@ pub const Map = struct {
                         next = Node.init(v, curr.m);
                     },
                     Tile.Key => {
-                        const shift: u5 = @intCast(u5, self.keys.get(v).?.value - 'a');
+                        const shift: u5 = @intCast(u5, self.keys.get(v).? - 'a');
                         const needed: usize = @shlExact(@intCast(usize, 1), shift);
                         next = Node.init(v, curr.m | needed);
                     },
@@ -204,7 +207,7 @@ pub const Map = struct {
                         if (!self.doors.contains(v)) {
                             next = Node.init(v, curr.m);
                         } else {
-                            const shift: u5 = @intCast(u5, self.doors.get(v).?.value - 'A');
+                            const shift: u5 = @intCast(u5, self.doors.get(v).? - 'A');
                             const needed: usize = @shlExact(@intCast(usize, 1), shift);
                             if (curr.m & needed != 0) {
                                 next = Node.init(v, curr.m);
@@ -225,13 +228,11 @@ pub const Map = struct {
     }
 
     pub fn walk_graph(self: *Map) usize {
-        var allocator = std.heap.direct_allocator;
-
         var seen = std.AutoHashMap(u64, void).init(allocator);
         defer seen.deinit();
 
-        const PQ = std.PriorityQueue(NodeInfo);
-        var Pend = PQ.init(allocator, NodeInfo.lessThan);
+        const PQ = std.PriorityQueue(NodeInfo, NodeInfo.cmp);
+        var Pend = PQ.init(allocator);
         defer Pend.deinit();
 
         const all_keys = self.get_all_keys();
@@ -242,14 +243,14 @@ pub const Map = struct {
         _ = Pend.add(first) catch unreachable;
         while (Pend.count() != 0) {
             const data = Pend.remove();
-            const x = Node.get_mask(data.label);
+            _ = Node.get_mask(data.label);
             if (dmax < data.dist) dmax = data.dist;
             if (Node.get_mask(data.label) == all_keys) break;
-            const node = self.nodes.get(data.label).?.value;
+            const node = self.nodes.get(data.label).?;
             const dist = data.dist + 1;
             var it = node.n.iterator();
             while (it.next()) |kv| {
-                const l = kv.key;
+                const l = kv.key_ptr.*;
                 if (seen.contains(l)) continue;
                 _ = seen.put(l, {}) catch unreachable;
                 _ = Pend.add(NodeInfo.init(l, dist)) catch unreachable;
@@ -262,7 +263,7 @@ pub const Map = struct {
         var all_keys: usize = 0;
         var it = self.keys.iterator();
         while (it.next()) |key| {
-            const shift: u5 = @intCast(u5, key.value - 'a');
+            const shift: u5 = @intCast(u5, key.value_ptr.* - 'a');
             const mask: usize = @shlExact(@intCast(usize, 1), shift);
             all_keys |= mask;
         }
@@ -306,7 +307,7 @@ test "small map" {
         \\#b.A.@.a#
         \\#########
     ;
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.parse(line);
     }
@@ -327,7 +328,7 @@ test "medium map 1" {
         \\#d.....................#
         \\########################
     ;
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.parse(line);
     }
@@ -348,7 +349,7 @@ test "medium map 2" {
         \\#.....@.a.B.c.d.A.e.F.g#
         \\########################
     ;
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.parse(line);
     }
@@ -373,7 +374,7 @@ test "medium map 3" {
         \\#l.F..d...h..C.m#
         \\#################
     ;
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.parse(line);
     }
@@ -395,7 +396,7 @@ test "medium map 4" {
         \\###g#h#i################
         \\########################
     ;
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.parse(line);
     }

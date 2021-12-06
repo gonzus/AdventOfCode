@@ -4,14 +4,11 @@ const Hull = ship.Hull;
 const Computer = @import("./computer.zig").Computer;
 
 pub fn main() !void {
-    const stdout = std.io.getStdOut() catch unreachable;
-    const out = &stdout.outStream().stream;
-
-    const allocator = std.debug.global_allocator;
-    var buf = try std.Buffer.initSize(allocator, 0);
-
+    const out = std.io.getStdOut().writer();
+    const inp = std.io.getStdIn().reader();
+    var buf: [20480]u8 = undefined;
     var count: u32 = 0;
-    while (std.io.readLine(&buf)) |line| {
+    while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         count += 1;
 
         var hull = Hull.init(Hull.Color.Black);
@@ -44,9 +41,7 @@ pub fn main() !void {
             }
         }
 
-        try out.print("Line {}, painted {} cells\n", count, hull.painted);
-    } else |err| {
-        // try out.print("Error, {}!\n", err);
+        try out.print("Line {}, painted {} cells\n", .{ count, hull.painted });
     }
-    try out.print("Read {} lines\n", count);
+    try out.print("Read {} lines\n", .{count});
 }

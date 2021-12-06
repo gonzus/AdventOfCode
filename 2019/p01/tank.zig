@@ -10,6 +10,10 @@ pub const Tank = struct {
         };
     }
 
+    pub fn deinit(self: *Tank) void {
+        _ = self;
+    }
+
     pub fn get(self: Tank) u32 {
         return self.mass;
     }

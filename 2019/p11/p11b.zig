@@ -5,14 +5,11 @@ const Pos = ship.Pos;
 const Computer = @import("./computer.zig").Computer;
 
 pub fn main() !void {
-    const stdout = std.io.getStdOut() catch unreachable;
-    const out = &stdout.outStream().stream;
-
-    const allocator = std.debug.global_allocator;
-    var buf = try std.Buffer.initSize(allocator, 0);
-
+    const out = std.io.getStdOut().writer();
+    const inp = std.io.getStdIn().reader();
+    var buf: [20480]u8 = undefined;
     var count: u32 = 0;
-    while (std.io.readLine(&buf)) |line| {
+    while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         count += 1;
 
         var hull = Hull.init(Hull.Color.White);
@@ -45,8 +42,8 @@ pub fn main() !void {
             }
         }
 
-        try out.print("Line {}, painted {} cells\n", count, hull.painted);
-        try out.print("Bounds: {} {} - {} {}\n", hull.pmin.x, hull.pmin.y, hull.pmax.x, hull.pmax.y);
+        try out.print("Line {}, painted {} cells\n", .{ count, hull.painted });
+        try out.print("Bounds: {} {} - {} {}\n", .{ hull.pmin.x, hull.pmin.y, hull.pmax.x, hull.pmax.y });
         var pos: Pos = undefined;
         pos.y = hull.pmax.y;
         while (pos.y >= hull.pmin.y) : (pos.y -= 1) {
@@ -54,14 +51,12 @@ pub fn main() !void {
             while (pos.x <= hull.pmax.x) : (pos.x += 1) {
                 const color = hull.get_color(pos);
                 switch (color) {
-                    Hull.Color.Black => try out.print(" "),
-                    Hull.Color.White => try out.print("\u{2588}"),
+                    Hull.Color.Black => try out.print(" ", .{}),
+                    Hull.Color.White => try out.print("\u{2588}", .{}),
                 }
             }
-            try out.print("\n");
+            try out.print("\n", .{});
         }
-    } else |err| {
-        // try out.print("Error, {}!\n", err);
     }
-    try out.print("Read {} lines\n", count);
+    try out.print("Read {} lines\n", .{count});
 }

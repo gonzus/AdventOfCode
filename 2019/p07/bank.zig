@@ -60,7 +60,7 @@ pub const Bank = struct {
                 }
                 previous = output;
             } else {
-                std.debug.warn("NODE {} is paused but there is no input\n", n);
+                std.debug.warn("NODE {} is paused but there is no input\n", .{n});
                 break;
             }
             n = (n + 1) % phases.len;

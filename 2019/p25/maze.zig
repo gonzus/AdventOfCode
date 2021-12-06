@@ -38,25 +38,25 @@ pub const Maze = struct {
             \\south
             \\inv
         ;
-        var it = std.mem.separate(program, "\n");
+        var it = std.mem.split(u8, program, "\n");
         while (it.next()) |line| {
-            // std.debug.warn("RUNNING\n");
+            // std.debug.warn("RUNNING\n", .{});
             _ = self.computer.run();
             var number: usize = 0;
             while (true) {
                 const output = self.computer.getOutput();
                 if (output == null) break;
                 const c = @intCast(u8, output.?);
-                // std.debug.warn("{c}", c);
+                // std.debug.warn("{c}", .{ c});
                 if (c >= '0' and c <= '9') {
                     number = number * 10 + c - '0';
                 } else {}
             }
             if (number > 0) {
-                // std.debug.warn("=== NUMBER {} ===\n", number);
+                // std.debug.warn("=== NUMBER {} ===\n", .{ number});
                 return number;
             }
-            // std.debug.warn("{}\n", line);
+            // std.debug.warn("{}\n", .{ line});
             var j: usize = 0;
             while (j < line.len) : (j += 1) {
                 self.computer.enqueueInput(line[j]);

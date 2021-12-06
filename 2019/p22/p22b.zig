@@ -2,12 +2,6 @@ const std = @import("std");
 const Deck = @import("./deck.zig").Deck;
 
 pub fn main() !void {
-    const stdout = std.io.getStdOut() catch unreachable;
-    const out = &stdout.outStream().stream;
-
-    const allocator = std.debug.global_allocator;
-    var buf = try std.Buffer.initSize(allocator, 0);
-
     const size: isize = 119315717514047;
     const runs: isize = 101741582076661;
     const pos: isize = 2020;
@@ -15,10 +9,11 @@ pub fn main() !void {
     var deck = Deck.init(size);
     defer deck.deinit();
 
-    while (std.io.readLine(&buf)) |line| {
+    const out = std.io.getStdOut().writer();
+    const inp = std.io.getStdIn().reader();
+    var buf: [20480]u8 = undefined;
+    while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         deck.run_line(line);
-    } else |err| {
-        // try out.print("Error, {}!\n", err);
     }
 
     // we now have the deck as it stands after one iteration
@@ -46,5 +41,5 @@ pub fn main() !void {
     // now just plug those values back into the deck and get the desired card
     deck.step = s1;
     deck.first = f1;
-    try out.print("Card in position {} is {}\n", pos, deck.get_card(pos));
+    try out.print("Card in position {} is {}\n", .{ pos, deck.get_card(pos) });
 }

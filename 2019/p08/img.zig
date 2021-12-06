@@ -37,8 +37,7 @@ pub const Image = struct {
     }
 
     pub fn deinit(self: Image) void {
-        // std.debug.warn("DEINIT {} layers\n", self.l);
-        // self.allocator.free(self.data);
+        _ = self;
     }
 
     fn pos(self: Image, l: usize, c: usize, r: usize) usize {
@@ -114,8 +113,7 @@ pub const Image = struct {
     }
 
     pub fn render(self: *Image) !void {
-        const stdout = std.io.getStdOut() catch unreachable;
-        const out = &stdout.outStream().stream;
+        const out = std.io.getStdOut().writer();
         // std.debug.warn("TYPE [{}]\n", @typeName(@typeOf(out)));
         var r: usize = 0;
         while (r < self.h) : (r += 1) {
@@ -127,28 +125,28 @@ pub const Image = struct {
                     switch (color) {
                         Color.Transparent => continue,
                         Color.Black => {
-                            try out.print(" ");
+                            try out.print("{s}", .{" "});
                             break;
                         },
                         Color.White => {
-                            try out.print("\u{2588}");
+                            try out.print("{s}", .{"\u{2588}"});
                             break;
                         },
                         else => break,
                     }
                 }
             }
-            try out.print("\n");
+            try out.print("{s}", .{"\n"});
         }
     }
 };
 
 test "total orbit count" {
     const data: []const u8 = "123456789012";
-    var image = Image.init(std.heap.direct_allocator, 3, 2);
+    var image = Image.init(std.testing.allocator, 3, 2);
     defer image.deinit();
 
     image.parse(data);
     assert(image.l == 2);
-    const result = image.find_layer_with_fewest_blacks();
+    _ = image.find_layer_with_fewest_blacks();
 }

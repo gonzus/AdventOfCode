@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const allocator = std.testing.allocator;
 
 const DIM = 3;
 
@@ -18,7 +19,7 @@ pub const Trace = struct {
 
     pub fn init() Trace {
         var self = Trace{
-            .data = std.AutoHashMap(u128, usize).init(std.heap.direct_allocator),
+            .data = std.AutoHashMap(u128, usize).init(allocator),
             .done = false,
         };
         return self;
@@ -55,16 +56,16 @@ pub const Map = struct {
     }
 
     pub fn add_lines(self: *Map, lines: []const u8) void {
-        var it = std.mem.separate(lines, "\n");
+        var it = std.mem.split(u8, lines, "\n");
         while (it.next()) |line| {
             self.add_line(line);
         }
     }
 
     pub fn add_line(self: *Map, line: []const u8) void {
-        var itc = std.mem.separate(line[1 .. line.len - 1], ", ");
+        var itc = std.mem.split(u8, line[1 .. line.len - 1], ", ");
         while (itc.next()) |str_coord| {
-            var ite = std.mem.separate(str_coord, "=");
+            var ite = std.mem.split(u8, str_coord, "=");
             var j: usize = 0;
             var dim: usize = 99;
             while (ite.next()) |str_val| : (j += 1) {
@@ -167,7 +168,7 @@ pub const Map = struct {
         const pos = size + 1;
         if (self.trace[dim].data.contains(label)) {
             self.trace[dim].done = true;
-            const where = self.trace[dim].data.get(label).?.value;
+            // const where = self.trace[dim].data.get(label).?.value;
             // std.debug.warn("*** FOUND dim {} pos {} label {} => {}\n", dim, pos, label, size);
             return pos;
         } else {
@@ -228,6 +229,7 @@ test "energy aftr 10 steps" {
         \\<x=3, y=5, z=-1>
     ;
     var map = Map.init();
+    defer map.deinit();
     map.add_lines(data);
     var j: usize = 0;
     while (j < 10) : (j += 1) {
@@ -269,6 +271,7 @@ test "energy aftr 100 steps" {
         \\<x=9, y=-8, z=-3>
     ;
     var map = Map.init();
+    defer map.deinit();
     map.add_lines(data);
     var j: usize = 0;
     while (j < 100) : (j += 1) {
@@ -310,6 +313,7 @@ test "cycle size small" {
         \\<x=3, y=5, z=-1>
     ;
     var map = Map.init();
+    defer map.deinit();
     map.add_lines(data);
     var j: usize = 0;
     while (j < 2772) : (j += 1) {
@@ -350,6 +354,7 @@ test "cycle size large" {
         \\<x=9, y=-8, z=-3>
     ;
     var map = Map.init();
+    defer map.deinit();
     map.add_lines(data);
     const result = map.find_cycle_size();
     assert(result == 4686774924);

@@ -16,7 +16,7 @@ pub const Computer = struct {
             .mem = undefined,
             .pos = 0,
         };
-        var it = std.mem.separate(str, ",");
+        var it = std.mem.split(u8, str, ",");
         while (it.next()) |what| {
             const instr = std.fmt.parseInt(u32, what, 10) catch unreachable;
             self.mem[self.pos] = instr;

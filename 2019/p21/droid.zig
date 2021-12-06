@@ -18,7 +18,7 @@ pub const Droid = struct {
     }
 
     pub fn run_code(self: *Droid, code: []const u8) i64 {
-        var it = std.mem.separate(code, "\n");
+        var it = std.mem.split(u8, code, "\n");
         while (it.next()) |line| {
             var k: usize = 0;
             while (k < line.len) : (k += 1) {
@@ -35,7 +35,7 @@ pub const Droid = struct {
             if (result == null) break;
             if (result.? >= 0 and result.? < 256) {
                 const c = @intCast(u8, result.?);
-                std.debug.warn("{c}", c);
+                std.debug.warn("{c}", .{c});
             } else {
                 damage = result.?;
                 break;

@@ -1,6 +1,13 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+// TODO
+// Cannot use testing allocator because I was too lazy to write the deinit()
+// method for Node (our graph).
+//
+// const allocator = std.testing.allocator;
+const allocator = std.heap.page_allocator;
+
 const MAX_DEPTH = 500;
 
 pub const Map = struct {
@@ -83,7 +90,6 @@ pub const Map = struct {
     };
 
     pub fn init() Map {
-        var allocator = std.heap.direct_allocator;
         var self = Map{
             .cells = std.AutoHashMap(Pos, Tile).init(allocator),
             .one = std.AutoHashMap(Pos, PortalName).init(allocator),
@@ -150,12 +156,11 @@ pub const Map = struct {
             const l1 = @intCast(u8, v % 1000);
             v /= 1000;
             const l0 = @intCast(u8, v % 1000);
-            std.debug.warn("LABEL: [{c}{c}]\n", l0, l1);
+            std.debug.warn("LABEL: [{c}{c}]\n", .{ l0, l1 });
         }
     };
 
     pub fn find_portals(self: *Map) void {
-        var allocator = std.heap.direct_allocator;
         var seen = std.AutoHashMap(Pos, void).init(allocator);
         defer seen.deinit();
 
@@ -169,10 +174,10 @@ pub const Map = struct {
                 var tc = self.get_pos(pc);
                 if (tc != Tile.Portal) continue;
                 if (seen.contains(pc)) continue;
-                const x0 = self.one.get(pc).?.value;
+                const x0 = self.one.get(pc).?;
                 const l0 = x0.label;
                 _ = self.one.remove(pc);
-                // std.debug.warn("LOOKING at portal {c} {}\n", l0, pc);
+                // std.debug.warn("LOOKING at portal {c} {}\n",.{ l0, pc});
                 var k: u8 = 1;
                 while (k <= 4) : (k += 1) {
                     const d = @intToEnum(Dir, k);
@@ -184,15 +189,15 @@ pub const Map = struct {
                     _ = seen.put(pc, {}) catch unreachable;
                     _ = seen.put(pn, {}) catch unreachable;
 
-                    const x1 = self.one.get(pn).?.value;
+                    const x1 = self.one.get(pn).?;
                     const l1 = x1.label;
                     if (x0.where != x1.where) {
-                        std.debug.warn("FUCKERS!\n");
+                        std.debug.warn("FUCKERS!\n", .{});
                         break;
                     }
                     _ = self.one.remove(pn);
                     var label = Label.encode(l0, l1);
-                    // std.debug.warn("PORTAL {c}{c} in area {}\n", l0, l1, x0.where);
+                    // std.debug.warn("PORTAL {c}{c} in area {}\n",.{ l0, l1, x0.where});
 
                     var p0 = Dir.move(pn, d);
                     var pt = self.get_pos(p0);
@@ -201,7 +206,7 @@ pub const Map = struct {
                         pt = self.get_pos(p0);
                     }
                     if (pt != Tile.Passage) {
-                        std.debug.warn("FUCK\n");
+                        std.debug.warn("FUCK\n", .{});
                     }
 
                     if (x0.where == 0 or x0.where == 4 or
@@ -223,17 +228,17 @@ pub const Map = struct {
 
                     if (self.two.contains(label)) {
                         // found second endpoint of a portal
-                        const p1 = self.two.get(label).?.value;
-                        // std.debug.warn("SECOND pos for label {}: {}\n", label, p0);
-                        // std.debug.warn("PORTAL SECOND [{}] {} {}\n", label, p0, p1);
+                        const p1 = self.two.get(label).?;
+                        // std.debug.warn("SECOND pos for label {}: {}\n",.{ label, p0});
+                        // std.debug.warn("PORTAL SECOND [{}] {} {}\n",.{ label, p0, p1});
                         _ = self.portals.put(p0, p1) catch unreachable;
                         _ = self.portals.put(p1, p0) catch unreachable;
                         _ = self.two.remove(label);
                     } else {
                         // found first endpoint of a portal
-                        // std.debug.warn("PORTAL FIRST [{}] {}\n", label, p0);
+                        // std.debug.warn("PORTAL FIRST [{}] {}\n",.{ label, p0});
                         _ = self.two.put(label, p0) catch unreachable;
-                        // std.debug.warn("FIRST pos for label {}: {}\n", label, p0);
+                        // std.debug.warn("FIRST pos for label {}: {}\n",.{ label, p0});
                     }
                     break;
                 }
@@ -252,31 +257,29 @@ pub const Map = struct {
             };
         }
 
-        fn lessThan(l: PosDist, r: PosDist) bool {
-            if (l.dist < r.dist) return true;
-            if (l.dist > r.dist) return false;
-            if (l.pos.x < r.pos.x) return true;
-            if (l.pos.x > r.pos.x) return false;
-            if (l.pos.y < r.pos.y) return true;
-            if (l.pos.y > r.pos.y) return false;
-            return false;
+        fn cmp(l: PosDist, r: PosDist) std.math.Order {
+            if (l.dist < r.dist) return std.math.Order.lt;
+            if (l.dist > r.dist) return std.math.Order.gt;
+            if (l.pos.x < r.pos.x) return std.math.Order.lt;
+            if (l.pos.x > r.pos.x) return std.math.Order.gt;
+            if (l.pos.y < r.pos.y) return std.math.Order.lt;
+            if (l.pos.y > r.pos.y) return std.math.Order.gt;
+            return std.math.Order.eq;
         }
     };
 
     pub fn find_graph(self: *Map) void {
-        var allocator = std.heap.direct_allocator;
-
-        self.graph.clear();
+        self.graph.clearRetainingCapacity();
         var it = self.portals.iterator();
         while (it.next()) |kv| {
-            const portal = kv.key;
+            const portal = kv.key_ptr.*;
             var reach = std.AutoHashMap(Pos, usize).init(allocator);
 
             var seen = std.AutoHashMap(Pos, void).init(allocator);
             defer seen.deinit();
 
-            const PQ = std.PriorityQueue(PosDist);
-            var Pend = PQ.init(allocator, PosDist.lessThan);
+            const PQ = std.PriorityQueue(PosDist, PosDist.cmp);
+            var Pend = PQ.init(allocator);
             defer Pend.deinit();
 
             _ = Pend.add(PosDist.init(portal, 0)) catch unreachable;
@@ -293,16 +296,16 @@ pub const Map = struct {
                     var v = Dir.move(data.pos, d);
                     if (!self.cells.contains(v)) continue;
                     if (seen.contains(v)) continue;
-                    const tile = self.cells.get(v).?.value;
+                    const tile = self.cells.get(v).?;
                     if (tile != Tile.Passage) continue;
                     _ = Pend.add(PosDist.init(v, dist)) catch unreachable;
                 }
             }
             _ = self.graph.put(portal, reach) catch unreachable;
-            // std.debug.warn("FROM portal {} {}:\n", portal.x - 1000, portal.y - 1000);
+            // std.debug.warn("FROM portal {} {}:\n",.{ portal.x - 1000, portal.y - 1000});
             // var itr = reach.iterator();
             // while (itr.next()) |kvr| {
-            //     std.debug.warn("- portal {} {} dist {}:\n", kvr.key.x - 1000, kvr.key.y - 1000, kvr.value);
+            //     std.debug.warn("- portal {} {} dist {}:\n",.{ kvr.key.x - 1000, kvr.key.y - 1000, kvr.value});
             // }
         }
     }
@@ -326,7 +329,6 @@ pub const Map = struct {
     // Long live the master, Edsger W. Dijkstra
     // https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
     pub fn find_path_to_target(self: *Map, recursive: bool) usize {
-        var allocator = std.heap.direct_allocator;
         var Pend = std.AutoHashMap(PortalInfo, void).init(allocator);
         defer Pend.deinit();
         var Dist = std.AutoHashMap(PortalInfo, usize).init(allocator);
@@ -339,7 +341,7 @@ pub const Map = struct {
         while (depth < MAX_DEPTH) : (depth += 1) {
             var itg = self.graph.iterator();
             while (itg.next()) |kvg| {
-                const p = kvg.key;
+                const p = kvg.key_ptr.*;
                 const pi = PortalInfo.init(p, depth);
                 _ = Pend.put(pi, {}) catch unreachable;
             }
@@ -357,14 +359,14 @@ pub const Map = struct {
             var dmin: usize = std.math.maxInt(usize);
             var it = Pend.iterator();
             while (it.next()) |v| {
-                const p = v.key;
+                const p = v.key_ptr.*;
                 if (!Dist.contains(p)) {
                     continue;
                 }
-                const found = Dist.get(p).?;
-                if (dmin > found.value) {
-                    dmin = found.value;
-                    pu = found.key;
+                const found = Dist.getEntry(p).?;
+                if (dmin > found.value_ptr.*) {
+                    dmin = found.value_ptr.*;
+                    pu = found.key_ptr.*;
                 }
             }
             var u: Pos = pu.pos;
@@ -379,13 +381,13 @@ pub const Map = struct {
 
             // update dist for all neighbours of u
             // add closest neighbour of u to the path
-            const du = Dist.get(pu).?.value;
-            const neighbours = self.graph.get(u).?.value;
-            // std.debug.warn("CONSIDER {} {} depth {} distance {} neighbours {}\n", u.x - 1000, u.y - 1000, pu.depth, du, neighbours.count());
+            const du = Dist.get(pu).?;
+            const neighbours = self.graph.get(u).?;
+            // std.debug.warn("CONSIDER {} {} depth {} distance {} neighbours {}\n",.{ u.x - 1000, u.y - 1000, pu.depth, du, neighbours.count(}));
             var itn = neighbours.iterator();
             while (itn.next()) |kvn| {
                 var dd: i32 = 0;
-                var v = kvn.key;
+                var v = kvn.key_ptr.*;
                 const outer = self.outer.contains(v);
                 const IS = v.equal(self.psrc);
                 const IT = v.equal(self.ptgt);
@@ -409,30 +411,30 @@ pub const Map = struct {
                     }
                 }
                 const nd = @intCast(i32, pu.depth) + dd;
-                var t = self.portals.get(v).?.value;
-                var alt = du + kvn.value;
+                var t = self.portals.get(v).?;
+                var alt = du + kvn.value_ptr.*;
                 if (t.equal(v) or IS or IT) {} else {
                     v = t;
                     alt += 1;
                 }
                 var pv = PortalInfo.init(v, @intCast(usize, nd));
                 var dv: usize = std.math.maxInt(usize);
-                if (Dist.contains(pv)) dv = Dist.get(pv).?.value;
+                if (Dist.contains(pv)) dv = Dist.get(pv).?;
                 if (alt < dv) {
-                    // std.debug.warn("UPDATE {} {} distance {}\n", v.x - 1000, v.y - 1000, alt);
+                    // std.debug.warn("UPDATE {} {} distance {}\n",.{ v.x - 1000, v.y - 1000, alt});
                     _ = Dist.put(pv, alt) catch unreachable;
                     _ = Path.put(pv, pu) catch unreachable;
                 }
             }
         }
 
-        const dist = Dist.get(pt).?.value;
+        const dist = Dist.get(pt).?;
         return dist;
     }
 
     pub fn get_pos(self: *Map, pos: Pos) Tile {
         if (!self.cells.contains(pos)) return Tile.Empty;
-        return self.cells.get(pos).?.value;
+        return self.cells.get(pos).?;
     }
 
     pub fn set_pos(self: *Map, pos: Pos, mark: Tile) void {
@@ -446,11 +448,11 @@ pub const Map = struct {
     pub fn show(self: Map) void {
         const sx = self.pmax.x - self.pmin.x + 1;
         const sy = self.pmax.y - self.pmin.y + 1;
-        std.debug.warn("MAP: {} x {} - {} {} - {} {}\n", sx, sy, self.pmin.x, self.pmin.y, self.pmax.x, self.pmax.y);
-        std.debug.warn("SRC: {}  -- TGT {}\n", self.psrc, self.ptgt);
+        std.debug.warn("MAP: {} x {} - {} {} - {} {}\n", .{ sx, sy, self.pmin.x, self.pmin.y, self.pmax.x, self.pmax.y });
+        std.debug.warn("SRC: {}  -- TGT {}\n", .{ self.psrc, self.ptgt });
         var y: usize = self.pmin.y;
         while (y <= self.pmax.y) : (y += 1) {
-            std.debug.warn("{:4} | ", y);
+            std.debug.warn("{:4} | ", .{y});
             var x: usize = self.pmin.x;
             while (x <= self.pmax.x) : (x += 1) {
                 const p = Pos.init(x, y);
@@ -464,13 +466,13 @@ pub const Map = struct {
                         Tile.Portal => c = 'X',
                     }
                 }
-                std.debug.warn("{c}", c);
+                std.debug.warn("{c}", .{c});
             }
-            std.debug.warn("\n");
+            std.debug.warn("\n", .{});
         }
         var it = self.portals.iterator();
         while (it.next()) |kv| {
-            std.debug.warn("Portal: {} to {}\n", kv.key, kv.value);
+            std.debug.warn("Portal: {} to {}\n", .{ kv.key, kv.value });
         }
     }
 };
@@ -500,7 +502,7 @@ test "small maze" {
         \\             Z
         \\             Z
     ;
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.parse(line);
     }
@@ -560,7 +562,7 @@ test "medium maze" {
         \\           B   J   C
         \\           U   P   P
     ;
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.parse(line);
     }
@@ -600,7 +602,7 @@ test "small maze recursive" {
         \\             Z
         \\             Z
     ;
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.parse(line);
     }
@@ -660,7 +662,7 @@ test "medium maze recursive" {
         \\               A O F   N
         \\               A A D   M
     ;
-    var it = std.mem.separate(data, "\n");
+    var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
         map.parse(line);
     }

@@ -1,13 +1,8 @@
 const std = @import("std");
+const allocator = std.heap.page_allocator;
 const Map = @import("./map.zig").Map;
 
 pub fn main() !void {
-    const stdout = std.io.getStdOut() catch unreachable;
-    const out = &stdout.outStream().stream;
-
-    const allocator = std.debug.global_allocator;
-    var buf = try std.Buffer.initSize(allocator, 0);
-
     var maps: [4]Map = undefined;
     var j: usize = 0;
     while (j < 4) : (j += 1) {
@@ -15,7 +10,9 @@ pub fn main() !void {
     }
     var r: usize = 0;
     var first: []const u8 = undefined;
-    while (std.io.readLine(&buf)) |line| {
+    const inp = std.io.getStdIn().reader();
+    var buf: [20480]u8 = undefined;
+    while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         if (r == 0) {
             first = line;
         }
@@ -44,29 +41,27 @@ pub fn main() !void {
             maps[3].parse(first[40..]);
         }
         r += 1;
-    } else |err| {
-        // try out.print("Error, {}!\n", err);
     }
 
     var sum: usize = 0;
     j = 0;
     while (j < 4) : (j += 1) {
-        var mk = std.AutoHashMap(u8, void).init(std.heap.direct_allocator);
+        var mk = std.AutoHashMap(u8, void).init(allocator);
         defer mk.deinit();
         var ik = maps[j].keys.iterator();
         while (ik.next()) |kv| {
-            const k = kv.value;
+            const k = kv.value_ptr.*;
             _ = mk.put(k, {}) catch unreachable;
-            // std.debug.warn("MAP {}: mapping key {c}\n", j, k);
+            std.debug.warn("MAP {}: mapping key {c}\n", .{ j, k });
         }
         var id = maps[j].doors.iterator();
         while (id.next()) |kv| {
-            const d = kv.value;
+            const d = kv.value_ptr.*;
             const k = d - 'A' + 'a';
-            // std.debug.warn("MAP {}: checking door {c}\n", j, d);
+            std.debug.warn("MAP {}: checking door {c}\n", .{ j, d });
             if (mk.contains(k)) continue;
-            const p = kv.key;
-            // std.debug.warn("MAP {}: removing door {c} without key {c}\n", j, d, k);
+            const p = kv.key_ptr.*;
+            std.debug.warn("MAP {}: removing door {c} without key {c}\n", .{ j, d, k });
             maps[j].set_pos(p, Map.Tile.Empty);
         }
 
@@ -75,7 +70,7 @@ pub fn main() !void {
         const dist = maps[j].walk_graph();
         sum += dist;
     }
-    try out.print("TOTAL {}\n", sum);
+    std.debug.warn("TOTAL {}\n", .{sum});
     j = 0;
     while (j < 4) : (j += 1) {
         maps[j].deinit();

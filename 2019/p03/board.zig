@@ -1,6 +1,8 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+const allocator = std.testing.allocator;
+
 pub const Board = struct {
     dist: Distance,
     map: std.AutoHashMap(i32, u32),
@@ -16,7 +18,7 @@ pub const Board = struct {
     pub fn init(dist: Board.Distance) Board {
         var self = Board{
             .dist = dist,
-            .map = std.AutoHashMap(i32, u32).init(std.heap.direct_allocator),
+            .map = std.AutoHashMap(i32, u32).init(allocator),
             .md = std.math.maxInt(u32),
             .mx = 0,
             .my = 0,
@@ -24,12 +26,12 @@ pub const Board = struct {
         return self;
     }
 
-    pub fn deinit(self: Board) void {
+    pub fn deinit(self: *Board) void {
         self.map.deinit();
     }
 
     pub fn trace(self: *Board, str: []const u8, first: bool) void {
-        var it = std.mem.separate(str, ",");
+        var it = std.mem.split(u8, str, ",");
         var cx: i32 = 0;
         var cy: i32 = 0;
         var cl: u32 = 0;
@@ -57,7 +59,7 @@ pub const Board = struct {
                 if (first) {
                     _ = self.map.put(pos, cl) catch unreachable;
                 } else if (self.map.contains(pos)) {
-                    const val = self.map.get(pos).?.value;
+                    const val = self.map.getEntry(pos).?.value_ptr.*;
                     const d = switch (self.dist) {
                         Distance.Manhattan => manhattan(cx, cy),
                         Distance.Travelled => travelled(val, cl),

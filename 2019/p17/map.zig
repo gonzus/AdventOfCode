@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const allocator = std.heap.page_allocator;
 const Computer = @import("./computer.zig").Computer;
 
 pub const Pos = struct {
@@ -108,7 +109,7 @@ pub const Map = struct {
 
     pub fn init() Map {
         var self = Map{
-            .cells = std.AutoHashMap(Pos, Tile).init(std.heap.direct_allocator),
+            .cells = std.AutoHashMap(Pos, Tile).init(allocator),
             .computer = Computer.init(true),
             .robot_dir = undefined,
             .robot_tumbling = false,
@@ -131,7 +132,7 @@ pub const Map = struct {
             self.computer.run();
             while (true) {
                 const output = self.computer.getOutput();
-                // std.debug.warn("COMPUTER output {}\n", output);
+                // std.debug.warn("COMPUTER output {}\n",.{ output});
                 if (output == null) break;
                 var c = @intCast(u8, output.?);
                 if (c == '\n') {
@@ -169,9 +170,9 @@ pub const Map = struct {
         }
     }
 
-    pub fn walk(self: *Map, route: *std.Buffer) usize {
+    pub fn walk(self: *Map, route: *std.ArrayList(u8)) usize {
         var sum: usize = 0;
-        var seen = std.AutoHashMap(Pos, void).init(std.heap.direct_allocator);
+        var seen = std.AutoHashMap(Pos, void).init(allocator);
         var p: Pos = self.pcur;
         var d: Dir = undefined;
         var r: ?Dir = null;
@@ -192,15 +193,15 @@ pub const Map = struct {
             if (!found) break;
             const t = Dir.turn(self.robot_dir, d);
             if (t != null) {
-                // std.debug.warn("TURN from {} to {} => {}\n", self.robot_dir, d, t.?);
+                // std.debug.warn("TURN from {} to {} => {}\n",.{ self.robot_dir, d, t.?});
                 const c = @enumToInt(t.?);
-                route.appendByte(c) catch unreachable;
-                route.appendByte(',') catch unreachable;
+                route.append(c) catch unreachable;
+                route.append(',') catch unreachable;
                 self.robot_dir = d;
             }
-            // std.debug.warn("WALK 1 {} {}\n", p.x - Pos.OFFSET / 2, p.y - Pos.OFFSET / 2);
+            // std.debug.warn("WALK 1 {} {}\n",.{ p.x - Pos.OFFSET / 2, p.y - Pos.OFFSET / 2});
             if (seen.contains(p)) {
-                // std.debug.warn("CROSSING {} {}\n", p.x, p.y);
+                // std.debug.warn("CROSSING {} {}\n",.{ p.x, p.y});
                 const alignment = (p.x - Pos.OFFSET / 2) * (p.y - Pos.OFFSET / 2);
                 sum += alignment;
             } else {
@@ -214,25 +215,25 @@ pub const Map = struct {
                 }
                 p = n;
                 steps += 1;
-                // std.debug.warn("WALK 2 {} {}\n", p.x - Pos.OFFSET / 2, p.y - Pos.OFFSET / 2);
+                // std.debug.warn("WALK 2 {} {}\n",.{ p.x - Pos.OFFSET / 2, p.y - Pos.OFFSET / 2});
                 if (seen.contains(p)) {
-                    // std.debug.warn("CROSSING {} {}\n", p.x, p.y);
+                    // std.debug.warn("CROSSING {} {}\n",.{ p.x, p.y});
                     const alignment = (p.x - Pos.OFFSET / 2) * (p.y - Pos.OFFSET / 2);
                     sum += alignment;
                 } else {
                     _ = seen.put(p, {}) catch unreachable;
                 }
             }
-            // std.debug.warn("MOVE {} steps\n", steps);
+            // std.debug.warn("MOVE {} steps\n",.{ steps});
             var str: [30]u8 = undefined;
             const len = usizeToStr(steps, str[0..]);
             var k: usize = len;
             while (true) {
                 k -= 1;
-                route.appendByte(str[k]) catch unreachable;
+                route.append(str[k]) catch unreachable;
                 if (k == 0) break;
             }
-            route.appendByte(',') catch unreachable;
+            route.append(',') catch unreachable;
         }
         return sum;
     }
@@ -246,7 +247,7 @@ pub const Map = struct {
             \\L,12,R,4,R,4
             \\n
         ;
-        var it = std.mem.separate(program, "\n");
+        var it = std.mem.split(u8, program, "\n");
         while (it.next()) |line| {
             var j: usize = 0;
             while (j < line.len) : (j += 1) {
@@ -257,14 +258,14 @@ pub const Map = struct {
         while (!self.computer.halted)
             self.computer.run();
 
-        std.debug.warn("== PROGRAM OUTPUT ==\n");
+        std.debug.warn("== PROGRAM OUTPUT ==\n", .{});
         var dust: i64 = 0;
         while (true) {
             const result = self.computer.getOutput();
             if (result == null) break;
             if (result.? >= 0 and result.? < 256) {
                 const c = @intCast(u8, result.?);
-                std.debug.warn("{c}", c);
+                std.debug.warn("{c}", .{c});
             } else {
                 dust = result.?;
             }
@@ -273,8 +274,9 @@ pub const Map = struct {
     }
 
     pub fn split_route(self: *Map, route: []const u8) usize {
-        std.debug.warn("SPLIT {} bytes: [{}]\n", route.len, route);
-        var seen = std.StringHashMap(usize).init(std.heap.direct_allocator);
+        _ = self;
+        std.debug.warn("SPLIT {} bytes: [{}]\n", .{ route.len, route });
+        // var seen = std.StringHashMap(usize).init(allocator);
 
         var j: usize = 0;
         while (j < route.len) {
@@ -287,16 +289,16 @@ pub const Map = struct {
             const slice = route[j..k];
             const top = route.len - slice.len;
             var count: usize = 0;
-            // std.debug.warn("SLICE [{}] with {} bytes, top byte {}\n", slice, slice.len, top);
+            // std.debug.warn("SLICE [{}] with {} bytes, top byte {}\n",.{ slice, slice.len, top});
             k += 1;
             while (k < top) : (k += 1) {
-                // std.debug.warn("CMP pos {}\n", k);
-                if (std.mem.compare(u8, slice, route[k .. k + slice.len]) == std.mem.Compare.Equal) {
+                // std.debug.warn("CMP pos {}\n",.{ k});
+                if (std.mem.eql(u8, slice, route[k .. k + slice.len])) {
                     count += 1;
                     if (count == 1) {
-                        std.debug.warn("SLICE #0 {} bytes at {}-{}: [{}]\n", slice.len, j, j + slice.len, slice);
+                        std.debug.warn("SLICE #0 {} bytes at {}-{}: [{}]\n", .{ slice.len, j, j + slice.len, slice });
                     }
-                    std.debug.warn("MATCH #{} {} bytes at {}-{}: [{}]\n", count, slice.len, k, k + slice.len, slice);
+                    std.debug.warn("MATCH #{} {} bytes at {}-{}: [{}]\n", .{ count, slice.len, k, k + slice.len, slice });
                 }
             }
             commas = 0;
@@ -326,7 +328,7 @@ pub const Map = struct {
         if (!self.cells.contains(pos)) {
             return Tile.Empty;
         }
-        return self.cells.get(pos).?.value;
+        return self.cells.get(pos).?;
     }
 
     pub fn set_pos(self: *Map, pos: Pos, mark: Tile) void {
@@ -343,11 +345,11 @@ pub const Map = struct {
     pub fn show(self: Map) void {
         const sx = self.pmax.x - self.pmin.x + 1;
         const sy = self.pmax.y - self.pmin.y + 1;
-        std.debug.warn("MAP: {} x {} - {} {} - {} {}\n", sx, sy, self.pmin.x, self.pmin.y, self.pmax.x, self.pmax.y);
-        std.debug.warn("ROBOT: {} {}\n", self.pcur.x, self.pcur.y);
+        std.debug.warn("MAP: {} x {} - {} {} - {} {}\n", .{ sx, sy, self.pmin.x, self.pmin.y, self.pmax.x, self.pmax.y });
+        std.debug.warn("ROBOT: {} {}\n", .{ self.pcur.x, self.pcur.y });
         var y: usize = self.pmin.y;
         while (y <= self.pmax.y) : (y += 1) {
-            std.debug.warn("{:4} | ", y);
+            std.debug.warn("{:4} | ", .{y});
             var x: usize = self.pmin.x;
             while (x <= self.pmax.x) : (x += 1) {
                 const p = Pos.init(x, y);
@@ -369,9 +371,9 @@ pub const Map = struct {
                     }
                 }
 
-                std.debug.warn("{c}", t);
+                std.debug.warn("{c}", .{t});
             }
-            std.debug.warn("\n");
+            std.debug.warn("\n", .{});
         }
     }
 };
@@ -391,7 +393,7 @@ test "find intersections and alignments" {
     defer map.deinit();
 
     var y: usize = 0;
-    var itl = std.mem.separate(data, "\n");
+    var itl = std.mem.split(u8, data, "\n");
     while (itl.next()) |line| : (y += 1) {
         var x: usize = 0;
         while (x < line.len) : (x += 1) {
@@ -427,8 +429,7 @@ test "find intersections and alignments" {
         }
     }
 
-    const allocator = std.debug.global_allocator;
-    var route = std.Buffer.initSize(allocator, 0) catch unreachable;
+    var route = std.ArrayList(u8).init(allocator);
     defer route.deinit();
 
     const result = map.walk(&route);
@@ -458,7 +459,7 @@ test "find correct route" {
     defer map.deinit();
 
     var y: usize = 0;
-    var itl = std.mem.separate(data, "\n");
+    var itl = std.mem.split(u8, data, "\n");
     while (itl.next()) |line| : (y += 1) {
         var x: usize = 0;
         while (x < line.len) : (x += 1) {
@@ -494,8 +495,7 @@ test "find correct route" {
         }
     }
 
-    const allocator = std.debug.global_allocator;
-    var route = std.Buffer.initSize(allocator, 0) catch unreachable;
+    var route = std.ArrayList(u8).init(allocator);
     defer route.deinit();
 
     _ = map.walk(&route);
@@ -503,8 +503,7 @@ test "find correct route" {
     const wanted = "R,8,R,8,R,4,R,4,R,8,L,6,L,2,R,4,R,4,R,8,R,8,R,8,L,6,L,2";
     const wanted_comma = wanted ++ ",";
 
-    assert(std.mem.compare(u8, slice, wanted) == std.mem.Compare.Equal or
-        std.mem.compare(u8, slice, wanted_comma) == std.mem.Compare.Equal);
+    assert(std.mem.eql(u8, slice, wanted) or std.mem.eql(u8, slice, wanted_comma));
 }
 
 test "split program matches" {
@@ -518,14 +517,14 @@ test "split program matches" {
 
     var j: usize = 0;
     var routine: [3][]const u8 = undefined;
-    var itr = std.mem.separate(routines, "\n");
+    var itr = std.mem.split(u8, routines, "\n");
     while (itr.next()) |line| : (j += 1) {
         routine[j] = line;
     }
 
     var output: [original.len * 2]u8 = undefined;
     var pos: usize = 0;
-    var itm = std.mem.separate(main, ",");
+    var itm = std.mem.split(u8, main, ",");
     while (itm.next()) |name| {
         const index = name[0] - 'A';
         std.mem.copy(u8, output[pos..], routine[index]);
@@ -533,5 +532,5 @@ test "split program matches" {
         std.mem.copy(u8, output[pos..], ",");
         pos += 1;
     }
-    assert(std.mem.compare(u8, original, output[0..original.len]) == std.mem.Compare.Equal);
+    assert(std.mem.eql(u8, original, output[0..original.len]));
 }

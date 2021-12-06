@@ -23,7 +23,7 @@ pub const Sleuth = struct {
     pub fn search(self: *Sleuth, str: []u8) usize {
         self.lo = 0;
         self.hi = 0;
-        var it = std.mem.separate(str, "-");
+        var it = std.mem.split(u8, str, "-");
         var first = true;
         while (it.next()) |what| {
             const number = std.fmt.parseInt(u32, what, 10) catch unreachable;

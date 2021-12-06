@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const allocator = std.testing.allocator;
 
 pub const Board = struct {
     const SIZE: usize = 5;
@@ -32,7 +33,6 @@ pub const Board = struct {
     };
 
     pub fn init(recursive: bool) Board {
-        var allocator = std.heap.direct_allocator;
         var self = Board{
             .recursive = recursive,
             .cells = undefined,
@@ -62,11 +62,11 @@ pub const Board = struct {
     pub fn get_cell(self: Board, c: usize, l: isize, x: usize, y: usize) Tile {
         const p = Pos.init(l, x, y);
         if (!self.cells[c].contains(p)) return Tile.Empty;
-        return self.cells[c].get(p).?.value;
+        return self.cells[c].get(p).?;
     }
 
     pub fn add_lines(self: *Board, lines: []const u8) void {
-        var it = std.mem.separate(lines, "\n");
+        var it = std.mem.split(u8, lines, "\n");
         while (it.next()) |line| {
             self.add_line(line);
         }
@@ -153,7 +153,7 @@ pub const Board = struct {
 
     pub fn step(self: *Board) void {
         const nc = 1 - self.cc;
-        self.cells[nc].clear();
+        self.cells[nc].clearRetainingCapacity();
         const lmin = self.lmin - 1;
         const lmax = self.lmax + 1;
         var l: isize = lmin;
@@ -183,8 +183,8 @@ pub const Board = struct {
     }
 
     pub fn run_until_repeated(self: *Board) usize {
-        const allocator = std.heap.direct_allocator;
         var seen = std.AutoHashMap(usize, void).init(allocator);
+        defer seen.deinit();
         var count: usize = 0;
         while (true) : (count += 1) {
             self.step();
@@ -285,7 +285,7 @@ test "non-recursive simple" {
     board.run_for_N_steps(steps);
 
     var y: usize = 0;
-    var it = std.mem.separate(expected, "\n");
+    var it = std.mem.split(u8, expected, "\n");
     while (it.next()) |line| : (y += 1) {
         var x: usize = 0;
         while (x < Board.SIZE) : (x += 1) {
@@ -320,7 +320,7 @@ test "non-recursive run until repeated" {
     assert(count == 85);
 
     var y: usize = 0;
-    var it = std.mem.separate(expected, "\n");
+    var it = std.mem.split(u8, expected, "\n");
     while (it.next()) |line| : (y += 1) {
         var x: usize = 0;
         while (x < Board.SIZE) : (x += 1) {

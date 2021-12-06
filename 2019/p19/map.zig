@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const allocator = std.heap.page_allocator;
 const Computer = @import("./computer.zig").Computer;
 
 pub const Map = struct {
@@ -31,7 +32,7 @@ pub const Map = struct {
 
     pub fn init(minx: usize, miny: usize, maxx: usize, maxy: usize, prg: []const u8) Map {
         var self = Map{
-            .cells = std.AutoHashMap(Pos, Tile).init(std.heap.direct_allocator),
+            .cells = std.AutoHashMap(Pos, Tile).init(allocator),
             .pmin = Pos.init(minx, miny),
             .pmax = Pos.init(maxx, maxy),
             .prg = prg,
@@ -53,11 +54,11 @@ pub const Map = struct {
         comp.run();
         const output = comp.getOutput();
         if (output == null) {
-            std.debug.warn("FUCK\n");
+            std.debug.warn("FUCK\n", .{});
             return Tile.Stationary;
         }
         const v = @intCast(u8, output.?);
-        // std.debug.warn("RUN {} {} => {}\n", p.x, p.y, v);
+        // std.debug.warn("RUN {} {} => {}\n", .{ p.x, p.y, v});
         const t = @intToEnum(Tile, v);
         return t;
     }
@@ -70,7 +71,7 @@ pub const Map = struct {
         while (true) {
             const p = Pos.init(xh, y);
             t = self.run_for_one_point(p);
-            // std.debug.warn("D {} {} {}\n", xh, y, t);
+            // std.debug.warn("D {} {} {}\n", .{ xh, y, t});
             if (t == Tile.Pulled) break;
             xh += s;
             s *= 2;
@@ -79,7 +80,7 @@ pub const Map = struct {
             var xm: usize = (xl + xh) / 2;
             const p = Pos.init(xm, y);
             t = self.run_for_one_point(p);
-            // std.debug.warn("M {} {} {}\n", xm, y, t);
+            // std.debug.warn("M {} {} {}\n", .{ xm, y, t});
             if (t == Tile.Pulled) {
                 xh = xm - 1;
             } else {
@@ -87,14 +88,14 @@ pub const Map = struct {
             }
         }
         // if (t != Tile.Pulled) xl += 1;
-        // std.debug.warn("F {} {}\n", xl, y);
+        // std.debug.warn("F {} {}\n", .{ xl, y});
         return xl;
     }
 
     pub fn run_to_get_map(self: *Map) usize {
         var count: usize = 0;
         var y: usize = self.pmin.y;
-        main: while (y < self.pmax.y) : (y += 1) {
+        while (y < self.pmax.y) : (y += 1) {
             var x: usize = self.pmin.x;
             while (x < self.pmax.x) : (x += 1) {
                 // if (self.computer.halted) break :main;
@@ -112,25 +113,24 @@ pub const Map = struct {
     }
 
     pub fn show(self: Map) void {
-        std.debug.warn("MAP: {} {} - {} {}\n", self.pmin.x, self.pmin.y, self.pmax.x, self.pmax.y);
+        std.debug.warn("MAP: {} {} - {} {}\n", .{ self.pmin.x, self.pmin.y, self.pmax.x, self.pmax.y });
         var y: usize = self.pmin.y;
         while (y < self.pmax.y) : (y += 1) {
-            std.debug.warn("{:4} | ", y);
+            std.debug.warn("{:4} | ", .{y});
             var x: usize = self.pmin.x;
             while (x < self.pmax.x) : (x += 1) {
                 const p = Pos.init(x, y);
                 const g = self.cells.get(p);
                 var c: u8 = ' ';
-                if (g != null) {
-                    const v = g.?.value;
+                if (g) |v| {
                     switch (v) {
                         Tile.Stationary => c = '.',
                         Tile.Pulled => c = '#',
                     }
                 }
-                std.debug.warn("{c}", c);
+                std.debug.warn("{c}", .{c});
             }
-            std.debug.warn("\n");
+            std.debug.warn("\n", .{});
         }
     }
 };

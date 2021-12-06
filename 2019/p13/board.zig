@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const allocator = std.testing.allocator;
 const Computer = @import("./computer.zig").Computer;
 
 pub const Pos = struct {
@@ -35,7 +36,7 @@ pub const Board = struct {
 
     pub fn init(hacked: bool) Board {
         var self = Board{
-            .cells = std.AutoHashMap(usize, Tile).init(std.heap.direct_allocator),
+            .cells = std.AutoHashMap(usize, Tile).init(allocator),
             .computer = Computer.init(true),
             .nx = undefined,
             .ny = undefined,
@@ -70,7 +71,7 @@ pub const Board = struct {
             }
             if (self.hacked) self.show();
             if (self.computer.halted) {
-                std.debug.warn("HALT computer\n");
+                std.debug.warn("HALT computer\n", .{});
                 break;
             }
         }
@@ -108,7 +109,7 @@ pub const Board = struct {
         const got = self.cells.get(label);
         var c: []const u8 = " ";
         if (got == null) return c;
-        switch (got.?.value) {
+        switch (got.?) {
             Tile.Empty => c = " ",
             Tile.Wall => c = "X",
             Tile.Block => c = "#",
@@ -119,21 +120,20 @@ pub const Board = struct {
     }
 
     pub fn show(self: Board) void {
-        const stdout = std.io.getStdOut() catch unreachable;
-        const out = &stdout.outStream().stream;
+        const out = std.io.getStdOut().writer();
         const escape: u8 = 0o33;
-        out.print("{c}[2J{c}[H", escape, escape) catch unreachable;
+        out.print("{c}[2J{c}[H", .{ escape, escape }) catch unreachable;
         var y: usize = self.pmin.y;
         while (y <= self.pmax.y) : (y += 1) {
             var x: usize = self.pmin.x;
             while (x <= self.pmax.x) : (x += 1) {
                 const pos = Pos{ .x = x, .y = y };
                 const tile = self.get_tile(pos);
-                out.print("{}", tile) catch unreachable;
+                out.print("{s}", .{tile}) catch unreachable;
             }
-            out.print("\n") catch unreachable;
+            out.print("\n", .{}) catch unreachable;
         }
-        out.print("SCORE: {}\n", self.score) catch unreachable;
+        out.print("SCORE: {}\n", .{self.score}) catch unreachable;
     }
 
     pub fn put_tile(self: *Board, pos: Pos, t: Tile) void {
@@ -170,7 +170,7 @@ pub const Board = struct {
         var it = self.cells.iterator();
         var count: usize = 0;
         while (it.next()) |entry| {
-            if (entry.value != t) continue;
+            if (entry.value_ptr.* != t) continue;
             count += 1;
         }
         return count;
@@ -183,7 +183,7 @@ test "count tiles without blocks" {
     defer board.deinit();
 
     const data = "1,2,2,6,5,4";
-    var it = std.mem.separate(data, ",");
+    var it = std.mem.split(u8, data, ",");
     while (it.next()) |what| {
         const output = std.fmt.parseInt(i64, what, 10) catch unreachable;
         const more = board.process_output(output);
@@ -199,7 +199,7 @@ test "count tiles with blocks" {
     defer board.deinit();
 
     const data = "1,2,3,6,5,4";
-    var it = std.mem.separate(data, ",");
+    var it = std.mem.split(u8, data, ",");
     while (it.next()) |what| {
         const output = std.fmt.parseInt(i64, what, 10) catch unreachable;
         const more = board.process_output(output);
