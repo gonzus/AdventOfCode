@@ -12,7 +12,7 @@ pub fn main() !void {
         count += 1;
         factory.parse(line);
     }
-    const result = factory.fuel_possible(1000000000000);
+    const result = factory.fuel_possible(1_000_000_000_000);
     const out = std.io.getStdOut().writer();
     try out.print("Can make {} fuel\n", .{result});
 }

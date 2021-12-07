@@ -113,7 +113,7 @@ pub const Board = struct {
                 }
             }
         }
-        // std.debug.warn("MIN is {} at {} {}\n", minc - 1, minx, miny);
+        std.debug.warn("MIN is {} at {} {}\n", .{ minc - 1, minx, miny });
         return minc - 1; // the position itself doesn't count
     }
 

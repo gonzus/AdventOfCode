@@ -13,7 +13,9 @@ pub fn main() !void {
         count += 1;
         board.add_line(line);
     }
+    const x = 22;
+    const y = 25;
     const wanted: usize = 200;
-    const result = board.scan_and_blast(26, 28, wanted);
-    try out.print("Read {} lines, shot #{} is {}\n", .{ count, wanted, result });
+    const result = board.scan_and_blast(x, y, wanted);
+    try out.print("Read {} lines, shot #{} from {} {} is {}\n", .{ count, wanted, x, y, result });
 }
