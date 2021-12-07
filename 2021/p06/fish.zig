@@ -14,9 +14,7 @@ pub const Fish = struct {
         return self;
     }
 
-    pub fn deinit(self: *Fish) void {
-        _ = self;
-    }
+    pub fn deinit(_: *Fish) void {}
 
     pub fn process_line(self: *Fish, data: []const u8) void {
         var it = std.mem.split(u8, data, ",");

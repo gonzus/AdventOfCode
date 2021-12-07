@@ -18,9 +18,7 @@ pub const Report = struct {
             return self;
         }
 
-        pub fn deinit(self: *Line) void {
-            _ = self;
-        }
+        pub fn deinit(_: *Line) void {}
 
         pub fn process(self: *Line, line: []const u8) void {
             for (line) |c, j| {

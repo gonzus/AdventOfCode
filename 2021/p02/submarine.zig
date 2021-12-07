@@ -24,9 +24,7 @@ pub const Submarine = struct {
         return self;
     }
 
-    pub fn deinit(self: *Submarine) void {
-        _ = self;
-    }
+    pub fn deinit(_: *Submarine) void {}
 
     pub fn process_command(self: *Submarine, line: []const u8) void {
         var it = std.mem.tokenize(u8, line, " ");
