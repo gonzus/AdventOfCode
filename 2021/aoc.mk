@@ -1,9 +1,11 @@
+SHELL := /bin/bash
+
 DATA = ../data/input$(DAY).txt
 PROGRAMS = p$(DAY)a p$(DAY)b
 
 define make-aoc-mod-target
   $1_test:
-	zig test $1
+	time zig test $1
 
   test:: $1_test
 endef
@@ -14,9 +16,9 @@ define make-aoc-prg-target
   $1_clean:
 	rm -f $1
   $1_run: $1
-	./$1 < $(DATA)
+	time ./$1 < $(DATA)
   $1_valgrind: $1
-	valgrind ./$1 < $(DATA)
+	time valgrind ./$1 < $(DATA)
 
   all:: $1
   clean:: $1_clean
