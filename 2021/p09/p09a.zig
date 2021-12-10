@@ -8,7 +8,7 @@ pub fn main() anyerror!void {
     const inp = std.io.getStdIn().reader();
     var buf: [10240]u8 = undefined;
     while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        map.process_line(line);
+        try map.process_line(line);
     }
 
     const risk = map.get_total_risk();

@@ -10,10 +10,7 @@ pub const Map = struct {
         y: isize,
 
         pub fn init(x: isize, y: isize) Pos {
-            var self = Pos{
-                .x = x,
-                .y = y,
-            };
+            var self = Pos{ .x = x, .y = y };
             return self;
         }
     };
@@ -38,19 +35,19 @@ pub const Map = struct {
         self.data.deinit();
     }
 
-    pub fn process_line(self: *Map, data: []const u8) void {
+    pub fn process_line(self: *Map, data: []const u8) !void {
         if (self.width == 0) {
             self.width = data.len;
         }
         if (self.width != data.len) {
-            unreachable;
+            return error.ChangingWidth;
         }
         const sy = @intCast(isize, self.height);
         for (data) |num, x| {
             const sx = @intCast(isize, x);
             const p = Pos.init(sx, sy);
             const n = num - '0';
-            self.data.put(p, n) catch unreachable;
+            try self.data.put(p, n);
         }
         self.height += 1;
     }
@@ -68,7 +65,7 @@ pub const Map = struct {
         return risk;
     }
 
-    pub fn get_largest_n_basins_product(self: *Map, n: usize) usize {
+    pub fn get_largest_n_basins_product(self: *Map, n: usize) !usize {
         var sizes = std.ArrayList(usize).init(allocator);
         defer sizes.deinit();
 
@@ -79,7 +76,7 @@ pub const Map = struct {
             while (y < self.height) : (y += 1) {
                 if (!self.is_basin(x, y)) continue;
 
-                const size = self.walk_basin(x, y);
+                const size = try self.walk_basin(x, y);
                 if (size == 0) continue;
 
                 sizes.append(size) catch unreachable;
@@ -108,20 +105,22 @@ pub const Map = struct {
         return true;
     }
 
-    fn walk_basin(self: *Map, x: isize, y: isize) usize {
+    fn walk_basin(self: *Map, x: isize, y: isize) !usize {
         const p = Pos.init(x, y);
         if (self.seen.contains(p)) return 0;
 
         self.seen.put(p, {}) catch unreachable;
         var size: usize = 1;
-        size += self.walk_neighbors(x - 1, y);
-        size += self.walk_neighbors(x + 1, y);
-        size += self.walk_neighbors(x, y - 1);
-        size += self.walk_neighbors(x, y + 1);
+        size += try self.walk_neighbors(x - 1, y);
+        size += try self.walk_neighbors(x + 1, y);
+        size += try self.walk_neighbors(x, y - 1);
+        size += try self.walk_neighbors(x, y + 1);
         return size;
     }
 
-    fn walk_neighbors(self: *Map, x: isize, y: isize) usize {
+    const WalkErrors = error{OutOfMemory};
+
+    fn walk_neighbors(self: *Map, x: isize, y: isize) WalkErrors!usize {
         const p = Pos.init(x, y);
         if (self.seen.contains(p)) return 0;
         if (!self.data.contains(p)) return 0;
@@ -129,12 +128,12 @@ pub const Map = struct {
         const h = self.get_height(x, y);
         if (h == 9) return 0;
 
-        self.seen.put(p, {}) catch unreachable;
+        try self.seen.put(p, {});
         var size: usize = 1;
-        if (h < self.get_height(x - 1, y)) size += self.walk_neighbors(x - 1, y);
-        if (h < self.get_height(x + 1, y)) size += self.walk_neighbors(x + 1, y);
-        if (h < self.get_height(x, y - 1)) size += self.walk_neighbors(x, y - 1);
-        if (h < self.get_height(x, y + 1)) size += self.walk_neighbors(x, y + 1);
+        if (h < self.get_height(x - 1, y)) size += try self.walk_neighbors(x - 1, y);
+        if (h < self.get_height(x + 1, y)) size += try self.walk_neighbors(x + 1, y);
+        if (h < self.get_height(x, y - 1)) size += try self.walk_neighbors(x, y - 1);
+        if (h < self.get_height(x, y + 1)) size += try self.walk_neighbors(x, y + 1);
         return size;
     }
 };
@@ -153,7 +152,7 @@ test "sample part a" {
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        map.process_line(line);
+        try map.process_line(line);
     }
     const risk = map.get_total_risk();
     try testing.expect(risk == 15);
@@ -173,8 +172,8 @@ test "sample part b" {
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        map.process_line(line);
+        try map.process_line(line);
     }
-    const product = map.get_largest_n_basins_product(3);
+    const product = try map.get_largest_n_basins_product(3);
     try testing.expect(product == 1134);
 }
