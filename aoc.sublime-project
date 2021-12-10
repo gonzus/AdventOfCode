@@ -1,0 +1,10 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+			"file_include_patterns": ["*.zig", "*.txt", "*.mk", "Makefile", ".gitignore"],
+			"folder_exclude_patterns": [ "attic"],
+		},
+	],
+}

@@ -5,7 +5,7 @@ PROGRAMS = p$(DAY)a p$(DAY)b
 
 define make-aoc-mod-target
   $1_test:
-	time zig test $1
+	zig test $1
 
   test:: $1_test
 endef
@@ -16,9 +16,9 @@ define make-aoc-prg-target
   $1_clean:
 	rm -f $1
   $1_run: $1
-	time ./$1 < $(DATA)
+	./$1 < $(DATA)
   $1_valgrind: $1
-	time valgrind ./$1 < $(DATA)
+	valgrind ./$1 < $(DATA)
 
   all:: $1
   clean:: $1_clean
