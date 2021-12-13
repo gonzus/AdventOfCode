@@ -59,7 +59,7 @@ pub const Map = struct {
         const start = self.caves.get_pos("start") orelse unreachable;
         const end = self.caves.get_pos("end") orelse unreachable;
         self.seen.put(start, true) catch unreachable;
-        var path: Caves = Caves.init(allocator);
+        var path = Caves.init(allocator);
         defer path.deinit();
         self.walk_caves(0, start, end, &path);
 
@@ -97,8 +97,9 @@ pub const Map = struct {
             if (self.cave_is_large(n)) {
                 // cave is large, visit without marking as seen
                 path.*.append(n) catch unreachable;
+                defer _ = path.*.pop();
+
                 self.walk_caves(depth + 1, n, end, path);
-                _ = path.*.pop();
                 continue;
             }
 
@@ -108,18 +109,22 @@ pub const Map = struct {
             if (self.slack) {
                 // not used slack yet; use it and visit without marking as seen
                 self.slack = false;
+                defer self.slack = true;
+
                 path.*.append(n) catch unreachable;
+                defer _ = path.*.pop();
+
                 self.walk_caves(depth + 1, n, end, path);
-                _ = path.*.pop();
-                self.slack = true;
             }
 
             // visit marking as seen
             self.seen.put(n, true) catch unreachable;
+            defer self.seen.put(n, false) catch unreachable;
+
             path.*.append(n) catch unreachable;
+            defer _ = path.*.pop();
+
             self.walk_caves(depth + 1, n, end, path);
-            _ = path.*.pop();
-            self.seen.put(n, false) catch unreachable;
         }
     }
 
@@ -134,7 +139,7 @@ pub const Map = struct {
             // yeah, the index for each cave ends up reversed in the string, but it is still unique...
             var x: usize = c;
             while (true) {
-                const d: u8 = @intCast(u8, x % 10);
+                const d = @intCast(u8, x % 10);
                 x /= 10;
                 buf[pos] = d + '0';
                 pos += 1;
