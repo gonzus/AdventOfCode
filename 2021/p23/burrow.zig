@@ -370,8 +370,7 @@ pub const Burrow = struct {
                 break;
             }
 
-            const smin = min_node.cost;
-            const su = smin;
+            const su = min_node.cost;
             var u = State.decode(uc);
 
             // *** try to move from wrong home to right home ***

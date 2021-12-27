@@ -5,17 +5,15 @@ const allocator = std.testing.allocator;
 // TIMES
 //
 // Dijkstra optimized:
-//   part 1: 0.3 seconds (answer: 707)
-//   part 2: 104 seconds (answer: 2942)
+//   part 1: 0.037 seconds (answer: 707)
+//   part 2: 0.719 seconds (answer: 2942)
 //
 // A*:
-//   part 1: 0.5 seconds (answer: 707)
-//   part 2: 122 seconds (answer: 2942)
+//   part 1: 0.052 seconds (answer: 707)
+//   part 2: 1.034 seconds (answer: 2942)
 pub const Map = struct {
     pub const Mode = enum { Small, Large };
     pub const Algo = enum { Dijkstra, AStar };
-
-    const Path = std.AutoHashMap(Pos, Pos);
 
     const Pos = struct {
         x: usize,
@@ -33,7 +31,23 @@ pub const Map = struct {
         }
     };
 
+    const Node = struct {
+        pos: Pos,
+        cost: usize,
+
+        pub fn init(pos: Pos, cost: usize) Node {
+            var self = Node{ .pos = pos, .cost = cost };
+            return self;
+        }
+
+        fn lessThan(l: Node, r: Node) std.math.Order {
+            return std.math.order(l.cost, r.cost);
+        }
+    };
+
     const Dir = enum { N, S, E, W };
+
+    const Path = std.AutoHashMap(Pos, Node);
 
     mode: Mode,
     algo: Algo,
@@ -90,136 +104,99 @@ pub const Map = struct {
             // std.debug.warn("PATH {}\n", .{pos});
             if (pos.equal(start)) break;
             risk += self.grid.get(pos).?;
-            pos = cameFrom.get(pos).?;
+            const node = cameFrom.get(pos).?;
+            pos = node.pos;
         }
         // std.debug.warn("SHORTEST {}\n", .{risk});
         return risk;
     }
 
     fn walk_dijkstra(self: *Map, start: Pos, goal: Pos, cameFrom: *Path) !void {
-        var pending = std.AutoHashMap(Pos, void).init(allocator);
+        var pending = std.PriorityQueue(Node, Node.lessThan).init(allocator);
         defer pending.deinit();
         var score = std.AutoHashMap(Pos, usize).init(allocator);
         defer score.deinit();
 
-        // Fill score for all nodes
-        var y: usize = 0;
-        while (y < self.height) : (y += 1) {
-            var x: usize = 0;
-            while (x < self.width) : (x += 1) {
-                const p = Pos.init(x, y);
-                try score.put(p, std.math.maxInt(usize));
-            }
-        }
-
         // We begin the route at the start node
-        try score.put(start, 0);
-        try pending.put(start, {});
+        try pending.add(Node.init(start, 0));
         while (pending.count() != 0) {
-            // Search for a pending position with lowest score.
-            // TODO: we could use a PriorityQueue here to quickly get at the
-            // node, but we will also need to update the node's score later,
-            // which would mean re-shuffling the PQ; not sure how to do this.
-            var u: Pos = undefined;
-            var smin: usize = std.math.maxInt(usize);
-            var it = pending.iterator();
-            while (it.next()) |pe| {
-                const p = pe.key_ptr.*;
-                if (score.getEntry(p)) |se| {
-                    if (smin > se.value_ptr.*) {
-                        smin = se.value_ptr.*;
-                        u = se.key_ptr.*;
-                    }
-                }
+            const min_node = pending.remove();
+            const u: Pos = min_node.pos;
+            if (u.equal(goal)) {
+                // found target -- yay!
+                break;
             }
-
-            _ = pending.remove(u);
-            if (u.equal(goal)) break;
-
-            // std.debug.warn("TRY {}\n", .{u});
+            const su = min_node.cost;
 
             // update score for all neighbours of u
             // add closest neighbour of u to the path
-            const su = score.get(u).?;
             for (std.enums.values(Dir)) |dir| {
                 if (self.get_neighbor(u, dir)) |v| {
                     const duv = self.grid.get(v).?;
                     const tentative = su + duv;
-                    const sv = score.get(v).?;
+                    var sv: usize = std.math.maxInt(usize);
+                    if (score.getEntry(v)) |e| {
+                        sv = e.value_ptr.*;
+                    }
                     if (tentative >= sv) continue;
-                    try pending.put(v, {});
+                    try pending.add(Node.init(v, tentative));
                     try score.put(v, tentative);
-                    try cameFrom.put(v, u);
+                    try cameFrom.put(v, Node.init(u, duv));
                 }
             }
         }
     }
 
+    // Implemented this because I thought it would make a major difference with
+    // Dijkstra (back when the code was NOT using a priority queue), but there
+    // is actually not much difference. and this is much more complicated.
     fn walk_astar(self: *Map, start: Pos, goal: Pos, cameFrom: *Path) !void {
-        var pending = std.AutoHashMap(Pos, void).init(allocator);
+        var pending = std.PriorityQueue(Node, Node.lessThan).init(allocator);
         defer pending.deinit();
-        var fScore = std.AutoHashMap(Pos, usize).init(allocator);
-        defer fScore.deinit();
         var gScore = std.AutoHashMap(Pos, usize).init(allocator);
         defer gScore.deinit();
         var hScore = std.AutoHashMap(Pos, usize).init(allocator);
         defer hScore.deinit();
 
-        // Fill fScore, gScore and hScore for all nodes
+        // Fill hScore for all nodes
+        // fScore and gScore are infinite by default
         var y: usize = 0;
         while (y < self.height) : (y += 1) {
             var x: usize = 0;
             while (x < self.width) : (x += 1) {
                 const p = Pos.init(x, y);
-                try gScore.put(p, std.math.maxInt(usize));
-                try fScore.put(p, std.math.maxInt(usize));
                 try hScore.put(p, self.height - y + self.width - x);
             }
         }
 
-        // We begin the route at the start node
-        const g = 0;
-        const h = hScore.get(start).?;
-        try fScore.put(start, g + h);
-        try gScore.put(start, g);
-        try pending.put(start, {});
+        try gScore.put(start, 0);
+        try pending.add(Node.init(start, 0));
         while (pending.count() != 0) {
-            // Search for a pending position with lowest fScore.
-            // TODO: we could use a PriorityQueue here to quickly get at the
-            // node, but we will also need to update the node's score later,
-            // which would mean re-shuffling the PQ; not sure how to do this.
-            var u: Pos = undefined;
-            var smin: usize = std.math.maxInt(usize);
-            var it = pending.iterator();
-            while (it.next()) |pe| {
-                const p = pe.key_ptr.*;
-                if (fScore.getEntry(p)) |se| {
-                    if (smin > se.value_ptr.*) {
-                        smin = se.value_ptr.*;
-                        u = se.key_ptr.*;
-                    }
-                }
+            const min_node = pending.remove();
+            const u: Pos = min_node.pos;
+            if (u.equal(goal)) {
+                // found target -- yay!
+                break;
             }
-
-            _ = pending.remove(u);
-            if (u.equal(goal)) break;
-
-            // std.debug.warn("TRY {}\n", .{u});
 
             // update score for all neighbours of u
             // add closest neighbour of u to the path
-            const gu = gScore.get(u).?;
+            var gu: usize = std.math.maxInt(usize);
+            if (gScore.getEntry(u)) |e| {
+                gu = e.value_ptr.*;
+            }
             for (std.enums.values(Dir)) |dir| {
                 if (self.get_neighbor(u, dir)) |v| {
                     const duv = self.grid.get(v).?;
                     const tentative = gu + duv;
-                    const gv = gScore.get(v).?;
+                    var gv: usize = std.math.maxInt(usize);
+                    if (gScore.getEntry(v)) |e| {
+                        gv = e.value_ptr.*;
+                    }
                     if (tentative >= gv) continue;
-                    const hv = hScore.get(v).?;
-                    try cameFrom.put(v, u);
+                    try pending.add(Node.init(v, tentative));
                     try gScore.put(v, tentative);
-                    try fScore.put(v, tentative + hv);
-                    try pending.put(v, {});
+                    try cameFrom.put(v, Node.init(u, duv));
                 }
             }
         }
