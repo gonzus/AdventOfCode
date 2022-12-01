@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 DATA = ../data/input$(DAY).txt
-PROGRAMS = p$(DAY)a p$(DAY)b
+PROGRAMS = p$(DAY)
 
 define make-aoc-mod-target
   $1_test:
@@ -12,16 +12,21 @@ endef
 
 define make-aoc-prg-target
   $1: $1.zig $(MODULES)
-	zig build-exe -mcpu=baseline $1.zig
+	zig build-exe $1.zig
   $1_clean:
 	rm -f $1
-  $1_run: $1
-	./$1 < $(DATA)
+  $1_run: $1_run1 $1_run2
+  $1_run1: $1
+	./$1 1 < $(DATA)
+  $1_run2: $1
+	./$1 2 < $(DATA)
   $1_valgrind: $1
 	valgrind ./$1 < $(DATA)
 
   all:: $1
   clean:: $1_clean
+  run1:: $1_run1
+  run2:: $1_run2
   run:: $1_run
   valgrind:: $1_valgrind
 endef
@@ -36,8 +41,10 @@ clean:: ## clean all
 .PHONY: all
 all:: ## build all parts of this problem
 
-.PHONY: run
+.PHONY: run run1 run1
 run:: ## run all parts of this problem
+run1:: ## run part 1 of this problem
+run2:: ## run part 2 of this problem
 
 .PHONY: valgrind
 valgrind:: ## valgrind all parts of this problem
