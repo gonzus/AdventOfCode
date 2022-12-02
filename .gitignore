@@ -1,7 +1,5 @@
 **/target/
 **/*.rs.bk
-**/*.swp
-*.sublime-workspace
-**/*.o
-**/zig-cache/
 20[0-9][0-9]/*/p[0-9]*
+!**/*.zig
+!**/Makefile
