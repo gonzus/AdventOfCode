@@ -1,12 +1,14 @@
 const std = @import("std");
 const testing = std.testing;
 
+const Allocator = std.mem.Allocator;
+
 pub const StringTable = struct {
-    allocator: *std.mem.Allocator,
+    allocator: Allocator,
     p2s: std.ArrayList([]const u8),
     s2p: std.StringHashMap(usize),
 
-    pub fn init(allocator: *std.mem.Allocator) StringTable {
+    pub fn init(allocator: Allocator) StringTable {
         var self = StringTable{
             .allocator = allocator,
             .p2s = std.ArrayList([]const u8).init(allocator),
@@ -52,8 +54,7 @@ pub const StringTable = struct {
 };
 
 test "basic" {
-    const allocator = std.testing.allocator;
-    var strtab = StringTable.init(allocator);
+    var strtab = StringTable.init(std.testing.allocator);
     defer strtab.deinit();
 
     const str = "gonzo";
@@ -66,8 +67,7 @@ test "basic" {
 }
 
 test "no overwrites" {
-    const allocator = std.testing.allocator;
-    var strtab = StringTable.init(allocator);
+    var strtab = StringTable.init(std.testing.allocator);
     defer strtab.deinit();
 
     const prefix = "This is string #";
