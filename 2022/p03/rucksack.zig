@@ -129,7 +129,7 @@ test "sample part 1" {
     }
 
     const sum = rucksack.get_compartment_total();
-    try testing.expect(sum == 157);
+    try testing.expectEqual(sum, 157);
 }
 
 test "sample part 2" {
@@ -151,5 +151,5 @@ test "sample part 2" {
     }
 
     const sum = rucksack.get_group_total();
-    try testing.expect(sum == 70);
+    try testing.expectEqual(sum, 70);
 }

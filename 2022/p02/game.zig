@@ -196,7 +196,7 @@ test "sample part 1" {
     }
 
     const score = game.get_score(false);
-    try testing.expect(score == 15);
+    try testing.expectEqual(score, 15);
 }
 
 test "sample part 2" {
@@ -215,5 +215,5 @@ test "sample part 2" {
     }
 
     const score = game.get_score(true);
-    try testing.expect(score == 12);
+    try testing.expectEqual(score, 12);
 }

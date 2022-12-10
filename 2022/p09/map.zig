@@ -124,7 +124,7 @@ test "sample part 1" {
     }
 
     const count = map.count_tail_visits();
-    try testing.expect(count == 13);
+    try testing.expectEqual(count, 13);
 }
 
 test "sample part 2 a" {
@@ -148,7 +148,7 @@ test "sample part 2 a" {
     }
 
     const count = map.count_tail_visits();
-    try testing.expect(count == 1);
+    try testing.expectEqual(count, 1);
 }
 
 test "sample part 2 b" {
@@ -172,5 +172,5 @@ test "sample part 2 b" {
     }
 
     const count = map.count_tail_visits();
-    try testing.expect(count == 36);
+    try testing.expectEqual(count, 36);
 }

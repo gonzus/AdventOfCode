@@ -141,7 +141,7 @@ test "sample part 1" {
     }
 
     const count = assignment.count_contained();
-    try testing.expect(count == 2);
+    try testing.expectEqual(count, 2);
 }
 
 test "sample part 2" {
@@ -163,5 +163,5 @@ test "sample part 2" {
     }
 
     const count = assignment.count_overlapping();
-    try testing.expect(count == 4);
+    try testing.expectEqual(count, 4);
 }

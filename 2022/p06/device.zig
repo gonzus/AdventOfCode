@@ -68,7 +68,7 @@ test "sample part 1" {
     for (cases) |case| {
         try device.feed(case.text);
         const offset = device.find_packet_marker();
-        try testing.expect(offset == case.marker);
+        try testing.expectEqual(offset, case.marker);
     }
 }
 
@@ -85,6 +85,6 @@ test "sample part 2" {
     for (cases) |case| {
         try device.feed(case.text);
         const offset = device.find_message_marker();
-        try testing.expect(offset == case.marker);
+        try testing.expectEqual(offset, case.marker);
     }
 }

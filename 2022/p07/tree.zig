@@ -214,7 +214,7 @@ test "sample part 1" {
     }
 
     const size = tree.add_dirs_at_most(100_000);
-    try testing.expect(size == 95437);
+    try testing.expectEqual(size, 95437);
 }
 
 test "sample part 2" {
@@ -253,5 +253,5 @@ test "sample part 2" {
     }
 
     const size = tree.smallest_dir_to_achieve(70_000_000, 30_000_000);
-    try testing.expect(size == 24933642);
+    try testing.expectEqual(size, 24933642);
 }

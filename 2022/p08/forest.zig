@@ -128,7 +128,7 @@ test "sample part 1" {
     }
 
     const count = forest.count_visible();
-    try testing.expect(count == 21);
+    try testing.expectEqual(count, 21);
 }
 
 test "sample part 2" {
@@ -149,5 +149,5 @@ test "sample part 2" {
     }
 
     const score = forest.find_most_scenic();
-    try testing.expect(score == 8);
+    try testing.expectEqual(score, 8);
 }

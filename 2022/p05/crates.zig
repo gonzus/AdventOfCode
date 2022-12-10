@@ -194,7 +194,7 @@ test "sample part 1" {
     // arrangement.show();
     try arrangement.rearrange(false);
     const message = try arrangement.get_message();
-    try testing.expect(std.mem.eql(u8, message, "CMZ"));
+    try testing.expectEqualStrings(message, "CMZ");
 }
 
 test "sample part 2" {
@@ -221,5 +221,5 @@ test "sample part 2" {
     // arrangement.show();
     try arrangement.rearrange(true);
     const message = try arrangement.get_message();
-    try testing.expect(std.mem.eql(u8, message, "MCD"));
+    try testing.expectEqualStrings(message, "MCD");
 }

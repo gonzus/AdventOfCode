@@ -72,7 +72,7 @@ test "sample part 1" {
     }
 
     const top = food.get_top(1);
-    try testing.expect(top == 24_000);
+    try testing.expectEqual(top, 24_000);
 }
 
 test "sample part 2" {
@@ -102,5 +102,5 @@ test "sample part 2" {
     }
 
     const top = food.get_top(3);
-    try testing.expect(top == 45_000);
+    try testing.expectEqual(top, 45_000);
 }

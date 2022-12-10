@@ -145,7 +145,7 @@ test "sample part 1" {
     }
 
     _ = cpu.run();
-    try testing.expect(cpu.X == -1);
+    try testing.expectEqual(cpu.X, -1);
 }
 
 test "sample part 2" {
@@ -307,7 +307,7 @@ test "sample part 2" {
     }
 
     const strength = cpu.run();
-    try testing.expect(strength == 13140);
+    try testing.expectEqual(strength, 13140);
 
     const expected: []const u8 =
         \\##..##..##..##..##..##..##..##..##..##..
@@ -326,6 +326,6 @@ test "sample part 2" {
         const want = expected[pos_want..pos_want+BITMAP_WIDTH];
         pos_got += BITMAP_WIDTH;
         pos_want += BITMAP_WIDTH + 1; // skip newline at end
-        try testing.expect(std.mem.eql(u8, got, want));
+        try testing.expectEqualStrings(got, want);
     }
 }
