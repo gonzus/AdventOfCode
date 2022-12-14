@@ -13,6 +13,9 @@ pub const Pos = struct {
 };
 
 pub const Cave = struct {
+    const CLEAR = "\x1b[2J";
+    const HOME = "\x1b[H";
+
     const Cell = enum(u8) {
         Source = '+',
         Empty  = '.',
@@ -113,7 +116,10 @@ pub const Cave = struct {
         }
     }
 
-    pub fn show(self: Cave, count: usize) void {
+    pub fn show(self: Cave, count: usize, clear: bool) void {
+        if (clear) {
+            std.debug.print("{s}{s}", .{CLEAR, HOME});
+        }
         std.debug.print("-- {} --------\n", .{count});
         var y: isize = self.min.y;
         while (y <= self.max.y) : (y += 1) {
@@ -197,7 +203,7 @@ pub const Cave = struct {
             if (self.with_floor) count += 1;
 
             const good = try self.drop_sand_unit();
-            // if (!self.with_floor) self.show(count);
+            // if (!self.with_floor) self.show(count, true);
             if (!good) break;
 
             // without a floor, we stop right before it is stable
