@@ -2,7 +2,6 @@ const std = @import("std");
 const testing = std.testing;
 
 const Allocator = std.mem.Allocator;
-const StringTable = @import("./util/strtab.zig").StringTable;
 
 pub const Cave = struct {
     const Rock = enum(u8) {
