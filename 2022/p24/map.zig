@@ -40,19 +40,19 @@ pub const Map = struct {
     };
 
     const Pos = struct {
-        x: usize,
-        y: usize,
+        x: isize,
+        y: isize,
 
-        pub fn init(x: usize, y: usize) Pos {
+        pub fn init(x: isize, y: isize) Pos {
             return Pos{.x = x, .y = y};
         }
 
-        pub fn move(self: Pos, dx: i32, dy: i32, maxx: usize, maxy: usize) ?Pos {
-            const vx: i32 = @intCast(i32, self.x) + dx;
+        pub fn move(self: Pos, dx: isize, dy: isize, maxx: usize, maxy: usize) ?Pos {
+            const vx = self.x + dx;
             if (vx < 0 or vx >= maxx) return null;
-            const vy: i32 = @intCast(i32, self.y) + dy;
+            const vy = self.y + dy;
             if (vy < 0 or vy >= maxy) return null;
-            return Pos.init(@intCast(usize, vx), @intCast(usize, vy));
+            return Pos.init(vx, vy);
         }
     };
 
