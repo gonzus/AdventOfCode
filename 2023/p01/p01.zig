@@ -1,30 +1,40 @@
 const std = @import("std");
+const testing = std.testing;
 const command = @import("./util/command.zig");
-const Food = @import("./food.zig").Food;
+const Calibration = @import("./trebuchet.zig").Calibration;
 
 pub fn main() anyerror!u8 {
-    const part = command.choose_part();
-    if (part <= 0 or part > 2) return 99;
-    return try problem(part);
-}
+    const part = command.choosePart();
 
-pub fn problem(part: u8) anyerror!u8 {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    var food = Food.init(allocator);
-    defer food.deinit();
+    const only_digits = part == .part1;
+    var calibration = Calibration.init(allocator, only_digits);
+    defer calibration.deinit();
 
     const inp = std.io.getStdIn().reader();
     var buf: [1024]u8 = undefined;
     while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        try food.add_line(line);
+        try calibration.addLine(line);
     }
 
-    var count: usize = if (part == 1) 1 else 3;
-    const top = food.get_top(count);
+    var sum: usize = 0;
+    switch (part) {
+        .part1 => {
+            sum = calibration.getSum();
+            const expected = @as(usize, 54450);
+            try testing.expectEqual(expected, sum);
+        },
+        .part2 => {
+            sum = calibration.getSum();
+            const expected = @as(usize, 54265);
+            try testing.expectEqual(expected, sum);
+        },
+    }
+
     const out = std.io.getStdOut().writer();
-    try out.print("Total calories for top {} elves: {}\n", .{ count, top });
+    try out.print("Sum: {}\n", .{sum});
     return 0;
 }

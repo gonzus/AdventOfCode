@@ -1,4 +1,4 @@
 DAY = 01
-MODULES = food.zig
+MODULES = trebuchet.zig
 
 include ../aoc.mk
