@@ -47,6 +47,7 @@ pub const Grid = struct {
     cols: usize,
     num: Number,
     numbers: std.ArrayList(usize),
+    symbols: std.ArrayList(Pos),
     data: std.AutoHashMap(Pos, Data),
     found: std.AutoHashMap(usize, void),
 
@@ -56,6 +57,7 @@ pub const Grid = struct {
             .cols = 0,
             .num = Number.init(),
             .numbers = std.ArrayList(usize).init(allocator),
+            .symbols = std.ArrayList(Pos).init(allocator),
             .data = std.AutoHashMap(Pos, Data).init(allocator),
             .found = std.AutoHashMap(usize, void).init(allocator),
         };
@@ -65,6 +67,7 @@ pub const Grid = struct {
     pub fn deinit(self: *Grid) void {
         self.found.deinit();
         self.data.deinit();
+        self.symbols.deinit();
         self.numbers.deinit();
     }
 
@@ -75,7 +78,7 @@ pub const Grid = struct {
             switch (c) {
                 '.' => try self.checkAndStoreNumber(col),
                 '0'...'9' => self.num.addDigit(c, col),
-                else => try self.storeSymbol(c, col), // will also check number
+                else => try self.checkAndStoreSymbol(c, col), // will also check number
             }
         }
         try self.checkAndStoreNumber(self.cols); // if last is a number
@@ -110,22 +113,12 @@ pub const Grid = struct {
 
     pub fn getSumPartNumbers(self: *Grid) !usize {
         var sum: usize = 0;
-        for (0..self.rows) |y| {
-            for (0..self.cols) |x| {
-                const entry = self.data.getEntry(Pos.init(x, y));
-                if (entry) |e| {
-                    switch (e.value_ptr.*) {
-                        .index => continue,
-                        .symbol => {
-                            try self.findNeighbors(x, y);
-                            var it = self.found.keyIterator();
-                            while (it.next()) |pos| {
-                                const num = self.numbers.items[pos.*];
-                                sum += num;
-                            }
-                        },
-                    }
-                }
+        for (self.symbols.items) |symbol| {
+            try self.findNeighbors(symbol.x, symbol.y);
+            var it = self.found.keyIterator();
+            while (it.next()) |pos| {
+                const num = self.numbers.items[pos.*];
+                sum += num;
             }
         }
         return sum;
@@ -133,27 +126,25 @@ pub const Grid = struct {
 
     pub fn getSumGearRatios(self: *Grid) !usize {
         var sum: usize = 0;
-        for (0..self.rows) |y| {
-            for (0..self.cols) |x| {
-                const entry = self.data.getEntry(Pos.init(x, y));
-                if (entry) |e| {
-                    switch (e.value_ptr.*) {
-                        .index => continue,
-                        .symbol => |s| {
-                            if (s != SYMBOL_GEAR) continue;
+        for (self.symbols.items) |symbol| {
+            const entry = self.data.getEntry(symbol);
+            if (entry) |e| {
+                switch (e.value_ptr.*) {
+                    .index => unreachable,
+                    .symbol => |s| {
+                        if (s != SYMBOL_GEAR) continue;
 
-                            try self.findNeighbors(x, y);
-                            if (self.found.count() != 2) continue;
+                        try self.findNeighbors(symbol.x, symbol.y);
+                        if (self.found.count() != 2) continue;
 
-                            var prod: usize = 1;
-                            var it = self.found.keyIterator();
-                            while (it.next()) |pos| {
-                                const num = self.numbers.items[pos.*];
-                                prod *= num;
-                            }
-                            sum += prod;
-                        },
-                    }
+                        var prod: usize = 1;
+                        var it = self.found.keyIterator();
+                        while (it.next()) |pos| {
+                            const num = self.numbers.items[pos.*];
+                            prod *= num;
+                        }
+                        sum += prod;
+                    },
                 }
             }
         }
@@ -172,12 +163,13 @@ pub const Grid = struct {
         self.num.reset();
     }
 
-    fn storeSymbol(self: *Grid, symbol: u8, col: usize) !void {
+    fn checkAndStoreSymbol(self: *Grid, symbol: u8, col: usize) !void {
         try self.checkAndStoreNumber(col);
 
         const value = Data{ .symbol = symbol };
         const pos = Pos.init(col, self.rows);
         try self.data.put(pos, value);
+        try self.symbols.append(pos);
     }
 
     fn findNeighbors(self: *Grid, x: usize, y: usize) !void {
