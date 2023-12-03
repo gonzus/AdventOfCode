@@ -4,12 +4,11 @@ const command = @import("./util/command.zig");
 const Grid = @import("./gondola.zig").Grid;
 
 pub fn main() anyerror!u8 {
-    const part = command.choosePart();
-
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
+    const part = command.choosePart();
     var grid = Grid.init(allocator);
     defer grid.deinit();
 
@@ -18,6 +17,7 @@ pub fn main() anyerror!u8 {
     while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         try grid.addLine(line);
     }
+    // grid.show();
 
     var sum: usize = 0;
     switch (part) {
@@ -35,5 +35,6 @@ pub fn main() anyerror!u8 {
 
     const out = std.io.getStdOut().writer();
     try out.print("Sum: {}\n", .{sum});
+    try out.print("Elapsed: {}ms\n", .{command.getElapsedMs()});
     return 0;
 }

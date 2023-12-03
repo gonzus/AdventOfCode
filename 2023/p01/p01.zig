@@ -4,12 +4,11 @@ const command = @import("./util/command.zig");
 const Calibration = @import("./trebuchet.zig").Calibration;
 
 pub fn main() anyerror!u8 {
-    const part = command.choosePart();
-
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
+    const part = command.choosePart();
     const only_digits = part == .part1;
     var calibration = Calibration.init(allocator, only_digits);
     defer calibration.deinit();
@@ -36,5 +35,6 @@ pub fn main() anyerror!u8 {
 
     const out = std.io.getStdOut().writer();
     try out.print("Sum: {}\n", .{sum});
+    try out.print("Elapsed: {}ms\n", .{command.getElapsedMs()});
     return 0;
 }

@@ -4,12 +4,11 @@ const command = @import("./util/command.zig");
 const Walk = @import("./island.zig").Walk;
 
 pub fn main() anyerror!u8 {
-    const part = command.choosePart();
-
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
+    const part = command.choosePart();
     var walk = Walk.init(allocator);
     defer walk.deinit();
 
@@ -35,5 +34,6 @@ pub fn main() anyerror!u8 {
 
     const out = std.io.getStdOut().writer();
     try out.print("Sum: {}\n", .{sum});
+    try out.print("Elapsed: {}ms\n", .{command.getElapsedMs()});
     return 0;
 }
