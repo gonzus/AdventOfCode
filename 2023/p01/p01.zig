@@ -19,22 +19,23 @@ pub fn main() anyerror!u8 {
         try calibration.addLine(line);
     }
 
-    var sum: usize = 0;
+    var answer: usize = 0;
     switch (part) {
         .part1 => {
-            sum = calibration.getSum();
+            answer = calibration.getSum();
             const expected = @as(usize, 54450);
-            try testing.expectEqual(expected, sum);
+            try testing.expectEqual(expected, answer);
         },
         .part2 => {
-            sum = calibration.getSum();
+            answer = calibration.getSum();
             const expected = @as(usize, 54265);
-            try testing.expectEqual(expected, sum);
+            try testing.expectEqual(expected, answer);
         },
     }
 
     const out = std.io.getStdOut().writer();
-    try out.print("Sum: {}\n", .{sum});
+    try out.print("=== {s} ===\n", .{@tagName(part)});
+    try out.print("Answer: {}\n", .{answer});
     try out.print("Elapsed: {}ms\n", .{command.getElapsedMs()});
     return 0;
 }

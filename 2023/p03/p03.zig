@@ -19,22 +19,23 @@ pub fn main() anyerror!u8 {
     }
     // grid.show();
 
-    var sum: usize = 0;
+    var answer: usize = 0;
     switch (part) {
         .part1 => {
-            sum = try grid.getSumPartNumbers();
+            answer = try grid.getSumPartNumbers();
             const expected = @as(usize, 520135);
-            try testing.expectEqual(expected, sum);
+            try testing.expectEqual(expected, answer);
         },
         .part2 => {
-            sum = try grid.getSumGearRatios();
+            answer = try grid.getSumGearRatios();
             const expected = @as(usize, 72514855);
-            try testing.expectEqual(expected, sum);
+            try testing.expectEqual(expected, answer);
         },
     }
 
     const out = std.io.getStdOut().writer();
-    try out.print("Sum: {}\n", .{sum});
+    try out.print("=== {s} ===\n", .{@tagName(part)});
+    try out.print("Answer: {}\n", .{answer});
     try out.print("Elapsed: {}ms\n", .{command.getElapsedMs()});
     return 0;
 }

@@ -18,22 +18,23 @@ pub fn main() anyerror!u8 {
         try walk.addLine(line);
     }
 
-    var sum: usize = 0;
+    var answer: usize = 0;
     switch (part) {
         .part1 => {
-            sum = walk.getSumPossibleGameIds();
+            answer = walk.getSumPossibleGameIds();
             const expected = @as(usize, 2685);
-            try testing.expectEqual(expected, sum);
+            try testing.expectEqual(expected, answer);
         },
         .part2 => {
-            sum = walk.getSumPowers();
+            answer = walk.getSumPowers();
             const expected = @as(usize, 83707);
-            try testing.expectEqual(expected, sum);
+            try testing.expectEqual(expected, answer);
         },
     }
 
     const out = std.io.getStdOut().writer();
-    try out.print("Sum: {}\n", .{sum});
+    try out.print("=== {s} ===\n", .{@tagName(part)});
+    try out.print("Answer: {}\n", .{answer});
     try out.print("Elapsed: {}ms\n", .{command.getElapsedMs()});
     return 0;
 }
