@@ -228,13 +228,14 @@ pub const Almanac = struct {
         var a_pos: usize = 0;
         var b_pos: usize = 0;
         while (true) {
-            if (a_pos >= tmp.items.len and b_pos >= b2c.items.len) {
-                break;
-            }
             if (a_pos >= tmp.items.len) {
+                // if we run out on the first list,
+                // we don't care about the rest
                 break;
             }
             if (b_pos >= b2c.items.len) {
+                // if we run out on the second list,
+                // we keep the rest of the first list
                 const r = tmp.items[a_pos];
                 const m = Map.initFromRangeDelta(r, 0);
                 a_pos += 1;
@@ -247,37 +248,56 @@ pub const Almanac = struct {
             const lb = b2c.items[b_pos];
             const rb = lb.range;
             if (ra.end < rb.beg) {
+                // range in first list is fully before
+                // range in the second list;
+                // keep it as-is and advance first list
                 a_pos += 1;
                 try target.append(la);
                 continue;
             }
             if (ra.beg > rb.end) {
+                // range in first list is fully after
+                // range in the second list;
+                // advance second list
                 b_pos += 1;
                 continue;
             }
+
+            // There is overlap between the two ranges.
+
             if (ra.beg < rb.beg) {
+                // there is a left piece on the first range;
+                // add it without re-mapping
                 const r = try Range.initFromBegEnd(ra.beg, @min(ra.end, rb.beg - 1));
                 const m = Map.initFromRangeDelta(r, la.delta);
                 try target.append(m);
-            } else {}
+            }
             {
                 const l = @max(ra.beg, rb.beg);
                 const h = @min(ra.end, rb.end);
                 if (l <= h) {
+                    // there is a non-empty overlap in both ranges;
+                    // add it re-mapped
                     const r = try Range.initFromBegEnd(l, h);
                     const m = Map.initFromRangeDelta(r, lb.delta);
                     try target.append(m);
                 }
             }
             if (ra.end > rb.end) {
+                // there is a right piece on the first range;
+                // modify it in-place to leave it as a new range
                 const nb = (if (ra.beg > rb.end) ra.beg else rb.end) + 1;
                 tmp.items[a_pos].beg = nb - la.delta;
                 b_pos += 1;
             } else if (ra.end < rb.end) {
+                // there is a right piece on the second range;
+                // modify it in-place to leave it as a new range
                 const nb = ra.end + 1;
                 b2c.items[b_pos].range.beg = nb;
                 a_pos += 1;
             } else {
+                // no overlap on the right;
+                // advance both lists
                 a_pos += 1;
                 b_pos += 1;
             }
