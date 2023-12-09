@@ -6,36 +6,25 @@ const Allocator = std.mem.Allocator;
 pub const Sensor = struct {
     const Readings = std.ArrayList(isize);
 
-    const Pair = struct {
-        beg: isize,
-        end: isize,
-
-        pub fn init() Pair {
-            var self: Pair = undefined;
-            self.setBegEnd(0, 0);
-            return self;
-        }
-
-        pub fn setBegEnd(self: *Pair, beg: isize, end: isize) void {
-            self.beg = beg;
-            self.end = end;
-        }
-    };
-
     allocator: Allocator,
     readings: Readings,
-    sum: Pair,
+    reversed: Readings,
+    sum_beg: isize,
+    sum_end: isize,
 
     pub fn init(allocator: Allocator) Sensor {
         var self = Sensor{
             .allocator = allocator,
             .readings = Readings.init(allocator),
-            .sum = Pair.init(),
+            .reversed = Readings.init(allocator),
+            .sum_beg = 0,
+            .sum_end = 0,
         };
         return self;
     }
 
     pub fn deinit(self: *Sensor) void {
+        self.reversed.deinit();
         self.readings.deinit();
     }
 
@@ -47,38 +36,42 @@ pub const Sensor = struct {
             try self.readings.append(n);
         }
 
-        var extra = Pair.init();
-        try self.findDiff(&self.readings, &extra);
-        self.sum.beg += extra.beg;
-        self.sum.end += extra.end;
+        self.reversed.clearRetainingCapacity();
+        for (self.readings.items, 0..) |_, p| {
+            const n = self.readings.items[self.readings.items.len - p - 1];
+            try self.reversed.append(n);
+        }
+
+        self.sum_end += try findDiff(&self.readings);
+        self.sum_beg += try findDiff(&self.reversed);
     }
 
-    fn findDiff(self: *Sensor, readings: *Readings, extra: *Pair) !void {
-        if (readings.items.len < 2) return;
-        extra.*.setBegEnd(readings.items[0], readings.getLast());
-
-        var deltas = Readings.init(self.allocator);
-        defer deltas.deinit();
-        var done = true;
-        for (0..readings.items.len - 1) |p| {
-            const d = readings.items[p + 1] - readings.items[p];
-            if (d != 0) done = false;
-            try deltas.append(d);
+    fn findDiff(readings: *Readings) !isize {
+        var items = readings.items;
+        var top = items.len;
+        var done = false;
+        while (top >= 2) : (top -= 1) {
+            done = true;
+            for (0..top - 1) |p| {
+                items[p] = items[p + 1] - items[p];
+                if (items[p] != 0) done = false;
+            }
+            if (done) break;
         }
-        if (done) return;
-
-        var next = Pair.init();
-        try self.findDiff(&deltas, &next);
-        extra.*.beg -= next.beg;
-        extra.*.end += next.end;
+        if (!done) unreachable;
+        var sum = items[top - 1];
+        while (top < items.len) : (top += 1) {
+            sum += items[top];
+        }
+        return sum;
     }
 
     pub fn getBegSum(self: *Sensor) !isize {
-        return self.sum.beg;
+        return self.sum_beg;
     }
 
     pub fn getEndSum(self: *Sensor) !isize {
-        return self.sum.end;
+        return self.sum_end;
     }
 };
 
