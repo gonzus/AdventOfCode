@@ -1,17 +1,13 @@
 const std = @import("std");
 const testing = std.testing;
+const Grid = @import("./util/grid.zig").Grid;
 
 const Allocator = std.mem.Allocator;
 
 pub const Platform = struct {
     const NUM_CYCLES = 1000000000;
 
-    const Direction = enum {
-        N,
-        W,
-        S,
-        E,
-    };
+    const Data = Grid(Piece);
 
     const Slope = enum {
         Ascending,
@@ -24,12 +20,7 @@ pub const Platform = struct {
         Empty = '.',
 
         pub fn parse(c: u8) Piece {
-            const piece: Piece = switch (c) {
-                'O' => .Round,
-                '#' => .Cube,
-                '.' => .Empty,
-                else => unreachable,
-            };
+            const piece: Piece = @enumFromInt(c);
             return piece;
         }
     };
@@ -63,7 +54,7 @@ pub const Platform = struct {
         x: isize,
         y: isize,
 
-        pub fn init(dir: Direction) Delta {
+        pub fn init(dir: Data.Direction) Delta {
             var self = Delta{ .x = 0, .y = 0 };
             switch (dir) {
                 .N => self.y = -1,
@@ -80,15 +71,15 @@ pub const Platform = struct {
         col: Iteration,
         delta: Delta,
 
-        pub fn init(dir: Direction, size: Pair) Tilt {
+        pub fn init(dir: Data.Direction, rows: usize, cols: usize) Tilt {
             var self = Tilt{
                 .row = switch (dir) {
-                    .N => Iteration.init(.Descending, size.y),
-                    else => Iteration.init(.Ascending, size.y),
+                    .N => Iteration.init(.Descending, rows),
+                    else => Iteration.init(.Ascending, rows),
                 },
                 .col = switch (dir) {
-                    .W => Iteration.init(.Descending, size.x),
-                    else => Iteration.init(.Ascending, size.x),
+                    .W => Iteration.init(.Descending, cols),
+                    else => Iteration.init(.Ascending, cols),
                 },
                 .delta = Delta.init(dir),
             };
@@ -97,7 +88,7 @@ pub const Platform = struct {
     };
 
     const State = struct {
-        const DIR_SIZE = std.meta.tags(Direction).len;
+        const DIR_SIZE = std.meta.tags(Data.Direction).len;
 
         loads: [DIR_SIZE]usize,
 
@@ -108,62 +99,42 @@ pub const Platform = struct {
             return self;
         }
 
-        pub fn setDirectionLoad(self: *State, dir: Direction, load: usize) void {
+        pub fn setDirectionLoad(self: *State, dir: Data.Direction, load: usize) void {
             self.loads[@intFromEnum(dir)] = load;
         }
     };
 
-    const Pair = struct {
-        x: usize,
-        y: usize,
-
-        pub fn init(x: usize, y: usize) Pair {
-            var self = Pair{ .x = x, .y = y };
-            return self;
-        }
-
-        pub fn initFromSigned(x: isize, y: isize) Pair {
-            return Pair.init(@intCast(x), @intCast(y));
-        }
-    };
-
-    const GRID_MAX_SIZE = 120;
-
     allocator: Allocator,
     cycle: bool,
-    size: Pair,
-    data: [GRID_MAX_SIZE][GRID_MAX_SIZE]Piece,
+    data: Data,
 
     pub fn init(allocator: Allocator, cycle: bool) Platform {
         var self = Platform{
             .allocator = allocator,
             .cycle = cycle,
-            .size = Pair.init(0, 0),
-            .data = undefined,
+            .data = Data.init(allocator, .Empty),
         };
         return self;
     }
 
     pub fn deinit(self: *Platform) void {
-        _ = self;
+        self.data.deinit();
     }
 
     pub fn addLine(self: *Platform, line: []const u8) !void {
-        if (self.size.x < line.len) {
-            self.size.x = line.len;
-        }
+        try self.data.ensureCols(line.len);
+        const y = self.data.rows();
         for (line, 0..) |c, x| {
             const piece = Piece.parse(c);
-            self.data[x][self.size.y] = piece;
+            try self.data.set(x, y, piece);
         }
-        self.size.y += 1;
     }
 
     pub fn show(self: *Platform) void {
-        std.debug.print("Platform: {} x {}\n", .{ self.size.y, self.size.x });
-        for (0..self.size.y) |y| {
-            for (0..self.size.x) |x| {
-                const piece = self.data[x][y];
+        std.debug.print("Platform: {} x {}\n", .{ self.data.cols(), self.data.rows() });
+        for (0..self.data.rows()) |y| {
+            for (0..self.data.cols()) |x| {
+                const piece = self.data.get(x, y);
                 std.debug.print("{c}", .{@intFromEnum(piece)});
             }
             std.debug.print("\n", .{});
@@ -208,45 +179,44 @@ pub const Platform = struct {
 
     fn getLoad(self: *Platform) usize {
         var sum: usize = 0;
-        for (0..self.size.y) |y| {
+        for (0..self.data.rows()) |y| {
             var count: usize = 0;
-            for (0..self.size.x) |x| {
-                const piece = self.data[x][y];
+            for (0..self.data.cols()) |x| {
+                const piece = self.data.get(x, y);
                 if (piece != .Round) continue;
                 count += 1;
             }
-            sum += count * (self.size.y - y);
+            sum += count * (self.data.rows() - y);
         }
         return sum;
     }
 
-    fn runTilt(self: *Platform, dir: Direction) !void {
-        const tilt = Tilt.init(dir, self.size);
+    fn runTilt(self: *Platform, dir: Data.Direction) !void {
+        const tilt = Tilt.init(dir, self.data.rows(), self.data.cols());
         var row = tilt.row.start;
         while (true) : (row += tilt.row.delta) {
             var col = tilt.col.start;
             while (true) : (col += tilt.col.delta) {
-                const src_pos = Pair.initFromSigned(col, row);
-                const src_piece = self.data[src_pos.x][src_pos.y];
+                const src_pos = Data.Pos.initFromSigned(col, row);
+                const src_piece = self.data.get(src_pos.x, src_pos.y);
                 if (src_piece != .Round) {
                     if (tilt.col.done(col)) break;
                     continue;
                 }
-                var tgt_pos_opt: ?Pair = null;
+                var tgt_pos_opt: ?Data.Pos = null;
                 var step: isize = 1;
                 while (true) : (step += 1) {
                     var nx = col + tilt.delta.x * step;
-                    if (nx < 0 or nx > self.size.x - 1) break;
                     var ny = row + tilt.delta.y * step;
-                    if (ny < 0 or ny > self.size.y - 1) break;
-                    const new_pos = Pair.initFromSigned(nx, ny);
-                    const new_piece = self.data[new_pos.x][new_pos.y];
+                    if (!self.data.validPos(nx, ny)) break;
+                    const new_pos = Data.Pos.initFromSigned(nx, ny);
+                    const new_piece = self.data.get(new_pos.x, new_pos.y);
                     if (new_piece != .Empty) break;
                     tgt_pos_opt = new_pos;
                 }
                 if (tgt_pos_opt) |tgt_pos| {
-                    self.data[src_pos.x][src_pos.y] = .Empty;
-                    self.data[tgt_pos.x][tgt_pos.y] = .Round;
+                    try self.data.set(src_pos.x, src_pos.y, .Empty);
+                    try self.data.set(tgt_pos.x, tgt_pos.y, .Round);
                 }
                 if (tilt.col.done(col)) break;
             }
@@ -256,7 +226,7 @@ pub const Platform = struct {
 
     fn runCycle(self: *Platform) !State {
         var state = State.init();
-        for (std.meta.tags(Direction)) |dir| {
+        for (std.meta.tags(Data.Direction)) |dir| {
             try self.runTilt(dir);
             const load = self.getLoad();
             state.setDirectionLoad(dir, load);
