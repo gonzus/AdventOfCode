@@ -73,17 +73,36 @@ pub fn Grid(comptime T: type) type {
             self.allocator.free(self.data);
         }
 
-        pub fn ensureCols(self: *Self, new_cols: usize) !void {
-            if (self.col_cap >= new_cols) return;
-            const row_cap = @max(self.row_cap, new_cols); // estimate
-            const new_size = row_cap * new_cols;
+        fn ensureSize(self: *Self, new_rows: usize, new_cols: usize) !void {
+            if (self.row_cap >= new_rows and self.col_cap >= new_cols) return;
+            const old_size = self.row_cap * self.col_cap;
+            const new_size = new_rows * new_cols;
             var new_data = try self.allocator.realloc(self.data, new_size);
-            for (self.row_cap * self.col_cap..new_size) |p| {
+            for (old_size..new_size) |p| {
                 new_data[p] = self.default;
             }
             self.data = new_data;
-            self.row_cap = row_cap;
+            self.row_cap = new_rows;
             self.col_cap = new_cols;
+        }
+
+        pub fn ensureCols(self: *Self, new_cols: usize) !void {
+            const new_rows = @max(self.row_cap, new_cols); // estimate
+            try self.ensureSize(new_rows, new_cols);
+        }
+
+        pub fn ensureExtraRow(self: *Self) !void {
+            const new_rows = self.row_len + 1;
+            const new_cols = self.col_len;
+            try self.ensureSize(new_rows, new_cols);
+        }
+
+        pub fn clear(self: *Self) void {
+            self.row_len = 0;
+            self.col_len = 0;
+            for (0..self.row_cap * self.col_cap) |p| {
+                self.data[p] = self.default;
+            }
         }
 
         pub fn validPos(self: Self, x: isize, y: isize) bool {
@@ -146,6 +165,14 @@ pub fn SparseGrid(comptime T: type) type {
         }
 
         pub fn ensureCols(_: *Self, _: usize) !void {}
+
+        pub fn ensureExtraRow(_: *Self) !void {}
+
+        pub fn clear(self: *Self) void {
+            self.data.clearRetainingCapacity();
+            self.row_len = 0;
+            self.col_len = 0;
+        }
 
         pub fn validPos(self: Self, x: isize, y: isize) bool {
             if (x < 0 or x >= self.col_len) return false;
