@@ -1,9 +1,13 @@
 const std = @import("std");
 const testing = std.testing;
+const Grid = @import("./util/grid.zig").Grid;
+const Pos = @import("./util/grid.zig").Pos;
 
 const Allocator = std.mem.Allocator;
 
 pub const Map = struct {
+    const Data = Grid(Pipe);
+
     const Dir = enum(u8) {
         N = 0b0001,
         S = 0b0010,
@@ -20,21 +24,8 @@ pub const Map = struct {
         }
     };
 
-    const Pos = struct {
-        x: usize,
-        y: usize,
-
-        pub fn init(x: usize, y: usize) Pos {
-            const self = Pos{ .x = x, .y = y };
-            return self;
-        }
-
-        pub fn equal(self: Pos, other: Pos) bool {
-            return self.x == other.x and self.y == other.y;
-        }
-    };
-
     const Pipe = enum(u8) {
+        EMPTY = '.',
         AA = @intFromEnum(Dir.N) | @intFromEnum(Dir.S) | @intFromEnum(Dir.E) | @intFromEnum(Dir.W),
         NS = @intFromEnum(Dir.N) | @intFromEnum(Dir.S),
         EW = @intFromEnum(Dir.E) | @intFromEnum(Dir.W),
@@ -45,6 +36,7 @@ pub const Map = struct {
 
         pub fn init(c: u8) Pipe {
             const self: Pipe = switch (c) {
+                '.' => .EMPTY,
                 'S' => .AA,
                 '|' => .NS,
                 '-' => .EW,
@@ -59,6 +51,7 @@ pub const Map = struct {
 
         pub fn labelMap(self: Pipe) []const u8 {
             return switch (self) {
+                .EMPTY => ".",
                 .AA => "░",
                 .NS => "┃",
                 .EW => "━",
@@ -71,6 +64,7 @@ pub const Map = struct {
 
         pub fn labelLoop(self: Pipe) []const u8 {
             return switch (self) {
+                .EMPTY => ".",
                 .AA => "█",
                 .NS => "║",
                 .EW => "═",
@@ -82,6 +76,7 @@ pub const Map = struct {
         }
 
         pub fn pointsDir(self: Pipe, dir: Dir) bool {
+            if (self == .EMPTY) return false;
             return @intFromEnum(self) & @intFromEnum(dir) > 0;
         }
 
@@ -95,9 +90,7 @@ pub const Map = struct {
     };
 
     allocator: Allocator,
-    rows: usize,
-    cols: usize,
-    grid: std.AutoHashMap(Pos, Pipe),
+    grid: Data,
     loop: std.AutoHashMap(Pos, usize),
     start: Pos,
     equiv: Pipe,
@@ -105,9 +98,7 @@ pub const Map = struct {
     pub fn init(allocator: Allocator) Map {
         var self = Map{
             .allocator = allocator,
-            .rows = 0,
-            .cols = 0,
-            .grid = std.AutoHashMap(Pos, Pipe).init(allocator),
+            .grid = Data.init(allocator, .EMPTY),
             .loop = std.AutoHashMap(Pos, usize).init(allocator),
             .start = undefined,
             .equiv = undefined,
@@ -122,33 +113,29 @@ pub const Map = struct {
     }
 
     pub fn addLine(self: *Map, line: []const u8) !void {
-        if (self.cols < line.len) {
-            self.cols = line.len;
-        }
+        try self.grid.ensureCols(line.len);
+        const rows = self.grid.rows();
         for (line, 0..) |c, x| {
             if (c == '.') continue;
 
-            const pos = Pos.init(x, self.rows);
+            const pos = Pos.init(x, rows);
             const pipe = Pipe.init(c);
-            try self.grid.put(pos, pipe);
+            try self.grid.set(pos.x, pos.y, pipe);
             if (pipe == .AA) {
                 self.start = pos;
             }
         }
-        self.rows += 1;
     }
 
     pub fn show(self: Map) void {
-        std.debug.print("Map: {} x {}\n", .{ self.rows, self.cols });
+        std.debug.print("Map: {} x {}\n", .{ self.grid.rows(), self.grid.cols() });
         const solved = self.loop.count() > 0;
-        for (0..self.rows) |y| {
-            for (0..self.cols) |x| {
+        for (0..self.grid.rows()) |y| {
+            for (0..self.grid.cols()) |x| {
                 var l: []const u8 = ".";
                 const pos = Pos.init(x, y);
-                const maybe_pipe = self.grid.get(pos);
-                if (maybe_pipe) |pipe| {
-                    l = if (solved and self.loop.contains(pos)) pipe.labelLoop() else pipe.labelMap();
-                }
+                const pipe = self.grid.get(pos.x, pos.y);
+                l = if (solved and self.loop.contains(pos)) pipe.labelLoop() else pipe.labelMap();
                 std.debug.print("{s}", .{l});
             }
             std.debug.print("\n", .{});
@@ -168,15 +155,15 @@ pub const Map = struct {
             var inside = false;
             var x: usize = 0;
             var y: usize = 0;
-            if (delta >= self.cols) {
-                y = delta - self.cols;
+            if (delta >= self.grid.cols()) {
+                y = delta - self.grid.cols();
             } else {
-                x = self.cols - delta;
+                x = self.grid.cols() - delta;
             }
-            if (y > self.rows) break;
+            if (y > self.grid.rows()) break;
             while (true) {
                 // move inside current diagonal
-                if (x >= self.cols or y >= self.rows) break;
+                if (x >= self.grid.cols() or y >= self.grid.rows()) break;
                 var empty = true;
                 var change = false;
                 const pos = Pos.init(x, y);
@@ -184,11 +171,9 @@ pub const Map = struct {
                     empty = false;
                     change = self.equiv.isDiagonalBorder();
                 } else if (self.loop.contains(pos)) {
-                    const maybe_pipe = self.grid.get(pos);
-                    if (maybe_pipe) |pipe| {
-                        empty = false;
-                        change = pipe.isDiagonalBorder();
-                    }
+                    const pipe = self.grid.get(pos.x, pos.y);
+                    empty = false;
+                    change = pipe.isDiagonalBorder();
                 }
                 if (empty and inside) {
                     count += 1;
@@ -206,8 +191,8 @@ pub const Map = struct {
     fn validMove(self: Map, pos: Pos, dir: Dir) bool {
         return switch (dir) {
             .N => pos.y > 0,
-            .S => pos.y < self.rows - 1,
-            .E => pos.x < self.cols - 1,
+            .S => pos.y < self.grid.rows() - 1,
+            .E => pos.x < self.grid.cols() - 1,
             .W => pos.x > 0,
         };
     }
@@ -259,10 +244,9 @@ pub const Map = struct {
             if (dist_max < pd.dist) {
                 dist_max = pd.dist;
             }
-            // std.debug.print("CHECK {}\n", .{pd});
             const pos = pd.pos;
             const next_dist = pd.dist + 1;
-            const pipe = self.grid.get(pos).?;
+            const pipe = self.grid.get(pos.x, pos.y);
 
             for (std.meta.tags(Dir)) |dir| {
                 if (!pipe.pointsDir(dir)) continue;
@@ -271,18 +255,15 @@ pub const Map = struct {
                 if (maybe_next) |next| {
                     if (self.loop.contains(next)) continue;
 
-                    const maybe_neighbor = self.grid.get(next);
-                    if (maybe_neighbor) |neighbor| {
-                        if (!neighbor.pointsDir(dir.opposite())) continue;
+                    const neighbor = self.grid.get(next.x, next.y);
+                    if (!neighbor.pointsDir(dir.opposite())) continue;
 
-                        _ = try self.loop.put(next, next_dist);
-                        _ = try queue.add(PosDist.init(next, next_dist));
-                    }
+                    _ = try self.loop.put(next, next_dist);
+                    _ = try queue.add(PosDist.init(next, next_dist));
                 }
             }
         }
         self.equiv = self.getStartEquiv();
-        // self.show();
         return dist_max;
     }
 
@@ -490,7 +471,6 @@ test "sample large part 2" {
         \\L.L7LFJ|||||FJL7||LJ
         \\L7JLJL-JLJLJL--JLJ.L
     ;
-    std.debug.print("\n", .{});
 
     var map = Map.init(std.testing.allocator);
     defer map.deinit();
