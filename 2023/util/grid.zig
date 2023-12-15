@@ -41,6 +41,12 @@ pub const Pos = struct {
         return self.x == other.x and self.y == other.y;
     }
 
+    pub fn manhattanDistance(self: Pos, other: Pos) usize {
+        var dx = if (self.x < other.x) other.x - self.x else self.x - other.x;
+        var dy = if (self.y < other.y) other.y - self.y else self.y - other.y;
+        return dx + dy;
+    }
+
     pub fn format(
         pos: Pos,
         comptime _: []const u8,

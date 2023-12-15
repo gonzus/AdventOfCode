@@ -1,29 +1,10 @@
 const std = @import("std");
 const testing = std.testing;
+const Pos = @import("./util/grid.zig").Pos;
 
 const Allocator = std.mem.Allocator;
 
 pub const Map = struct {
-    const Pos = struct {
-        x: usize,
-        y: usize,
-
-        pub fn init(x: usize, y: usize) Pos {
-            const self = Pos{ .x = x, .y = y };
-            return self;
-        }
-
-        pub fn equal(self: Pos, other: Pos) bool {
-            return self.x == other.x and self.y == other.y;
-        }
-
-        pub fn manhattanDistance(self: Pos, other: Pos) usize {
-            var dx = if (self.x < other.x) other.x - self.x else self.x - other.x;
-            var dy = if (self.y < other.y) other.y - self.y else self.y - other.y;
-            return dx + dy;
-        }
-    };
-
     allocator: Allocator,
     rows: usize,
     cols: usize,
