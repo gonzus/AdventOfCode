@@ -1,5 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
+const Grid = @import("./util/grid.zig").Grid;
+const Pos = @import("./util/grid.zig").Pos;
 
 const Allocator = std.mem.Allocator;
 
@@ -7,30 +9,18 @@ pub const Pattern = struct {
     const MULTIPLIER_ROWS = 100;
     const MULTIPLIER_COLS = 1;
 
-    const Pos = struct {
-        x: usize,
-        y: usize,
-
-        pub fn init(x: usize, y: usize) Pos {
-            var self = Pos{ .x = x, .y = y };
-            return self;
-        }
-    };
+    const Data = Grid(u8);
 
     allocator: Allocator,
     smudges: usize,
-    rows: usize,
-    cols: usize,
-    data: std.AutoHashMap(Pos, u8),
+    data: Data,
     summary: usize,
 
     pub fn init(allocator: Allocator, smudges: usize) Pattern {
         var self = Pattern{
             .allocator = allocator,
             .smudges = smudges,
-            .rows = 0,
-            .cols = 0,
-            .data = std.AutoHashMap(Pos, u8).init(allocator),
+            .data = Data.init(allocator, '.'),
             .summary = 0,
         };
         return self;
@@ -46,14 +36,12 @@ pub const Pattern = struct {
             return;
         }
 
-        if (self.cols < line.len) {
-            self.cols = line.len;
-        }
+        try self.data.ensureCols(line.len);
+        try self.data.ensureExtraRow();
+        const y = self.data.rows();
         for (line, 0..) |c, x| {
-            const p = Pos.init(x, self.rows);
-            _ = try self.data.getOrPutValue(p, c);
+            try self.data.set(x, y, c);
         }
-        self.rows += 1;
     }
 
     pub fn getSummary(self: *Pattern) !usize {
@@ -62,16 +50,13 @@ pub const Pattern = struct {
     }
 
     fn searchMirrors(self: Pattern) usize {
-        for (1..self.cols) |x| {
-            const min = @min(x, self.cols - x);
+        for (1..self.data.cols()) |x| {
+            const min = @min(x, self.data.cols() - x);
             var diffs: usize = 0;
-            for (0..self.rows) |y| {
+            for (0..self.data.rows()) |y| {
                 for (0..min) |m| {
-                    const pl = Pos.init(x - 1 - m, y);
-                    const pr = Pos.init(x + m, y);
-                    // std.debug.print("COL {}, CMP {} vs {}\n", .{ x, pl, pr });
-                    const dl = self.data.get(pl) orelse unreachable;
-                    const dr = self.data.get(pr) orelse unreachable;
+                    const dl = self.data.get(x - 1 - m, y);
+                    const dr = self.data.get(x + m, y);
                     if (dl != dr) {
                         diffs += 1;
                     }
@@ -83,16 +68,13 @@ pub const Pattern = struct {
             }
         }
 
-        for (1..self.rows) |y| {
-            const min = @min(y, self.rows - y);
+        for (1..self.data.rows()) |y| {
+            const min = @min(y, self.data.rows() - y);
             var diffs: usize = 0;
-            for (0..self.cols) |x| {
+            for (0..self.data.cols()) |x| {
                 for (0..min) |m| {
-                    const pt = Pos.init(x, y - 1 - m);
-                    const pb = Pos.init(x, y + m);
-                    // std.debug.print("ROW {}, CMP {} vs {}\n", .{ y, pt, pb });
-                    const dt = self.data.get(pt) orelse unreachable;
-                    const db = self.data.get(pb) orelse unreachable;
+                    const dt = self.data.get(x, y - 1 - m);
+                    const db = self.data.get(x, y + m);
                     if (dt != db) {
                         diffs += 1;
                     }
@@ -108,14 +90,12 @@ pub const Pattern = struct {
     }
 
     fn process(self: *Pattern) !void {
-        if (self.rows == 0) {
+        if (self.data.rows() == 0) {
             return;
         }
 
         self.summary += self.searchMirrors();
-        self.data.clearRetainingCapacity();
-        self.rows = 0;
-        self.cols = 0;
+        self.data.clear();
     }
 };
 
