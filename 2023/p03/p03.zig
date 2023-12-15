@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 const command = @import("./util/command.zig");
-const Grid = @import("./gondola.zig").Grid;
+const Engine = @import("./island.zig").Engine;
 
 pub fn main() anyerror!u8 {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -9,25 +9,25 @@ pub fn main() anyerror!u8 {
     const allocator = arena.allocator();
 
     const part = command.choosePart();
-    var grid = Grid.init(allocator);
-    defer grid.deinit();
+    var engine = Engine.init(allocator);
+    defer engine.deinit();
 
     const inp = std.io.getStdIn().reader();
     var buf: [1024]u8 = undefined;
     while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        try grid.addLine(line);
+        try engine.addLine(line);
     }
-    // grid.show();
+    // engine.show();
 
     var answer: usize = 0;
     switch (part) {
         .part1 => {
-            answer = try grid.getSumPartNumbers();
+            answer = try engine.getSumPartNumbers();
             const expected = @as(usize, 520135);
             try testing.expectEqual(expected, answer);
         },
         .part2 => {
-            answer = try grid.getSumGearRatios();
+            answer = try engine.getSumGearRatios();
             const expected = @as(usize, 72514855);
             try testing.expectEqual(expected, answer);
         },

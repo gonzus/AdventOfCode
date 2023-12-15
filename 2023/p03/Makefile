@@ -1,4 +1,4 @@
 DAY = 03
-MODULES = gondola.zig
+MODULES = island.zig
 
 include ../aoc.mk
