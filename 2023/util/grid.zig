@@ -9,8 +9,14 @@ pub const Direction = enum {
     S,
     E,
 
-    pub fn parse(c: u8) Direction {
-        const dir: Direction = @enumFromInt(c);
+    pub fn parse(c: u8) !Direction {
+        const dir: Direction = switch (c) {
+            'N' => .N,
+            'S' => .S,
+            'E' => .E,
+            'W' => .W,
+            else => return error.InvalidDirection,
+        };
         return dir;
     }
 
@@ -65,7 +71,7 @@ pub fn Grid(comptime T: type) type {
             var self = Self{
                 .allocator = allocator,
                 .default = default,
-                .data = undefined,
+                .data = &.{},
                 .row_cap = 0,
                 .row_len = 0,
                 .col_cap = 0,
@@ -216,4 +222,57 @@ pub fn SparseGrid(comptime T: type) type {
         row_len: usize,
         col_len: usize,
     };
+}
+
+test "Direction" {
+    try testing.expectEqual(Direction.parse('N'), .N);
+    try testing.expectEqual(Direction.parse('S'), .S);
+    try testing.expectEqual(Direction.parse('E'), .E);
+    try testing.expectEqual(Direction.parse('W'), .W);
+}
+
+test "Pos" {
+    const p1 = Pos.init(3, 9);
+    const p2 = Pos.init(5, 4);
+    try testing.expect(p1.equal(p1));
+    try testing.expect(p2.equal(p2));
+    try testing.expect(!p1.equal(p2));
+    try testing.expect(!p2.equal(p1));
+    try testing.expectEqual(p1.manhattanDistance(p2), 7);
+}
+
+test "Grid" {
+    const default = '*';
+    const treasure = 'X';
+    var grid = Grid(u8).init(testing.allocator, default);
+    defer grid.deinit();
+    try testing.expectEqual(grid.rows(), 0);
+    try testing.expectEqual(grid.cols(), 0);
+
+    try grid.ensureCols(3);
+    try testing.expectEqual(grid.rows(), 0);
+    try testing.expectEqual(grid.cols(), 0);
+    try testing.expectEqual(grid.get(1, 2), default);
+    try grid.set(1, 2, treasure);
+    try testing.expectEqual(grid.get(1, 2), treasure);
+    try testing.expectEqual(grid.rows(), 3);
+    try testing.expectEqual(grid.cols(), 2);
+}
+
+test "SparseGrid" {
+    const default = '*';
+    const treasure = 'X';
+    var grid = SparseGrid(u8).init(testing.allocator, default);
+    defer grid.deinit();
+    try testing.expectEqual(grid.rows(), 0);
+    try testing.expectEqual(grid.cols(), 0);
+
+    try grid.ensureCols(3);
+    try testing.expectEqual(grid.rows(), 0);
+    try testing.expectEqual(grid.cols(), 0);
+    try testing.expectEqual(grid.get(1, 2), default);
+    try grid.set(1, 2, treasure);
+    try testing.expectEqual(grid.get(1, 2), treasure);
+    try testing.expectEqual(grid.rows(), 3);
+    try testing.expectEqual(grid.cols(), 2);
 }
