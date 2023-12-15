@@ -1,5 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
+const Math = @import("./util/math.zig").Math;
 
 const Allocator = std.mem.Allocator;
 
@@ -148,7 +149,7 @@ pub const Network = struct {
             // fortunately, for my data, each of the full cycles contains a
             // single step ending in Z :-)
             const cycle = try self.findCycle(s);
-            steps = lcm(steps, cycle.first);
+            steps = Math.lcm(steps, cycle.first);
         }
         return steps;
     }
@@ -182,21 +183,6 @@ pub const Network = struct {
             if (instr_pos >= self.instructions.items.len) instr_pos = 0;
         }
         return cycle;
-    }
-
-    fn gcd(ca: usize, cb: usize) usize {
-        var a = ca;
-        var b = cb;
-        while (b != 0) {
-            const t = b;
-            b = a % b;
-            a = t;
-        }
-        return a;
-    }
-
-    fn lcm(a: usize, b: usize) usize {
-        return (a * b) / gcd(a, b);
     }
 };
 
