@@ -1,4 +1,4 @@
 DAY = 01
-MODULES = trebuchet.zig
+MODULES = island.zig
 
 include ../aoc.mk

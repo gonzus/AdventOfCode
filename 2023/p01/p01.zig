@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 const command = @import("./util/command.zig");
-const Calibration = @import("./trebuchet.zig").Calibration;
+const Calibration = @import("./island.zig").Calibration;
 
 pub fn main() anyerror!u8 {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
