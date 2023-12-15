@@ -1,6 +1,9 @@
 const std = @import("std");
 const testing = std.testing;
 const Grid = @import("./util/grid.zig").Grid;
+// const Grid = @import("./util/grid.zig").SparseGrid;
+const Direction = @import("./util/grid.zig").Direction;
+const Pos = @import("./util/grid.zig").Pos;
 
 const Allocator = std.mem.Allocator;
 
@@ -54,7 +57,7 @@ pub const Platform = struct {
         x: isize,
         y: isize,
 
-        pub fn init(dir: Data.Direction) Delta {
+        pub fn init(dir: Direction) Delta {
             var self = Delta{ .x = 0, .y = 0 };
             switch (dir) {
                 .N => self.y = -1,
@@ -71,7 +74,7 @@ pub const Platform = struct {
         col: Iteration,
         delta: Delta,
 
-        pub fn init(dir: Data.Direction, rows: usize, cols: usize) Tilt {
+        pub fn init(dir: Direction, rows: usize, cols: usize) Tilt {
             var self = Tilt{
                 .row = switch (dir) {
                     .N => Iteration.init(.Descending, rows),
@@ -88,7 +91,7 @@ pub const Platform = struct {
     };
 
     const State = struct {
-        const DIR_SIZE = std.meta.tags(Data.Direction).len;
+        const DIR_SIZE = std.meta.tags(Direction).len;
 
         loads: [DIR_SIZE]usize,
 
@@ -99,7 +102,7 @@ pub const Platform = struct {
             return self;
         }
 
-        pub fn setDirectionLoad(self: *State, dir: Data.Direction, load: usize) void {
+        pub fn setDirectionLoad(self: *State, dir: Direction, load: usize) void {
             self.loads[@intFromEnum(dir)] = load;
         }
     };
@@ -191,25 +194,25 @@ pub const Platform = struct {
         return sum;
     }
 
-    fn runTilt(self: *Platform, dir: Data.Direction) !void {
+    fn runTilt(self: *Platform, dir: Direction) !void {
         const tilt = Tilt.init(dir, self.data.rows(), self.data.cols());
         var row = tilt.row.start;
         while (true) : (row += tilt.row.delta) {
             var col = tilt.col.start;
             while (true) : (col += tilt.col.delta) {
-                const src_pos = Data.Pos.initFromSigned(col, row);
+                const src_pos = Pos.initFromSigned(col, row);
                 const src_piece = self.data.get(src_pos.x, src_pos.y);
                 if (src_piece != .Round) {
                     if (tilt.col.done(col)) break;
                     continue;
                 }
-                var tgt_pos_opt: ?Data.Pos = null;
+                var tgt_pos_opt: ?Pos = null;
                 var step: isize = 1;
                 while (true) : (step += 1) {
                     var nx = col + tilt.delta.x * step;
                     var ny = row + tilt.delta.y * step;
                     if (!self.data.validPos(nx, ny)) break;
-                    const new_pos = Data.Pos.initFromSigned(nx, ny);
+                    const new_pos = Pos.initFromSigned(nx, ny);
                     const new_piece = self.data.get(new_pos.x, new_pos.y);
                     if (new_piece != .Empty) break;
                     tgt_pos_opt = new_pos;
@@ -226,7 +229,7 @@ pub const Platform = struct {
 
     fn runCycle(self: *Platform) !State {
         var state = State.init();
-        for (std.meta.tags(Data.Direction)) |dir| {
+        for (std.meta.tags(Direction)) |dir| {
             try self.runTilt(dir);
             const load = self.getLoad();
             state.setDirectionLoad(dir, load);
