@@ -1,7 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
 const Grid = @import("./util/grid.zig").Grid;
-// const Grid = @import("./util/grid.zig").SparseGrid;
 const Direction = @import("./util/grid.zig").Direction;
 const Pos = @import("./util/grid.zig").Pos;
 
@@ -126,6 +125,7 @@ pub const Platform = struct {
 
     pub fn addLine(self: *Platform, line: []const u8) !void {
         try self.data.ensureCols(line.len);
+        try self.data.ensureExtraRow();
         const y = self.data.rows();
         for (line, 0..) |c, x| {
             const piece = Piece.parse(c);

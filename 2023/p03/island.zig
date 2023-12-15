@@ -65,6 +65,7 @@ pub const Engine = struct {
     pub fn addLine(self: *Engine, line: []const u8) !void {
         const rows = self.data.rows();
         try self.data.ensureCols(line.len);
+        try self.data.ensureExtraRow();
         self.num.reset();
         for (line, 0..) |c, col| {
             switch (c) {

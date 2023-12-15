@@ -114,6 +114,7 @@ pub const Map = struct {
 
     pub fn addLine(self: *Map, line: []const u8) !void {
         try self.grid.ensureCols(line.len);
+        try self.grid.ensureExtraRow();
         const rows = self.grid.rows();
         for (line, 0..) |c, x| {
             if (c == '.') continue;
