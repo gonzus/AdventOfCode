@@ -37,6 +37,10 @@ pub const Pos = struct {
         return Pos.init(@intCast(x), @intCast(y));
     }
 
+    pub fn equal(self: Pos, other: Pos) bool {
+        return self.x == other.x and self.y == other.y;
+    }
+
     pub fn format(
         pos: Pos,
         comptime _: []const u8,
