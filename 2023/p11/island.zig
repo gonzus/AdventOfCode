@@ -130,7 +130,7 @@ pub const Map = struct {
             const s1 = self.stars.items[p1];
             for (p1 + 1..self.stars.items.len) |p2| {
                 const s2 = self.stars.items[p2];
-                sum += s1.manhattanDistance(s2);
+                sum += s1.manhattanDist(s2);
                 sum += extraDistance(s1.x, s2.x, accum_col.items, extra);
                 sum += extraDistance(s1.y, s2.y, accum_row.items, extra);
             }

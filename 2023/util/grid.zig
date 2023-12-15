@@ -35,7 +35,7 @@ pub const Pos = struct {
     y: usize,
 
     pub fn init(x: usize, y: usize) Pos {
-        var self = Pos{ .x = x, .y = y };
+        const self = Pos{ .x = x, .y = y };
         return self;
     }
 
@@ -47,10 +47,16 @@ pub const Pos = struct {
         return self.x == other.x and self.y == other.y;
     }
 
-    pub fn manhattanDistance(self: Pos, other: Pos) usize {
-        var dx = if (self.x < other.x) other.x - self.x else self.x - other.x;
-        var dy = if (self.y < other.y) other.y - self.y else self.y - other.y;
+    pub fn manhattanDist(self: Pos, other: Pos) usize {
+        const dx = if (self.x < other.x) other.x - self.x else self.x - other.x;
+        const dy = if (self.y < other.y) other.y - self.y else self.y - other.y;
         return dx + dy;
+    }
+
+    pub fn euclideanDistSq(self: Pos, other: Pos) usize {
+        const dx = if (self.x < other.x) other.x - self.x else self.x - other.x;
+        const dy = if (self.y < other.y) other.y - self.y else self.y - other.y;
+        return dx * dx + dy * dy;
     }
 
     pub fn format(
@@ -68,7 +74,7 @@ pub fn Grid(comptime T: type) type {
         const Self = @This();
 
         pub fn init(allocator: Allocator, default: T) Self {
-            var self = Self{
+            const self = Self{
                 .allocator = allocator,
                 .default = default,
                 .data = &.{},
@@ -77,7 +83,6 @@ pub fn Grid(comptime T: type) type {
                 .col_cap = 0,
                 .col_len = 0,
             };
-            self.data.len = 0;
             return self;
         }
 
@@ -89,7 +94,7 @@ pub fn Grid(comptime T: type) type {
             if (self.row_cap >= new_rows and self.col_cap >= new_cols) return;
             const old_size = self.row_cap * self.col_cap;
             const new_size = new_rows * new_cols;
-            var new_data = try self.allocator.realloc(self.data, new_size);
+            const new_data = try self.allocator.realloc(self.data, new_size);
             for (old_size..new_size) |p| {
                 new_data[p] = self.default;
             }
@@ -162,7 +167,7 @@ pub fn SparseGrid(comptime T: type) type {
         const Self = @This();
 
         pub fn init(allocator: Allocator, default: T) Self {
-            var self = Self{
+            const self = Self{
                 .allocator = allocator,
                 .default = default,
                 .data = std.AutoHashMap(Pos, T).init(allocator),
@@ -238,7 +243,8 @@ test "Pos" {
     try testing.expect(p2.equal(p2));
     try testing.expect(!p1.equal(p2));
     try testing.expect(!p2.equal(p1));
-    try testing.expectEqual(p1.manhattanDistance(p2), 7);
+    try testing.expectEqual(p1.manhattanDist(p2), 7);
+    try testing.expectEqual(p1.euclideanDistSq(p2), 29);
 }
 
 test "Grid" {
