@@ -74,6 +74,9 @@ pub fn Grid(comptime T: type) type {
             const row_cap = @max(self.row_cap, new_cols); // estimate
             const new_size = row_cap * new_cols;
             var new_data = try self.allocator.realloc(self.data, new_size);
+            for (self.row_cap * self.col_cap..new_size) |p| {
+                new_data[p] = self.default;
+            }
             self.data = new_data;
             self.row_cap = row_cap;
             self.col_cap = new_cols;
