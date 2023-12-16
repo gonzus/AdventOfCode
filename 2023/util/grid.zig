@@ -46,6 +46,13 @@ pub const Pos = struct {
     pub fn equal(self: Pos, other: Pos) bool {
         return self.x == other.x and self.y == other.y;
     }
+    pub fn cmp(_: void, l: Pos, r: Pos) std.math.Order {
+        if (l.x < r.x) return std.math.Order.lt;
+        if (l.x > r.x) return std.math.Order.gt;
+        if (l.y < r.y) return std.math.Order.lt;
+        if (l.y > r.y) return std.math.Order.gt;
+        return std.math.Order.eq;
+    }
 
     pub fn manhattanDist(self: Pos, other: Pos) usize {
         const dx = if (self.x < other.x) other.x - self.x else self.x - other.x;
@@ -245,6 +252,10 @@ test "Pos" {
     try testing.expect(!p2.equal(p1));
     try testing.expectEqual(p1.manhattanDist(p2), 7);
     try testing.expectEqual(p1.euclideanDistSq(p2), 29);
+    try testing.expectEqual(Pos.cmp({}, p1, p2), std.math.Order.lt);
+    try testing.expectEqual(Pos.cmp({}, p2, p1), std.math.Order.gt);
+    try testing.expectEqual(Pos.cmp({}, p1, p1), std.math.Order.eq);
+    try testing.expectEqual(Pos.cmp({}, p2, p2), std.math.Order.eq);
 }
 
 test "Grid" {
