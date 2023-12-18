@@ -213,35 +213,21 @@ pub const Map = struct {
         dist: usize,
 
         pub fn init(pos: Pos, dist: usize) PosDist {
-            return PosDist{
-                .pos = pos,
-                .dist = dist,
-            };
-        }
-
-        fn cmp(_: void, l: PosDist, r: PosDist) std.math.Order {
-            const Order = std.math.Order;
-            if (l.dist < r.dist) return Order.lt;
-            if (l.dist > r.dist) return Order.gt;
-            if (l.pos.x < r.pos.x) return Order.lt;
-            if (l.pos.x > r.pos.x) return Order.gt;
-            if (l.pos.y < r.pos.y) return Order.lt;
-            if (l.pos.y > r.pos.y) return Order.gt;
-            return Order.eq;
+            return PosDist{ .pos = pos, .dist = dist };
         }
     };
 
     fn findLoop(self: *Map) !usize {
         self.loop.clearRetainingCapacity();
 
-        const PQ = std.PriorityQueue(PosDist, void, PosDist.cmp);
-        var queue = PQ.init(self.allocator, {});
+        const Queue = std.ArrayList(PosDist);
+        var queue = Queue.init(self.allocator);
         defer queue.deinit();
 
-        _ = try queue.add(PosDist.init(self.start, 0));
+        _ = try queue.append(PosDist.init(self.start, 0));
         var dist_max: usize = 0;
-        while (queue.count() != 0) {
-            const pd = queue.remove();
+        while (queue.items.len > 0) {
+            const pd = queue.swapRemove(0);
             if (dist_max < pd.dist) {
                 dist_max = pd.dist;
             }
@@ -260,7 +246,7 @@ pub const Map = struct {
                     if (!neighbor.pointsDir(dir.opposite())) continue;
 
                     _ = try self.loop.put(next, next_dist);
-                    _ = try queue.add(PosDist.init(next, next_dist));
+                    _ = try queue.append(PosDist.init(next, next_dist));
                 }
             }
         }

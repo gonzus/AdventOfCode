@@ -117,43 +117,29 @@ pub const Map = struct {
         dir: Dir,
 
         pub fn init(pos: Pos, dir: Dir) PosDir {
-            return PosDir{
-                .pos = pos,
-                .dir = dir,
-            };
-        }
-
-        fn cmp(_: void, l: PosDir, r: PosDir) std.math.Order {
-            const po = Pos.cmp({}, l.pos, r.pos);
-            if (po != std.math.Order.eq) return po;
-
-            const ld = @intFromEnum(l.dir);
-            const rd = @intFromEnum(r.dir);
-            if (ld < rd) return std.math.Order.lt;
-            if (ld > rd) return std.math.Order.gt;
-            return std.math.Order.eq;
+            return PosDir{ .pos = pos, .dir = dir };
         }
     };
 
-    const PQ = std.PriorityQueue(PosDir, void, PosDir.cmp);
+    const Queue = std.ArrayList(PosDir);
 
-    fn addPossibleNeighbor(self: Map, pos: Pos, dir: Dir, queue: *PQ) !void {
+    fn addPossibleNeighbor(self: Map, pos: Pos, dir: Dir, queue: *Queue) !void {
         const npos_maybe = self.moveDir(pos, dir);
         if (npos_maybe) |npos| {
-            try queue.add(PosDir.init(npos, dir));
+            try queue.append(PosDir.init(npos, dir));
         }
     }
 
     fn findEnergizedTiles(self: *Map, start: PosDir) !void {
-        var queue = PQ.init(self.allocator, {});
+        var queue = Queue.init(self.allocator);
         defer queue.deinit();
 
         var seen = std.AutoHashMap(PosDir, void).init(self.allocator);
         defer seen.deinit();
 
-        _ = try queue.add(start);
-        while (queue.count() != 0) {
-            const pd = queue.remove();
+        _ = try queue.append(start);
+        while (queue.items.len > 0) {
+            const pd = queue.swapRemove(0);
             const cpos = pd.pos;
             const cdir = pd.dir;
 
@@ -162,6 +148,9 @@ pub const Map = struct {
 
             _ = try self.energized.getOrPut(cpos);
 
+            // TODO: instead of adding the immediate neighbor in each case,
+            // we could quickly find the farthest possible neighbor in each direction,
+            // and avoid adding all those intermmediate nodes to the graph
             var piece = self.grid.get(cpos.x, cpos.y);
             switch (piece) {
                 .Empty => {
