@@ -4,15 +4,17 @@ const testing = std.testing;
 const Allocator = std.mem.Allocator;
 
 pub const StringTable = struct {
+    pub const StringId = usize;
+
     allocator: Allocator,
     p2s: std.ArrayList([]const u8),
-    s2p: std.StringHashMap(usize),
+    s2p: std.StringHashMap(StringId),
 
     pub fn init(allocator: Allocator) StringTable {
         var self = StringTable{
             .allocator = allocator,
             .p2s = std.ArrayList([]const u8).init(allocator),
-            .s2p = std.StringHashMap(usize).init(allocator),
+            .s2p = std.StringHashMap(StringId).init(allocator),
         };
         return self;
     }
@@ -29,22 +31,28 @@ pub const StringTable = struct {
         return self.s2p.contains(str);
     }
 
-    pub fn add(self: *StringTable, str: []const u8) usize {
-        if (self.s2p.contains(str)) {
-            return self.s2p.get(str).?;
+    pub fn add(self: *StringTable, str: []const u8) !StringId {
+        const entry = self.s2p.getEntry(str);
+        if (entry) |e| {
+            return e.value_ptr.*;
         }
         const pos = self.p2s.items.len;
         const copy = self.allocator.dupe(u8, str) catch unreachable;
-        self.p2s.append(copy) catch unreachable;
-        _ = self.s2p.put(copy, pos) catch unreachable;
+        try self.p2s.append(copy);
+        _ = try self.s2p.put(copy, pos);
         return pos;
     }
 
-    pub fn get_pos(self: StringTable, str: []const u8) ?usize {
-        return self.s2p.get(str);
+    pub fn get_pos(self: StringTable, str: []const u8) ?StringId {
+        const entry = self.s2p.getEntry(str);
+        if (entry) |e| {
+            return e.value_ptr.*;
+        }
+        return null;
     }
 
-    pub fn get_str(self: StringTable, pos: usize) ?[]const u8 {
+    pub fn get_str(self: StringTable, pos: StringId) ?[]const u8 {
+        if (pos >= self.p2s.items.len) return null;
         return self.p2s.items[pos];
     }
 
@@ -60,7 +68,7 @@ test "basic" {
     const str = "gonzo";
     const pos: usize = 0;
 
-    _ = strtab.add(str);
+    _ = try strtab.add(str);
     try testing.expect(strtab.get_pos(str).? == pos);
     try testing.expect(std.mem.eql(u8, strtab.get_str(pos).?, str));
     try testing.expect(strtab.size() == 1);
@@ -81,7 +89,7 @@ test "no overwrites" {
         len += 1;
         const str = buf[0..len];
         // std.debug.warn("ADD [{}]\n", .{str});
-        _ = strtab.add(str);
+        _ = try strtab.add(str);
     }
 
     const size = strtab.size();
