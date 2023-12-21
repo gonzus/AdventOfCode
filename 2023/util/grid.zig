@@ -46,6 +46,7 @@ pub const Pos = struct {
     pub fn equal(self: Pos, other: Pos) bool {
         return self.x == other.x and self.y == other.y;
     }
+
     pub fn cmp(_: void, l: Pos, r: Pos) std.math.Order {
         if (l.x < r.x) return std.math.Order.lt;
         if (l.x > r.x) return std.math.Order.gt;
