@@ -1,104 +1,38 @@
 const std = @import("std");
 const testing = std.testing;
+const Math = @import("./util/math.zig").Math;
 
 const Allocator = std.mem.Allocator;
 
 pub const Stack = struct {
-    const Pos = struct {
-        x: isize,
-        y: isize,
-        z: isize,
+    const V3 = Math.Vector(isize, 3);
+    const V2 = Math.Vector(isize, 2);
 
-        pub fn init(x: isize, y: isize, z: isize) Pos {
-            return Pos{ .x = x, .y = y, .z = z };
-        }
-
-        pub fn initFromUnsigned(x: usize, y: usize, z: usize) Pos {
-            return Pos{ .x = @intCast(x), .y = @intCast(y), .z = @intCast(z) };
-        }
-
-        pub fn cmp(_: void, l: Pos, r: Pos) std.math.Order {
-            if (l.z < r.z) return std.math.Order.lt;
-            if (l.z > r.z) return std.math.Order.gt;
-            if (l.y < r.y) return std.math.Order.lt;
-            if (l.y > r.y) return std.math.Order.gt;
-            if (l.x < r.x) return std.math.Order.lt;
-            if (l.x > r.x) return std.math.Order.gt;
-            return std.math.Order.eq;
-        }
-
-        pub fn format(
-            pos: Pos,
-            comptime _: []const u8,
-            _: std.fmt.FormatOptions,
-            writer: anytype,
-        ) !void {
-            _ = try writer.print("({d},{d},{d})", .{ pos.x, pos.y, pos.z });
-        }
-    };
-
-    const P2 = struct {
-        x: isize,
-        y: isize,
-
-        pub fn init(x: isize, y: isize) P2 {
-            return P2{ .x = x, .y = y };
-        }
-
-        pub fn cmp(_: void, l: Pos, r: Pos) std.math.Order {
-            if (l.y < r.y) return std.math.Order.lt;
-            if (l.y > r.y) return std.math.Order.gt;
-            if (l.x < r.x) return std.math.Order.lt;
-            if (l.x > r.x) return std.math.Order.gt;
-            return std.math.Order.eq;
-        }
-
-        pub fn format(
-            p2: P2,
-            comptime _: []const u8,
-            _: std.fmt.FormatOptions,
-            writer: anytype,
-        ) !void {
-            _ = try writer.print("({d},{d})", .{ p2.x, p2.y });
-        }
-    };
     const Brick = struct {
         pos: usize,
-        p0: Pos,
-        p1: Pos,
+        v0: V3,
+        v1: V3,
         supported: std.AutoHashMap(usize, void),
         supports: std.AutoHashMap(usize, void),
-        total: std.AutoHashMap(usize, void),
 
-        pub fn init(allocator: Allocator, pos: usize, p0: Pos, p1: Pos) Brick {
+        pub fn init(allocator: Allocator, pos: usize, v0: V3, v1: V3) Brick {
             const self = Brick{
                 .pos = pos,
-                .p0 = p0,
-                .p1 = p1,
+                .v0 = v0,
+                .v1 = v1,
                 .supported = std.AutoHashMap(usize, void).init(allocator),
                 .supports = std.AutoHashMap(usize, void).init(allocator),
-                .total = std.AutoHashMap(usize, void).init(allocator),
             };
             return self;
         }
 
         pub fn deinit(self: *Brick) void {
-            self.total.deinit();
             self.supports.deinit();
             self.supported.deinit();
         }
 
-        pub fn lessThan(_: void, l: Brick, r: Brick) bool {
-            return l.p0.z < r.p0.z;
-        }
-
-        pub fn format(
-            brick: Brick,
-            comptime _: []const u8,
-            _: std.fmt.FormatOptions,
-            writer: anytype,
-        ) !void {
-            _ = try writer.print("{}~{}", .{ brick.p0, brick.p1 });
+        pub fn lessThan(context: void, l: Brick, r: Brick) bool {
+            return V3.cmp(context, l.v0, r.v0) == std.math.Order.lt;
         }
     };
 
@@ -114,14 +48,14 @@ pub const Stack = struct {
     allocator: Allocator,
     processed: bool,
     bricks: std.ArrayList(Brick),
-    tops: std.AutoHashMap(P2, Top),
+    tops: std.AutoHashMap(V2, Top),
 
     pub fn init(allocator: Allocator) Stack {
         var self = Stack{
             .allocator = allocator,
             .processed = false,
             .bricks = std.ArrayList(Brick).init(allocator),
-            .tops = std.AutoHashMap(P2, Top).init(allocator),
+            .tops = std.AutoHashMap(V2, Top).init(allocator),
         };
         return self;
     }
@@ -136,25 +70,23 @@ pub const Stack = struct {
 
     pub fn addLine(self: *Stack, line: []const u8) !void {
         var brick_count: usize = 0;
-        var p0: Pos = undefined;
+        var v0: V3 = undefined;
         var it_brick = std.mem.tokenizeScalar(u8, line, '~');
         while (it_brick.next()) |brick_chunk| : (brick_count += 1) {
-            var p1: Pos = undefined;
+            var v1: V3 = undefined;
             var pos_cnt: usize = 0;
             var it_pos = std.mem.tokenizeScalar(u8, brick_chunk, ',');
             while (it_pos.next()) |str| : (pos_cnt += 1) {
                 const n = try std.fmt.parseInt(isize, str, 10);
                 switch (pos_cnt) {
-                    0 => p1.x = n,
-                    1 => p1.y = n,
-                    2 => p1.z = n,
+                    0...2 => |i| v1.v[i] = n,
                     else => unreachable,
                 }
             }
             switch (brick_count) {
-                0 => p0 = p1,
+                0 => v0 = v1,
                 1 => {
-                    const brick = Brick.init(self.allocator, self.bricks.items.len, p0, p1);
+                    const brick = Brick.init(self.allocator, self.bricks.items.len, v0, v1);
                     try self.bricks.append(brick);
                 },
                 else => unreachable,
@@ -194,15 +126,14 @@ pub const Stack = struct {
         if (self.processed) return;
         self.processed = true;
         std.sort.heap(Brick, self.bricks.items, {}, Brick.lessThan);
-        for (self.bricks.items, 0..) |*brick, bpos| {
-            const dx = brick.*.p1.x - brick.*.p0.x;
-            const dy = brick.*.p1.y - brick.*.p0.y;
-            const dz = brick.*.p1.z - brick.*.p0.z;
-            if (dx < 0 or dy < 0 or dz < 0) unreachable;
-            if (dx == 0 and dy == 0) {
-                const p = P2.init(brick.*.p0.x, brick.*.p0.y);
+        for (self.bricks.items, 0..) |brick, bpos| {
+            const sub = V3.sub(brick.v1, brick.v0);
+            if (sub.v[0] < 0 or sub.v[1] < 0 or sub.v[2] < 0) unreachable;
+
+            if (sub.v[0] == 0 and sub.v[1] == 0) {
+                const p = V2.copy(&brick.v0.v);
                 var entry = self.tops.getEntry(p);
-                var nh: usize = @intCast(dz);
+                var nh: usize = @intCast(sub.v[2]);
                 nh += 1;
                 if (entry) |e| {
                     nh += e.value_ptr.*.height;
@@ -211,30 +142,31 @@ pub const Stack = struct {
                 try self.tops.put(p, Top.init(nh, bpos));
                 continue;
             }
-            if (dx > 0) {
-                if (dy > 0) unreachable;
-                if (dz > 1) unreachable;
-                try self.findAndUpdateMax(bpos, 1, 0);
+
+            if (sub.v[2] > 1) unreachable;
+
+            if (sub.v[0] > 0) {
+                if (sub.v[1] > 0) unreachable;
+                try self.findAndUpdateMax(bpos, V2.unit(0));
                 continue;
             }
-            if (dy > 0) {
-                if (dx > 0) unreachable;
-                if (dz > 1) unreachable;
-                try self.findAndUpdateMax(bpos, 0, 1);
+
+            if (sub.v[1] > 0) {
+                if (sub.v[0] > 0) unreachable;
+                try self.findAndUpdateMax(bpos, V2.unit(1));
                 continue;
             }
+
             unreachable;
         }
     }
 
-    fn findAndUpdateMax(self: *Stack, bpos: usize, dx: isize, dy: isize) !void {
+    fn findAndUpdateMax(self: *Stack, bpos: usize, delta: V2) !void {
         const brick = self.bricks.items[bpos];
         var max = Top.init(0, std.math.maxInt(isize));
         for (0..2) |pass| {
-            var x = brick.p0.x;
-            var y = brick.p0.y;
-            while (x <= brick.p1.x and y <= brick.p1.y) {
-                const p = P2.init(x, y);
+            var p = V2.copy(&brick.v0.v);
+            while (p.v[0] <= brick.v1.v[0] and p.v[1] <= brick.v1.v[1]) {
                 var below = self.tops.get(p);
                 if (below) |b| {
                     if (pass == 0) {
@@ -251,8 +183,7 @@ pub const Stack = struct {
                 if (pass == 1) {
                     try self.tops.put(p, Top.init(max.height + 1, bpos));
                 }
-                x += dx;
-                y += dy;
+                p = V2.add(p, delta);
             }
         }
     }
@@ -301,7 +232,6 @@ test "sample simple part 1" {
         \\0,1,6~2,1,6
         \\1,1,8~1,1,9
     ;
-    std.debug.print("\n", .{});
 
     var stack = Stack.init(std.testing.allocator);
     defer stack.deinit();
@@ -326,7 +256,6 @@ test "sample simple part 2" {
         \\0,1,6~2,1,6
         \\1,1,8~1,1,9
     ;
-    std.debug.print("\n", .{});
 
     var stack = Stack.init(std.testing.allocator);
     defer stack.deinit();
