@@ -66,7 +66,7 @@ pub const Text = struct {
             if (c1 != 0) {
                 if (c2 != c1 or c1 != c0 or p0 - last_double >= 2) {
                     const d = [_]u8{ c1, c0 };
-                    var r = try doubles.getOrPutValue(d, 0);
+                    const r = try doubles.getOrPutValue(d, 0);
                     r.value_ptr.* += 1;
                     last_double = p0;
                 }

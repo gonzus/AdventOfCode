@@ -5,14 +5,14 @@ PROGRAMS = p$(DAY)
 
 define make-aoc-mod-target
   $1_test:
-	zig test $1
+	zig test $1 -freference-trace
 
   test:: $1_test
 endef
 
 define make-aoc-prg-target
   $1: $1.zig $(MODULES)
-	zig build-exe $1.zig
+	zig build-exe $1.zig -freference-trace
   $1_clean:
 	rm -f $1
   $1_run: $1_run1 $1_run2

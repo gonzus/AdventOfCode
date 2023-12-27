@@ -5,7 +5,7 @@ pub const Building = struct {
     current: isize,
 
     pub fn init() Building {
-        var self = Building{ .current = 0 };
+        const self = Building{ .current = 0 };
         return self;
     }
 
