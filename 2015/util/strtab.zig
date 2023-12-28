@@ -11,7 +11,7 @@ pub const StringTable = struct {
     s2p: std.StringHashMap(StringId),
 
     pub fn init(allocator: Allocator) StringTable {
-        var self = StringTable{
+        const self = StringTable{
             .allocator = allocator,
             .p2s = std.ArrayList([]const u8).init(allocator),
             .s2p = std.StringHashMap(StringId).init(allocator),
@@ -79,11 +79,12 @@ test "no overwrites" {
     defer strtab.deinit();
 
     const prefix = "This is string #";
+    const plen = prefix.len;
     var c: u8 = 0;
     var buf: [100]u8 = undefined;
     while (c < 10) : (c += 1) {
         var len: usize = 0;
-        std.mem.copy(u8, buf[len..], prefix);
+        @memcpy(buf[len .. len + plen], prefix);
         len += prefix.len;
         buf[len] = c + '0';
         len += 1;
@@ -96,7 +97,7 @@ test "no overwrites" {
     try testing.expect(size == 10);
     while (c < 10) : (c += 1) {
         var len: usize = 0;
-        std.mem.copy(u8, buf[len..], prefix);
+        @memcpy(buf[len .. len + plen], prefix);
         len += prefix.len;
         buf[len] = c + '0';
         len += 1;
