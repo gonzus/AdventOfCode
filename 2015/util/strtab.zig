@@ -27,6 +27,11 @@ pub const StringTable = struct {
         self.p2s.deinit();
     }
 
+    pub fn clear(self: *StringTable) void {
+        self.s2p.clearRetainingCapacity();
+        self.p2s.clearRetainingCapacity();
+    }
+
     pub fn contains(self: *StringTable, str: []const u8) bool {
         return self.s2p.contains(str);
     }
