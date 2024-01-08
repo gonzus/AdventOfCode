@@ -1,6 +1,5 @@
 const std = @import("std");
 const testing = std.testing;
-const Pos = @import("./util/grid.zig").Pos;
 
 const Allocator = std.mem.Allocator;
 
