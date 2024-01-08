@@ -151,6 +151,10 @@ pub fn Grid(comptime T: type) type {
             return self.data[pos];
         }
 
+        pub fn getSigned(self: Self, x: isize, y: isize) T {
+            return self.get(@intCast(x), @intCast(y));
+        }
+
         pub fn set(self: *Self, x: usize, y: usize, val: T) !void {
             if (x < 0 or x >= self.col_cap or y < 0 or y >= self.row_cap)
                 return error.InvalidPos;
@@ -158,6 +162,10 @@ pub fn Grid(comptime T: type) type {
             if (self.row_len <= y) self.row_len = y + 1;
             const pos = self.col_cap * y + x;
             self.data[pos] = val;
+        }
+
+        pub fn setSigned(self: *Self, x: isize, y: isize, val: T) !void {
+            return self.set(@intCast(x), @intCast(y), val);
         }
 
         allocator: Allocator,
