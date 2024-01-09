@@ -3,7 +3,7 @@ const testing = std.testing;
 
 pub const Math = struct {
     pub fn lcm(a: usize, b: usize) usize {
-        var prod: u64 = a * b;
+        const prod: u64 = a * b;
         return prod / std.math.gcd(a, b);
     }
 
