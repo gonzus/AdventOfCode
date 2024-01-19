@@ -1,9 +1,12 @@
 const std = @import("std");
 const testing = std.testing;
+const Math = @import("./util/math.zig").Math;
 
 const Allocator = std.mem.Allocator;
 
 pub const City = struct {
+    const Pos = Math.Vector(isize, 2);
+
     const Turn = enum {
         L,
         R,
@@ -50,15 +53,6 @@ pub const City = struct {
         steps: usize,
     };
 
-    const Pos = struct {
-        x: isize,
-        y: isize,
-
-        pub fn init(x: isize, y: isize) Pos {
-            return Pos{ .x = x, .y = y };
-        }
-    };
-
     repeated: bool,
     moves: std.ArrayList(Move),
     seen: std.AutoHashMap(Pos, void),
@@ -98,7 +92,7 @@ pub const City = struct {
 
     pub fn getDistanceToWalk(self: *City) !usize {
         _ = try self.walkRoute();
-        return self.distance();
+        return self.beg.manhattanDist(self.cur);
     }
 
     pub fn getFirstRepeatedDistance(self: *City) !usize {
@@ -113,19 +107,19 @@ pub const City = struct {
             self.dir = self.dir.makeTurn(move.turn);
             switch (self.dir) {
                 .N => for (0..move.steps) |_| {
-                    self.cur.y -= 1;
+                    self.cur.v[1] -= 1;
                     try self.visit();
                 },
                 .S => for (0..move.steps) |_| {
-                    self.cur.y += 1;
+                    self.cur.v[1] += 1;
                     try self.visit();
                 },
                 .E => for (0..move.steps) |_| {
-                    self.cur.x += 1;
+                    self.cur.v[0] += 1;
                     try self.visit();
                 },
                 .W => for (0..move.steps) |_| {
-                    self.cur.x -= 1;
+                    self.cur.v[0] -= 1;
                     try self.visit();
                 },
             }
@@ -133,25 +127,18 @@ pub const City = struct {
     }
 
     fn reset(self: *City) void {
-        self.beg = Pos.init(0, 0);
-        self.cur = Pos.init(0, 0);
+        self.beg = Pos.init();
+        self.cur = Pos.init();
         self.repeated_dist = std.math.maxInt(usize);
         self.dir = .N;
         self.seen.clearRetainingCapacity();
-    }
-
-    fn distance(self: *City) usize {
-        var dist: isize = 0;
-        dist += if (self.cur.x > self.beg.x) self.cur.x - self.beg.x else self.beg.x - self.cur.x;
-        dist += if (self.cur.y > self.beg.y) self.cur.y - self.beg.y else self.beg.y - self.cur.y;
-        return @intCast(dist);
     }
 
     fn visit(self: *City) !void {
         const r = try self.seen.getOrPut(self.cur);
         if (!r.found_existing) return;
         if (self.repeated_dist != std.math.maxInt(usize)) return;
-        self.repeated_dist = self.distance();
+        self.repeated_dist = self.beg.manhattanDist(self.cur);
     }
 };
 
