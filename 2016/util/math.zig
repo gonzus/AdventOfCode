@@ -7,6 +7,57 @@ pub const Math = struct {
         return prod / std.math.gcd(a, b);
     }
 
+    // given equations: X = divs[j] (mod mods[j])
+    // compute a value for X
+    pub fn chineseRemainder(divs: []const u64, mods: []const u64) u64 {
+        if (divs.len != mods.len) return 0;
+
+        const len = divs.len;
+        if (len == 0) return 0;
+
+        var prod: u64 = 1;
+        for (0..len) |k| {
+            // if this overflows, can't do
+            prod *= divs[k];
+        }
+
+        var sum: u64 = 0;
+        for (0..len) |k| {
+            const n: u64 = prod / divs[k];
+            sum += mods[k] * mulInverse(n, divs[k]) * n;
+        }
+
+        return sum % prod;
+    }
+
+    // returns X where (a * X) % b == 1
+    fn mulInverse(a: u64, b: u64) u64 {
+        if (b == 1) return 1;
+
+        var va: i64 = @intCast(a);
+        var vb: i64 = @intCast(b);
+        var x0: i64 = 0;
+        var x1: i64 = 1;
+        while (va > 1) {
+            const q = @divTrunc(va, vb);
+            {
+                // both @mod and @rem work here
+                const t = vb;
+                vb = @mod(va, vb);
+                va = t;
+            }
+            {
+                const t = x0;
+                x0 = x1 - q * x0;
+                x1 = t;
+            }
+        }
+        while (x1 < 0) {
+            x1 += @intCast(b);
+        }
+        return @intCast(x1);
+    }
+
     pub fn Vector(comptime T: type, comptime S: usize) type {
         return struct {
             const Self = @This();
@@ -117,6 +168,21 @@ test "LCM" {
     try testing.expectEqual(Math.lcm(2, 1), 2);
     try testing.expectEqual(Math.lcm(3, 6), 6);
     try testing.expectEqual(Math.lcm(4, 6), 12);
+}
+
+test "chinese reminder" {
+    {
+        const divs = [_]usize{ 3, 5, 7 };
+        const mods = [_]usize{ 2, 3, 2 };
+        const cr = Math.chineseRemainder(divs[0..], mods[0..]);
+        try testing.expectEqual(@as(usize, 23), cr);
+    }
+    {
+        const divs = [_]usize{ 3, 4, 5 };
+        const mods = [_]usize{ 1, 2, 4 };
+        const cr = Math.chineseRemainder(divs[0..], mods[0..]);
+        try testing.expectEqual(@as(usize, 34), cr);
+    }
 }
 
 test "V2" {
