@@ -1,0 +1,257 @@
+const std = @import("std");
+const testing = std.testing;
+
+const Allocator = std.mem.Allocator;
+
+pub const Computer = struct {
+    const INVALID_PC = std.math.maxInt(usize);
+
+    const Reg = enum { a, b, c, d };
+    const RegSize = std.meta.tags(Reg).len;
+
+    const Operand = union(enum) {
+        reg: Reg,
+        num: isize,
+
+        pub fn parse(op: []const u8) Operand {
+            const num = std.fmt.parseInt(isize, op, 10) catch {
+                const reg: Reg = @enumFromInt(op[0] - 'a');
+                return Operand{ .reg = reg };
+            };
+            return Operand{ .num = num };
+        }
+
+        pub fn getValue(self: Operand, computer: *Computer) isize {
+            return switch (self) {
+                .reg => |r| computer.*.reg[@intFromEnum(r)],
+                .num => |n| n,
+            };
+        }
+    };
+
+    const Unary = struct {
+        op0: Operand,
+
+        pub fn init(op0: Operand) Unary {
+            return .{ .op0 = op0 };
+        }
+
+        pub fn parse(op0: []const u8) Unary {
+            return Unary.init(Operand.parse(op0));
+        }
+    };
+
+    const Binary = struct {
+        op0: Operand,
+        op1: Operand,
+
+        pub fn init(op0: Operand, op1: Operand) Binary {
+            return .{ .op0 = op0, .op1 = op1 };
+        }
+
+        pub fn parse(op0: []const u8, op1: []const u8) Binary {
+            return Binary.init(Operand.parse(op0), Operand.parse(op1));
+        }
+    };
+
+    const Op = enum {
+        cpy,
+        inc,
+        dec,
+        jnz,
+        tgl,
+
+        pub fn parse(str: []const u8) !Op {
+            for (Ops) |o| {
+                if (std.mem.eql(u8, str, @tagName(o))) return o;
+            }
+            return error.InvalidOp;
+        }
+    };
+    const Ops = std.meta.tags(Op);
+
+    const Instr = union(Op) {
+        cpy: Binary,
+        inc: Unary,
+        dec: Unary,
+        jnz: Binary,
+        tgl: Unary,
+
+        pub fn toggle(self: Instr) Instr {
+            return switch (self) {
+                .inc => |t| Instr{ .dec = Unary.init(t.op0) },
+                .jnz => |t| Instr{ .cpy = Binary.init(t.op0, t.op1) },
+                .dec, .tgl => |t| Instr{ .inc = Unary.init(t.op0) },
+                .cpy => |t| Instr{ .jnz = Binary.init(t.op0, t.op1) },
+            };
+        }
+    };
+
+    reg: [RegSize]isize,
+    instrs: std.ArrayList(Instr),
+    pc: usize,
+
+    pub fn init(allocator: Allocator) Computer {
+        return Computer{
+            .reg = [_]isize{0} ** RegSize,
+            .instrs = std.ArrayList(Instr).init(allocator),
+            .pc = 0,
+        };
+    }
+
+    pub fn deinit(self: *Computer) void {
+        self.instrs.deinit();
+    }
+
+    pub fn addLine(self: *Computer, line: []const u8) !void {
+        var it = std.mem.tokenizeScalar(u8, line, ' ');
+        const op = try Op.parse(it.next().?);
+        const instr = switch (op) {
+            .cpy => Instr{ .cpy = Binary.parse(it.next().?, it.next().?) },
+            .inc => Instr{ .inc = Unary.parse(it.next().?) },
+            .dec => Instr{ .dec = Unary.parse(it.next().?) },
+            .jnz => Instr{ .jnz = Binary.parse(it.next().?, it.next().?) },
+            .tgl => Instr{ .tgl = Unary.parse(it.next().?) },
+        };
+        try self.instrs.append(instr);
+    }
+
+    pub fn show(self: Computer) void {
+        std.debug.print("Computer with {} instructions\n", .{self.instrs.items.len});
+        for (self.instrs.items) |instr| {
+            std.debug.print("{}\n", .{instr});
+        }
+    }
+
+    pub fn run(self: *Computer) !void {
+        self.pc = 0;
+        while (self.pc < self.instrs.items.len) {
+            const instr = self.instrs.items[self.pc];
+            self.pc = try self.execInstr(instr);
+        }
+    }
+
+    pub fn getRegister(self: *Computer, reg: Reg) isize {
+        return self.reg[@intFromEnum(reg)];
+    }
+
+    pub fn setRegister(self: *Computer, reg: Reg, value: isize) void {
+        self.reg[@intFromEnum(reg)] = value;
+    }
+
+    pub fn getSafePassword(self: *Computer, eggs: usize) !usize {
+        self.setRegister(.a, @intCast(eggs));
+        try self.run();
+        return @intCast(self.getRegister(.a));
+    }
+
+    pub fn getSafePasswordWithShortcut(self: *Computer, eggs: usize) !usize {
+        var c: usize = 0;
+        var d: usize = 0;
+        for (self.instrs.items) |instr| {
+            switch (instr) {
+                .cpy => |i| {
+                    switch (i.op0) {
+                        .num => |n| {
+                            if (n > 0) {
+                                switch (i.op1) {
+                                    .reg => |r| if (r == .c) {
+                                        c = @intCast(n);
+                                    },
+                                    else => {},
+                                }
+                            }
+                        },
+                        else => {},
+                    }
+                },
+                .jnz => |i| {
+                    switch (i.op0) {
+                        .num => |n| {
+                            if (n > 0) {
+                                switch (i.op1) {
+                                    .reg => |r| if (r == .d) {
+                                        d = @intCast(n);
+                                    },
+                                    else => {},
+                                }
+                            }
+                        },
+                        else => {},
+                    }
+                },
+                else => {},
+            }
+        }
+        var prod: usize = 1;
+        for (1..eggs + 1) |n| {
+            prod *= n;
+        }
+        return prod + c * d;
+    }
+
+    fn execInstr(self: *Computer, instr: Instr) !usize {
+        var next = self.pc + 1;
+        switch (instr) {
+            .cpy => |cpy| switch (cpy.op1) {
+                .reg => |r| self.reg[@intFromEnum(r)] = cpy.op0.getValue(self),
+                .num => return error.InvalidReg,
+            },
+            .inc => |inc| switch (inc.op0) {
+                .reg => |r| self.reg[@intFromEnum(r)] += 1,
+                .num => return error.InvalidReg,
+            },
+            .dec => |dec| switch (dec.op0) {
+                .reg => |r| self.reg[@intFromEnum(r)] -= 1,
+                .num => return error.InvalidReg,
+            },
+            .jnz => |jnz| if (jnz.op0.getValue(self) != 0) {
+                next = self.offsetPC(jnz.op1.getValue(self));
+            },
+            .tgl => |dec| switch (dec.op0) {
+                .reg => |r| {
+                    const pc = self.offsetPC(self.reg[@intFromEnum(r)]);
+                    if (pc != INVALID_PC) {
+                        self.instrs.items[pc] = self.instrs.items[pc].toggle();
+                    }
+                },
+                .num => return error.InvalidReg,
+            },
+        }
+        return next;
+    }
+
+    fn offsetPC(self: Computer, offset: isize) usize {
+        var pc: isize = @intCast(self.pc);
+        pc += offset;
+        if (pc < 0) return INVALID_PC;
+        if (pc >= self.instrs.items.len) return INVALID_PC;
+        return @intCast(pc);
+    }
+};
+
+test "sample part 1" {
+    const data =
+        \\cpy 2 a
+        \\tgl a
+        \\tgl a
+        \\tgl a
+        \\cpy 1 a
+        \\dec a
+        \\dec a
+    ;
+
+    var computer = Computer.init(std.testing.allocator);
+    defer computer.deinit();
+
+    var it = std.mem.split(u8, data, "\n");
+    while (it.next()) |line| {
+        try computer.addLine(line);
+    }
+    // computer.show();
+
+    try computer.run();
+    const value = computer.getRegister(.a);
+    const expected = @as(isize, 3);
+    try testing.expectEqual(expected, value);
+}
