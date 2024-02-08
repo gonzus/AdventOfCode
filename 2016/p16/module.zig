@@ -80,7 +80,6 @@ test "sample part 1" {
     const data =
         \\10000
     ;
-    std.debug.print("\n", .{});
 
     var disk = Disk.init(testing.allocator);
 

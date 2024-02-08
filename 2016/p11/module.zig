@@ -181,7 +181,7 @@ pub const Factory = struct {
             _ = try self.addComponent("elerium");
             _ = try self.addComponent("dilithium");
         }
-        self.show();
+        // self.show();
 
         const tgt_floor: Floor = @intCast(self.floor - 1);
         var src = State.init(self.components.count(), 0);
@@ -200,7 +200,7 @@ pub const Factory = struct {
         var search = AStar.init(self.allocator, self.floor);
         defer search.deinit();
         const dist = search.run(src, tgt);
-        std.debug.print("Visited {} nodes\n", .{search.seen.count()});
+        // std.debug.print("Visited {} nodes\n", .{search.seen.count()});
         return dist;
     }
 
@@ -360,7 +360,6 @@ test "sample part 1" {
         \\The third floor contains a lithium generator.
         \\The fourth floor contains nothing relevant.
     ;
-    std.debug.print("\n", .{});
 
     var factory = Factory.init(std.testing.allocator, false);
     defer factory.deinit();
