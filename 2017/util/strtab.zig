@@ -20,14 +20,15 @@ pub const StringTable = struct {
     }
 
     pub fn deinit(self: *StringTable) void {
+        self.clear();
         self.s2p.deinit();
-        for (self.p2s.items) |item| {
-            self.allocator.free(item);
-        }
         self.p2s.deinit();
     }
 
     pub fn clear(self: *StringTable) void {
+        for (self.p2s.items) |item| {
+            self.allocator.free(item);
+        }
         self.s2p.clearRetainingCapacity();
         self.p2s.clearRetainingCapacity();
     }
