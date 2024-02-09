@@ -124,3 +124,66 @@ pub fn DirectedGraph(comptime E: type) type {
         }
     };
 }
+
+pub fn FloodFill(comptime Context: type, comptime Node: type) type {
+    return struct {
+        const Self = @This();
+
+        const NodeDist = struct {
+            node: Node,
+            dist: usize,
+
+            fn init(node: Node, dist: usize) NodeDist {
+                return NodeDist{ .node = node, .dist = dist };
+            }
+
+            fn lessThan(_: void, l: NodeDist, r: NodeDist) std.math.Order {
+                return std.math.order(l.dist, r.dist);
+            }
+        };
+        const PQ = std.PriorityQueue(NodeDist, void, NodeDist.lessThan);
+
+        allocator: Allocator,
+        context: *Context,
+        pending: PQ,
+        seen: std.AutoHashMap(Node, void),
+
+        pub fn init(allocator: Allocator, context: *Context) Self {
+            const self = Self{
+                .allocator = allocator,
+                .context = context,
+                .pending = PQ.init(allocator, {}),
+                .seen = std.AutoHashMap(Node, void).init(allocator),
+            };
+            return self;
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.seen.deinit();
+            self.pending.deinit();
+        }
+
+        pub const Action = enum { visit, skip, abort };
+
+        pub fn run(self: *Self, start: Node) !void {
+            self.seen.clearRetainingCapacity();
+            try self.pending.add(NodeDist.init(start, 0));
+            PENDING: while (self.pending.count() != 0) {
+                const nd = self.pending.remove();
+                const action: Action = try self.context.visit(nd.node, nd.dist, self.seen.count());
+                switch (action) {
+                    .visit => {},
+                    .skip => continue :PENDING,
+                    .abort => break :PENDING,
+                }
+
+                const neighbors = self.context.neighbors(nd.node);
+                for (neighbors) |n| {
+                    const r = try self.seen.getOrPut(n);
+                    if (r.found_existing) continue;
+                    try self.pending.add(NodeDist.init(n, nd.dist + 1));
+                }
+            }
+        }
+    };
+}

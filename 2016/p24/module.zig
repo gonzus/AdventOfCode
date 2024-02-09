@@ -2,6 +2,7 @@ const std = @import("std");
 const testing = std.testing;
 const Grid = @import("./util/grid.zig").Grid;
 const Math = @import("./util/math.zig").Math;
+const FloodFill = @import("./util/graph.zig").FloodFill;
 
 const Allocator = std.mem.Allocator;
 
@@ -73,76 +74,74 @@ pub const Roof = struct {
         return length;
     }
 
-    const PosDist = struct {
-        pos: Pos,
-        dist: usize,
+    const FF = FloodFill(Context, Pos);
+    const Context = struct {
+        roof: *Roof,
+        graph: *Graph,
+        src: usize,
+        nbuf: [10]Pos,
+        nlen: usize,
 
-        fn init(pos: Pos, dist: usize) PosDist {
-            return PosDist{ .pos = pos, .dist = dist };
+        pub fn init(roof: *Roof, graph: *Graph) Context {
+            return .{
+                .roof = roof,
+                .graph = graph,
+                .src = undefined,
+                .nbuf = undefined,
+                .nlen = 0,
+            };
         }
 
-        fn lessThan(_: void, l: PosDist, r: PosDist) std.math.Order {
-            const od = std.math.order(l.dist, r.dist);
-            return od;
+        pub fn visit(self: *Context, pos: Pos, dist: usize, seen: usize) !FF.Action {
+            _ = seen;
+            const c = self.roof.grid.get(pos.v[0], pos.v[1]);
+            if (std.ascii.isDigit(c)) {
+                const tgt: usize = c - '0';
+                if (tgt != self.src) {
+                    self.graph.addEdge(self.src, tgt, dist);
+                    return .skip;
+                }
+            }
+            return .visit;
+        }
+
+        pub fn neighbors(self: *Context, pos: Pos) []Pos {
+            self.nlen = 0;
+            const dxs = [_]isize{ 1, -1, 0, 0 };
+            const dys = [_]isize{ 0, 0, 1, -1 };
+            for (dxs, dys) |dx, dy| {
+                var ix: isize = @intCast(pos.v[0]);
+                ix += dx;
+                if (ix < 0) continue;
+                const nx: usize = @intCast(ix);
+                if (nx >= self.roof.grid.cols()) continue;
+
+                var iy: isize = @intCast(pos.v[1]);
+                iy += dy;
+                if (iy < 0) continue;
+                const ny: usize = @intCast(iy);
+                if (ny >= self.roof.grid.rows()) continue;
+
+                const c = self.roof.grid.get(nx, ny);
+                if (c == '#') continue;
+
+                self.nbuf[self.nlen] = Pos.copy(&[_]usize{ nx, ny });
+                self.nlen += 1;
+            }
+            return self.nbuf[0..self.nlen];
         }
     };
 
     fn buildGraph(self: *Roof, graph: *Graph) !void {
-        var pending = std.PriorityQueue(PosDist, void, PosDist.lessThan).init(self.allocator, {});
-        defer pending.deinit();
-        var seen = std.AutoHashMap(Pos, void).init(self.allocator);
-        defer seen.deinit();
+        var context = Context.init(self, graph);
+        var ff = FF.init(self.allocator, &context);
+        defer ff.deinit();
 
         var it = self.wires.iterator();
         while (it.next()) |entry| {
-            const src = entry.key_ptr.*;
-            const src_pos = entry.value_ptr.*;
-            seen.clearRetainingCapacity();
-            try pending.add(PosDist.init(src_pos, 0));
-            while (pending.count() != 0) {
-                const pd = pending.remove();
-                const pos = pd.pos;
-                const c = self.grid.get(pos.v[0], pos.v[1]);
-                if (std.ascii.isDigit(c)) {
-                    const tgt = c - '0';
-                    if (tgt != src) {
-                        graph.addEdge(src, tgt, pd.dist);
-                        continue;
-                    }
-                }
-
-                const dxs = [_]isize{ 1, -1, 0, 0 };
-                const dys = [_]isize{ 0, 0, 1, -1 };
-                for (dxs, dys) |dx, dy| {
-                    const next = self.getPossibleNeighbor(pos, dx, dy);
-                    if (next) |p| {
-                        const r = try seen.getOrPut(p);
-                        if (r.found_existing) continue;
-                        try pending.add(PosDist.init(p, pd.dist + 1));
-                    }
-                }
-            }
+            context.src = entry.key_ptr.*;
+            try ff.run(entry.value_ptr.*);
         }
-    }
-
-    fn getPossibleNeighbor(self: Roof, pos: Pos, dx: isize, dy: isize) ?Pos {
-        var ix: isize = @intCast(pos.v[0]);
-        ix += dx;
-        if (ix < 0) return null;
-        const nx: usize = @intCast(ix);
-        if (nx >= self.grid.cols()) return null;
-
-        var iy: isize = @intCast(pos.v[1]);
-        iy += dy;
-        if (iy < 0) return null;
-        const ny: usize = @intCast(iy);
-        if (ny >= self.grid.rows()) return null;
-
-        const n = self.grid.get(nx, ny);
-        if (n == '#') return null;
-
-        const next = Pos.copy(&[_]usize{ nx, ny });
-        return next;
     }
 
     const Graph = struct {
