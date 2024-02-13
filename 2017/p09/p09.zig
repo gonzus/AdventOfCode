@@ -1,33 +1,29 @@
 const std = @import("std");
 const testing = std.testing;
 const command = @import("./util/command.zig");
-const CPU = @import("./module.zig").CPU;
+const Stream = @import("./module.zig").Stream;
 
 pub fn main() anyerror!u8 {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
     const part = command.choosePart();
-    var cpu = CPU.init(allocator);
-    defer cpu.deinit();
+    var stream = Stream.init();
+    defer stream.deinit();
 
     const inp = std.io.getStdIn().reader();
-    var buf: [1024]u8 = undefined;
+    var buf: [20 * 1024]u8 = undefined;
     while (try inp.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        try cpu.addLine(line);
+        try stream.addLine(line);
     }
 
-    var answer: isize = undefined;
+    var answer: usize = undefined;
     switch (part) {
         .part1 => {
-            answer = try cpu.getLargestRegister();
-            const expected = @as(isize, 6012);
+            answer = try stream.getTotalScore();
+            const expected = @as(usize, 9251);
             try testing.expectEqual(expected, answer);
         },
         .part2 => {
-            answer = try cpu.getHighestValue();
-            const expected = @as(isize, 6369);
+            answer = try stream.getNonCanceledCharacters();
+            const expected = @as(usize, 4322);
             try testing.expectEqual(expected, answer);
         },
     }
