@@ -91,5 +91,5 @@ test "sample part 1" {
     var buf: [100]u8 = undefined;
     const checksum = try disk.getDiskChecksum(20, &buf);
     const expected = "01100";
-    try testing.expectEqualSlices(u8, expected, checksum);
+    try testing.expectEqualStrings(expected, checksum);
 }

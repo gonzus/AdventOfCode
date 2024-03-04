@@ -18,12 +18,12 @@ pub fn main() anyerror!u8 {
         .part1 => {
             answer = try message.findCorrectedMessage(&buf);
             const expected = "qqqluigu";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
         .part2 => {
             answer = try message.findCorrectedMessage(&buf);
             const expected = "lsoypmia";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
     }
 

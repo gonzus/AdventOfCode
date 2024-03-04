@@ -31,7 +31,7 @@ pub fn main() anyerror!u8 {
         .part2 => {
             const answer = screen.displayMessage(&buf);
             const expected = "UPOJFLBCEZ";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
             try out.print("Answer: {s}\n", .{answer});
         },
     }

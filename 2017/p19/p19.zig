@@ -25,7 +25,7 @@ pub fn main() anyerror!u8 {
         .part1 => {
             const answer = try routing.findLetters();
             const expected = "PVBSCMEQHY";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
             try out.print("Answer: {s}\n", .{answer});
         },
         .part2 => {

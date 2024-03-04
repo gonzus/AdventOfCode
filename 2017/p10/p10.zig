@@ -30,7 +30,7 @@ pub fn main() anyerror!u8 {
         .part2 => {
             const answer = try knot.getFinalHash();
             const expected = "2da93395f1a6bb3472203252e3b17fe5";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
             try out.print("Answer: {s}\n", .{answer});
         },
     }

@@ -18,13 +18,13 @@ pub fn main() anyerror!u8 {
         .part1 => {
             answer = try password.findNext();
             const expected = "hepxxyzz";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
         .part2 => {
             answer = try password.findNext();
             answer = try password.findNext();
             const expected = "heqaabcc";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
     }
 

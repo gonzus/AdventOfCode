@@ -22,12 +22,12 @@ pub fn main() anyerror!u8 {
         .part1 => {
             answer = try disk.getDiskChecksum(272, &buf);
             const expected = "10111110010110110";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
         .part2 => {
             answer = try disk.getDiskChecksum(35651584, &buf);
             const expected = "01101100001100100";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
     }
 

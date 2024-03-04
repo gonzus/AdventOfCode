@@ -233,7 +233,7 @@ test "sample part 1 case A" {
 
     const path = try vault.findShortestPath();
     const expected = "DDRRRD";
-    try testing.expectEqualSlices(u8, expected, path);
+    try testing.expectEqualStrings(expected, path);
 }
 
 test "sample part 1 case B" {
@@ -250,7 +250,7 @@ test "sample part 1 case B" {
 
     const path = try vault.findShortestPath();
     const expected = "DDUDRLRRUDRD";
-    try testing.expectEqualSlices(u8, expected, path);
+    try testing.expectEqualStrings(expected, path);
 }
 
 test "sample part 1 case C" {
@@ -267,7 +267,7 @@ test "sample part 1 case C" {
 
     const path = try vault.findShortestPath();
     const expected = "DRURDRUDDLLDLUURRDULRLDUUDDDRR";
-    try testing.expectEqualSlices(u8, expected, path);
+    try testing.expectEqualStrings(expected, path);
 }
 
 test "sample part 2 case A" {

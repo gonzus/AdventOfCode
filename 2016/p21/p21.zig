@@ -24,12 +24,12 @@ pub fn main() anyerror!u8 {
         .part1 => {
             answer = try scrambler.getScrambledPassword("abcdefgh");
             const expected = "agcebfdh";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
         .part2 => {
             answer = try scrambler.getUnscrambledPassword("fbgdceah");
             const expected = "afhdbegc";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
     }
 

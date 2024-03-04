@@ -77,7 +77,7 @@ test "sample part 1" {
     var buf: [Message.MAX_COLS]u8 = undefined;
     const corrected = try message.findCorrectedMessage(&buf);
     const expected = "easter";
-    try testing.expectEqualSlices(u8, expected, corrected);
+    try testing.expectEqualStrings(expected, corrected);
 }
 
 test "sample part 2" {
@@ -110,5 +110,5 @@ test "sample part 2" {
     var buf: [Message.MAX_COLS]u8 = undefined;
     const corrected = try message.findCorrectedMessage(&buf);
     const expected = "advent";
-    try testing.expectEqualSlices(u8, expected, corrected);
+    try testing.expectEqualStrings(expected, corrected);
 }

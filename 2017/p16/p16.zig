@@ -23,12 +23,12 @@ pub fn main() anyerror!u8 {
         .part1 => {
             answer = try promenade.runMovesTimes(1);
             const expected = "kbednhopmfcjilag";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
         .part2 => {
             answer = try promenade.runMovesTimes(1_000_000_000);
             const expected = "fbmcgdnjakpioelh";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
     }
 

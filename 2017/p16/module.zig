@@ -149,5 +149,5 @@ test "sample part 1" {
 
     const order = try promenade.runMovesTimes(1);
     const expected = "baedc";
-    try testing.expectEqualSlices(u8, expected, order);
+    try testing.expectEqualStrings(expected, order);
 }

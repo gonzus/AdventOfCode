@@ -236,7 +236,7 @@ test "sample part 1" {
 
     const password = try scrambler.getScrambledPassword("abcde");
     const expected = "decab";
-    try testing.expectEqualSlices(u8, expected, password);
+    try testing.expectEqualStrings(expected, password);
 }
 
 test "sample part 2" {
@@ -262,5 +262,5 @@ test "sample part 2" {
 
     const password = try scrambler.getUnscrambledPassword("decab");
     const expected = "abcde";
-    try testing.expectEqualSlices(u8, expected, password);
+    try testing.expectEqualStrings(expected, password);
 }

@@ -75,12 +75,12 @@ test "sample part 1" {
         var password = Password.init();
         try password.addLine("abcdefgh");
         const next = try password.findNext();
-        try testing.expectEqualSlices(u8, "abcdffaa", next);
+        try testing.expectEqualStrings("abcdffaa", next);
     }
     {
         var password = Password.init();
         try password.addLine("ghijklmn");
         const next = try password.findNext();
-        try testing.expectEqualSlices(u8, "ghjaabcc", next);
+        try testing.expectEqualStrings("ghjaabcc", next);
     }
 }

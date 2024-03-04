@@ -112,12 +112,16 @@ pub const Building = struct {
     strtab: StringTable,
     instrs: std.ArrayList(StringId),
     keypad: Keypad,
+    buf: [100]u8,
+    len: usize,
 
     pub fn init(allocator: Allocator, diamond: bool) !Building {
         const building = Building{
             .strtab = StringTable.init(allocator),
             .instrs = std.ArrayList(StringId).init(allocator),
             .keypad = if (diamond) try Keypad.initDiamond(allocator) else try Keypad.initSquare(allocator),
+            .buf = undefined,
+            .len = 0,
         };
         return building;
     }
@@ -134,14 +138,13 @@ pub const Building = struct {
     }
 
     pub fn getCode(self: *Building) ![]const u8 {
-        var str: [100]u8 = undefined;
-        var len: usize = 0;
+        self.len = 0;
         for (self.instrs.items) |instr| {
             const char = try self.applyInstr(instr);
-            str[len] = char;
-            len += 1;
+            self.buf[self.len] = char;
+            self.len += 1;
         }
-        return str[0..len];
+        return self.buf[0..self.len];
     }
 
     fn applyInstr(self: *Building, instr: StringId) !u8 {
@@ -172,7 +175,7 @@ test "sample part 1" {
 
     const code = try building.getCode();
     const expected = "1985";
-    try testing.expectEqualSlices(u8, expected, code);
+    try testing.expectEqualStrings(expected, code);
 }
 
 test "sample part 2" {
@@ -193,5 +196,5 @@ test "sample part 2" {
 
     const code = try building.getCode();
     const expected = "5DB3";
-    try testing.expectEqualSlices(u8, expected, code);
+    try testing.expectEqualStrings(expected, code);
 }

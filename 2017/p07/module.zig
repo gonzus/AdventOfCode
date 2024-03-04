@@ -190,7 +190,7 @@ test "sample part 1" {
 
     const bottom = try tower.findBottomProgram();
     const expected = "tknk";
-    try testing.expectEqualSlices(u8, expected, bottom);
+    try testing.expectEqualStrings(expected, bottom);
 }
 
 test "sample part 2" {

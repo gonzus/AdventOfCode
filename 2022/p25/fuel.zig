@@ -7,7 +7,7 @@ pub const Bob = struct {
     fuels: std.ArrayList(usize),
 
     pub fn init(allocator: Allocator) Bob {
-        var self = Bob{
+        const self = Bob{
             .fuels = std.ArrayList(usize).init(allocator),
         };
         return self;
@@ -29,7 +29,7 @@ pub const Bob = struct {
                 else => unreachable,
             };
             num *= 5;
-            num = @intCast(usize, @intCast(isize, num) + d);
+            num = @as(usize, @intCast(@as(isize, @intCast(num)) + d));
         }
         return num;
     }
@@ -58,7 +58,7 @@ pub const Bob = struct {
         while (true) {
             const d = copy % 5;
             copy /= 5;
-            buf[p] = '0' + @intCast(u8, d);
+            buf[p] = '0' + @as(u8, @intCast(d));
             // std.debug.print(" DIGIT5 {} = {c}\n", .{p, buf[p]});
             p += 1;
             if (copy == 0) break;
@@ -77,8 +77,8 @@ pub const Bob = struct {
                 else => unreachable,
             };
             if (buf[q] <= '2') continue;
-            if (buf[q+1] == 0) buf[q+1] = '0';
-            buf[q+1] += 1;
+            if (buf[q + 1] == 0) buf[q + 1] = '0';
+            buf[q + 1] += 1;
         }
 
         // create a slice with the reversed digits
@@ -87,9 +87,9 @@ pub const Bob = struct {
             // std.debug.print("D{} = {c}\n", .{q, tmp[q]});
             buf[buf.len - 1 - q] = tmp[q];
         }
-        p = buf.len-q;
+        p = buf.len - q;
 
-        return buf[p..p+q];
+        return buf[p .. p + q];
     }
 
     pub fn add_line(self: *Bob, line: []const u8) !void {
@@ -117,21 +117,21 @@ test "sample part simple" {
     var cases = std.StringHashMap(usize).init(std.testing.allocator);
     defer cases.deinit();
 
-    try cases.put("1"             ,          1);
-    try cases.put("2"             ,          2);
-    try cases.put("1="            ,          3);
-    try cases.put("1-"            ,          4);
-    try cases.put("10"            ,          5);
-    try cases.put("11"            ,          6);
-    try cases.put("12"            ,          7);
-    try cases.put("2="            ,          8);
-    try cases.put("2-"            ,          9);
-    try cases.put("20"            ,         10);
-    try cases.put("1=0"           ,         15);
-    try cases.put("1-0"           ,         20);
-    try cases.put("1=11-2"        ,       2022);
-    try cases.put("1-0---0"       ,      12345);
-    try cases.put("1121-1110-1=0" ,  314159265);
+    try cases.put("1", 1);
+    try cases.put("2", 2);
+    try cases.put("1=", 3);
+    try cases.put("1-", 4);
+    try cases.put("10", 5);
+    try cases.put("11", 6);
+    try cases.put("12", 7);
+    try cases.put("2=", 8);
+    try cases.put("2-", 9);
+    try cases.put("20", 10);
+    try cases.put("1=0", 15);
+    try cases.put("1-0", 20);
+    try cases.put("1=11-2", 2022);
+    try cases.put("1-0---0", 12345);
+    try cases.put("1121-1110-1=0", 314159265);
 
     var it = cases.iterator();
     while (it.next()) |e| {
@@ -143,7 +143,7 @@ test "sample part simple" {
 
         var buf: [100]u8 = undefined;
         const number_to_snafu = Bob.convert_10_to_5(number, &buf);
-        try testing.expectEqualSlices(u8, snafu, number_to_snafu);
+        try testing.expectEqualStrings(snafu, number_to_snafu);
     }
 }
 
@@ -178,5 +178,5 @@ test "sample part 1" {
 
     var buf: [100]u8 = undefined;
     const snafu = Bob.convert_10_to_5(fuel, &buf);
-    try testing.expectEqualSlices(u8, "2=-1=0", snafu);
+    try testing.expectEqualStrings("2=-1=0", snafu);
 }

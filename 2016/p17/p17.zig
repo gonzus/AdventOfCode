@@ -23,7 +23,7 @@ pub fn main() anyerror!u8 {
         .part1 => {
             const path = try vault.findShortestPath();
             const expected = "RLRDRDUDDR";
-            try testing.expectEqualSlices(u8, expected, path);
+            try testing.expectEqualStrings(expected, path);
             try out.print("Answer: {s}\n", .{path});
         },
         .part2 => {

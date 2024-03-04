@@ -182,7 +182,7 @@ test "sample part 1" {
 
     const text = try routing.findLetters();
     const expected = "ABCDEF";
-    try testing.expectEqualSlices(u8, expected, text);
+    try testing.expectEqualStrings(expected, text);
 }
 
 test "sample part 2" {

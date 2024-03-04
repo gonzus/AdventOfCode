@@ -76,7 +76,7 @@ test "sample part 1" {
     var buf: [100]u8 = undefined;
     const password = try door.findPassword(&buf);
     const expected = "18f47a30";
-    try testing.expectEqualSlices(u8, expected, password);
+    try testing.expectEqualStrings(expected, password);
 }
 
 test "sample part 2" {
@@ -94,5 +94,5 @@ test "sample part 2" {
     var buf: [100]u8 = undefined;
     const password = try door.findPassword(&buf);
     const expected = "05ace8e3";
-    try testing.expectEqualSlices(u8, expected, password);
+    try testing.expectEqualStrings(expected, password);
 }

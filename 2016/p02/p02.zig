@@ -23,12 +23,12 @@ pub fn main() anyerror!u8 {
         .part1 => {
             answer = try building.getCode();
             const expected = "52981";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
         .part2 => {
             answer = try building.getCode();
             const expected = "74CD2";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
     }
 

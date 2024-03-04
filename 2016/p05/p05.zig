@@ -18,12 +18,12 @@ pub fn main() anyerror!u8 {
         .part1 => {
             answer = try door.findPassword(&buf);
             const expected = "4543c154";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
         .part2 => {
             answer = try door.findPassword(&buf);
             const expected = "1050cbbd";
-            try testing.expectEqualSlices(u8, expected, answer);
+            try testing.expectEqualStrings(expected, answer);
         },
     }
 

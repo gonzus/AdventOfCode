@@ -29,7 +29,7 @@ pub fn problem(part: u8) anyerror!u8 {
         const fuel = bob.total_fuel();
         const snafu = Bob.convert_10_to_5(fuel, &buf);
         const expected = "2=2-1-010==-0-1-=--2";
-        try testing.expectEqualSlices(u8, expected, snafu);
+        try testing.expectEqualStrings(expected, snafu);
         try out.print("SNAFU: {s}\n", .{snafu});
     } else {
         try out.print("Day 25 only had part 1\n", .{});
