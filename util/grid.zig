@@ -31,15 +31,15 @@ pub const Direction = enum {
 };
 
 pub const Pos = struct {
-    x: usize,
-    y: usize,
+    x: isize,
+    y: isize,
 
-    pub fn init(x: usize, y: usize) Pos {
+    pub fn init(x: isize, y: isize) Pos {
         const self = Pos{ .x = x, .y = y };
         return self;
     }
 
-    pub fn initFromSigned(x: isize, y: isize) Pos {
+    pub fn initFromUnsigned(x: usize, y: usize) Pos {
         return Pos.init(@intCast(x), @intCast(y));
     }
 
@@ -56,15 +56,24 @@ pub const Pos = struct {
     }
 
     pub fn manhattanDist(self: Pos, other: Pos) usize {
-        const dx = if (self.x < other.x) other.x - self.x else self.x - other.x;
-        const dy = if (self.y < other.y) other.y - self.y else self.y - other.y;
+        const dx: usize = @intCast(if (self.x < other.x) other.x - self.x else self.x - other.x);
+        const dy: usize = @intCast(if (self.y < other.y) other.y - self.y else self.y - other.y);
         return dx + dy;
     }
 
     pub fn euclideanDistSq(self: Pos, other: Pos) usize {
-        const dx = if (self.x < other.x) other.x - self.x else self.x - other.x;
-        const dy = if (self.y < other.y) other.y - self.y else self.y - other.y;
+        const dx: usize = @intCast(if (self.x < other.x) other.x - self.x else self.x - other.x);
+        const dy: usize = @intCast(if (self.y < other.y) other.y - self.y else self.y - other.y);
         return dx * dx + dy * dy;
+    }
+
+    pub fn move(self: *Pos, dir: Direction) !void {
+        switch (dir) {
+            .N => self.y -= 1,
+            .S => self.y += 1,
+            .E => self.x += 1,
+            .W => self.x -= 1,
+        }
     }
 
     pub fn format(
@@ -183,13 +192,14 @@ pub fn SparseGrid(comptime T: type) type {
         const Self = @This();
 
         pub fn init(allocator: Allocator, default: T) Self {
-            const self = Self{
+            var self = Self{
                 .allocator = allocator,
                 .default = default,
                 .data = std.AutoHashMap(Pos, T).init(allocator),
-                .row_len = 0,
-                .col_len = 0,
+                .min = undefined,
+                .max = undefined,
             };
+            self.clear();
             return self;
         }
 
@@ -203,45 +213,45 @@ pub fn SparseGrid(comptime T: type) type {
 
         pub fn clear(self: *Self) void {
             self.data.clearRetainingCapacity();
-            self.row_len = 0;
-            self.col_len = 0;
+            self.min = Pos.init(0, 0);
+            self.max = Pos.init(-1, -1);
         }
 
         pub fn validPos(self: Self, x: isize, y: isize) bool {
-            if (x < 0 or x >= self.col_len) return false;
-            if (y < 0 or y >= self.row_len) return false;
+            if (x < self.min.x or x > self.max.x) return false;
+            if (y < self.min.y or y > self.max.y) return false;
             return true;
         }
 
         pub fn rows(self: Self) usize {
-            return self.row_len;
+            return @intCast(self.max.y - self.min.y + 1);
         }
 
         pub fn cols(self: Self) usize {
-            return self.col_len;
+            return @intCast(self.max.x - self.min.x + 1);
         }
 
-        pub fn get(self: Self, x: usize, y: usize) T {
-            const pos = Pos.init(x, y);
+        pub fn get(self: Self, pos: Pos) T {
             const value = self.data.get(pos) orelse self.default;
             return value;
         }
 
-        pub fn set(self: *Self, x: usize, y: usize, val: T) !void {
-            const pos = Pos.init(x, y);
+        pub fn set(self: *Self, pos: Pos, val: T) !void {
             const entry = try self.data.getOrPut(pos);
             entry.value_ptr.* = val;
-            if (!entry.found_existing) {
-                if (self.row_len <= y) self.row_len = y + 1;
-                if (self.col_len <= x) self.col_len = x + 1;
-            }
+            if (entry.found_existing) return;
+
+            if (self.min.x > pos.x) self.min.x = pos.x;
+            if (self.max.x < pos.x) self.max.x = pos.x;
+            if (self.min.y > pos.y) self.min.y = pos.y;
+            if (self.max.y < pos.y) self.max.y = pos.y;
         }
 
         allocator: Allocator,
         default: T,
         data: std.AutoHashMap(Pos, T),
-        row_len: usize,
-        col_len: usize,
+        min: Pos,
+        max: Pos,
     };
 }
 
@@ -296,9 +306,10 @@ test "SparseGrid" {
     try grid.ensureCols(3);
     try testing.expectEqual(grid.rows(), 0);
     try testing.expectEqual(grid.cols(), 0);
-    try testing.expectEqual(grid.get(1, 2), default);
-    try grid.set(1, 2, treasure);
-    try testing.expectEqual(grid.get(1, 2), treasure);
+    const pos = Pos.init(1, 2);
+    try testing.expectEqual(grid.get(pos), default);
+    try grid.set(pos, treasure);
+    try testing.expectEqual(grid.get(pos), treasure);
     try testing.expectEqual(grid.rows(), 3);
     try testing.expectEqual(grid.cols(), 2);
 }
