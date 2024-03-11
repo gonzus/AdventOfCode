@@ -7,6 +7,17 @@ pub const Math = struct {
         return prod / std.math.gcd(a, b);
     }
 
+    // TODO: implement a proper sieve
+    pub fn isPrime(n: usize) bool {
+        if (n <= 1) return false;
+        if (n % 2 == 0) return false;
+        var f: usize = 3;
+        while (f * f < n) : (f += 2) {
+            if (n % f == 0) return false;
+        }
+        return true;
+    }
+
     // given equations: X = divs[j] (mod mods[j])
     // compute a value for X
     pub fn chineseRemainder(divs: []const u64, mods: []const u64) u64 {
@@ -168,6 +179,20 @@ test "LCM" {
     try testing.expectEqual(Math.lcm(2, 1), 2);
     try testing.expectEqual(Math.lcm(3, 6), 6);
     try testing.expectEqual(Math.lcm(4, 6), 12);
+}
+
+test "isPrime" {
+    var primes = [_]usize{ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 };
+    for (0..100) |n| {
+        var found = false;
+        for (&primes) |p| {
+            if (n == p) {
+                found = true;
+                break;
+            }
+        }
+        try testing.expectEqual(Math.isPrime(n), found);
+    }
 }
 
 test "chinese reminder" {
