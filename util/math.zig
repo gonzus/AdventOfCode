@@ -2,6 +2,8 @@ const std = @import("std");
 const testing = std.testing;
 
 pub const Math = struct {
+    const INFINITY = std.math.maxInt(usize);
+
     pub fn lcm(a: usize, b: usize) usize {
         const prod: u64 = a * b;
         return prod / std.math.gcd(a, b);
@@ -10,9 +12,10 @@ pub const Math = struct {
     // TODO: implement a proper sieve
     pub fn isPrime(n: usize) bool {
         if (n <= 1) return false;
+        if (n == 2) return true;
         if (n % 2 == 0) return false;
         var f: usize = 3;
-        while (f * f < n) : (f += 2) {
+        while (f * f <= n) : (f += 2) {
             if (n % f == 0) return false;
         }
         return true;
@@ -159,6 +162,7 @@ pub const Math = struct {
                 _: std.fmt.FormatOptions,
                 writer: anytype,
             ) !void {
+                _ = try writer.print("V", .{});
                 for (0..size) |p| {
                     const c: u8 = if (p == 0) '(' else ',';
                     _ = try writer.print("{c}{d}", .{ c, v.v[p] });
@@ -169,6 +173,46 @@ pub const Math = struct {
             v: [S]T,
         };
     }
+
+    pub const Pos2D = Vector(usize, 2);
+
+    pub const Rectangle = struct {
+        tl: Pos2D,
+        br: Pos2D,
+
+        pub fn initTLBR(t: usize, l: usize, b: usize, r: usize) Rectangle {
+            return .{
+                .tl = Pos2D.copy(&[_]usize{ l, t }),
+                .br = Pos2D.copy(&[_]usize{ r, b }),
+            };
+        }
+
+        pub fn initTLWH(t: usize, l: usize, w: usize, h: usize) Rectangle {
+            return Rectangle.initTLBR(t, l, t + h - 1, l + w - 1);
+        }
+
+        pub fn format(
+            v: Rectangle,
+            comptime _: []const u8,
+            _: std.fmt.FormatOptions,
+            writer: anytype,
+        ) !void {
+            _ = try writer.print("Rect({}-{})", .{ v.tl, v.br });
+        }
+
+        pub fn getOverlap(self: Rectangle, other: Rectangle) Rectangle {
+            return Rectangle.initTLBR(
+                @max(self.tl.v[1], other.tl.v[1]),
+                @max(self.tl.v[0], other.tl.v[0]),
+                @min(self.br.v[1], other.br.v[1]),
+                @min(self.br.v[0], other.br.v[0]),
+            );
+        }
+
+        pub fn isValid(self: Rectangle) bool {
+            return self.tl.v[1] <= self.br.v[1] and self.tl.v[0] <= self.br.v[0];
+        }
+    };
 };
 
 test "LCM" {

@@ -1,4 +1,4 @@
 DAY = 03
-MODULES = fabric.zig
+MODULES = module.zig
 
-include ../aoc.mk
+include ../../aoc.mk
