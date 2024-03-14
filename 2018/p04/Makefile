@@ -1,4 +1,4 @@
 DAY = 04
-MODULES = shift.zig
+MODULES = module.zig
 
-include ../aoc.mk
+include ../../aoc.mk
