@@ -4,7 +4,7 @@ const assert = std.debug.assert;
 
 const Allocator = std.mem.Allocator;
 
-pub const Security = struct {
+pub const Shift = struct {
     const INVALID = std.math.maxInt(usize);
     const MINUTES = 60;
 
@@ -49,7 +49,7 @@ pub const Security = struct {
     events: std.ArrayList(Event),
     stats: std.AutoHashMap(usize, Stats),
 
-    pub fn init(allocator: Allocator) Security {
+    pub fn init(allocator: Allocator) Shift {
         return .{
             .allocator = allocator,
             .events = std.ArrayList(Event).init(allocator),
@@ -57,12 +57,12 @@ pub const Security = struct {
         };
     }
 
-    pub fn deinit(self: *Security) void {
+    pub fn deinit(self: *Shift) void {
         self.stats.deinit();
         self.events.deinit();
     }
 
-    pub fn addLine(self: *Security, line: []const u8) !void {
+    pub fn addLine(self: *Shift, line: []const u8) !void {
         var it = std.mem.tokenizeAny(u8, line, " []-:#");
         const Y = try std.fmt.parseUnsigned(usize, it.next().?, 10);
         const M = try std.fmt.parseUnsigned(usize, it.next().?, 10);
@@ -89,15 +89,15 @@ pub const Security = struct {
         }
     }
 
-    pub fn getMostAsleep(self: *Security, strategy: usize) !usize {
+    pub fn getMostAsleep(self: *Shift, strategy: usize) !usize {
         self.sortAndFixGuards();
-        try self.processShifts();
+        try self.processEvents();
         if (strategy == 1) return self.findWithStrategyOne();
         if (strategy == 2) return self.findWithStrategyTwo();
         return 0;
     }
 
-    fn registerGuard(self: *Security, guard: usize, minute: usize) !void {
+    fn registerGuard(self: *Shift, guard: usize, minute: usize) !void {
         const r = try self.stats.getOrPut(guard);
         if (!r.found_existing) {
             r.value_ptr.* = Stats.init();
@@ -106,7 +106,7 @@ pub const Security = struct {
         r.value_ptr.*.minutes[minute] += 1;
     }
 
-    fn sortAndFixGuards(self: *Security) void {
+    fn sortAndFixGuards(self: *Shift) void {
         std.sort.heap(Event, self.events.items, {}, Event.lessThan);
         var guard: usize = INVALID;
         for (self.events.items) |*e| {
@@ -117,7 +117,7 @@ pub const Security = struct {
         }
     }
 
-    fn processShifts(self: *Security) !void {
+    fn processEvents(self: *Shift) !void {
         var guard: usize = INVALID;
         var date: usize = INVALID;
         var time: usize = INVALID;
@@ -155,7 +155,7 @@ pub const Security = struct {
         }
     }
 
-    fn findWithStrategyOne(self: Security) !usize {
+    fn findWithStrategyOne(self: Shift) !usize {
         var top_guard: usize = INVALID;
         var top_minute: usize = 0;
         var top_total: usize = 0;
@@ -179,7 +179,7 @@ pub const Security = struct {
         return top_guard * top_minute;
     }
 
-    fn findWithStrategyTwo(self: Security) !usize {
+    fn findWithStrategyTwo(self: Shift) !usize {
         var top_guard: usize = INVALID;
         var top_minute: usize = 0;
         var top_total: usize = 0;
@@ -220,14 +220,14 @@ test "sample part 1" {
         \\[1518-11-05 00:55] wakes up
     ;
 
-    var security = Security.init(testing.allocator);
-    defer security.deinit();
+    var shift = Shift.init(testing.allocator);
+    defer shift.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try security.addLine(line);
+        try shift.addLine(line);
     }
-    const code = try security.getMostAsleep(1);
+    const code = try shift.getMostAsleep(1);
     const expected = @as(usize, 240);
     try testing.expectEqual(expected, code);
 }
@@ -253,14 +253,14 @@ test "sample part 2" {
         \\[1518-11-05 00:55] wakes up
     ;
 
-    var security = Security.init(testing.allocator);
-    defer security.deinit();
+    var shift = Shift.init(testing.allocator);
+    defer shift.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try security.addLine(line);
+        try shift.addLine(line);
     }
-    const code = try security.getMostAsleep(2);
+    const code = try shift.getMostAsleep(2);
     const expected = @as(usize, 4455);
     try testing.expectEqual(expected, code);
 }
