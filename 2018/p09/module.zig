@@ -1,24 +1,24 @@
 const std = @import("std");
 const testing = std.testing;
 const assert = std.debug.assert;
-const SimpleDeque = @import("./util/queue.zig").SimpleDeque;
+const DoubleEndedQueue = @import("./util/queue.zig").DoubleEndedQueue;
 
 const Allocator = std.mem.Allocator;
 
 pub const Game = struct {
-    const Deque = SimpleDeque(usize);
+    const Queue = DoubleEndedQueue(usize);
 
     players: usize,
     points: usize,
     elves: std.AutoHashMap(usize, usize),
-    circle: Deque,
+    circle: Queue,
 
     pub fn init(allocator: Allocator) Game {
         return .{
             .players = 0,
             .points = 0,
             .elves = std.AutoHashMap(usize, usize).init(allocator),
-            .circle = Deque.init(allocator),
+            .circle = Queue.init(allocator),
         };
     }
 

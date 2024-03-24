@@ -3,52 +3,7 @@ const testing = std.testing;
 
 const Allocator = std.mem.Allocator;
 
-pub fn SimpleQueue(comptime E: type) type {
-    return struct {
-        const Self = @This();
-
-        data: std.ArrayList(E),
-        head: usize,
-
-        pub fn init(allocator: Allocator) Self {
-            return .{
-                .data = std.ArrayList(E).init(allocator),
-                .head = 0,
-            };
-        }
-
-        pub fn deinit(self: *Self) void {
-            self.data.deinit();
-        }
-
-        pub fn empty(self: Self) bool {
-            return self.head >= self.data.items.len;
-        }
-
-        pub fn size(self: Self) usize {
-            return self.data.items.len - self.head;
-        }
-
-        pub fn clear(self: *Self) void {
-            self.data.clearRetainingCapacity();
-            self.head = 0;
-        }
-
-        pub fn enqueue(self: *Self, value: E) !void {
-            try self.data.append(value);
-        }
-
-        pub fn dequeue(self: *Self) !E {
-            if (self.head >= self.data.items.len) return error.QueueEmpty;
-            const v = self.data.items[self.head];
-            self.head += 1;
-            if (self.head == self.data.items.len) self.clear();
-            return v;
-        }
-    };
-}
-
-pub fn SimpleDeque(comptime E: type) type {
+pub fn DoubleEndedQueue(comptime E: type) type {
     return struct {
         const Self = @This();
 
@@ -101,6 +56,22 @@ pub fn SimpleDeque(comptime E: type) type {
             self.tail = self.head;
         }
 
+        pub fn insertHead(self: *Self, value: E) !void {
+            if (self.head > 0) {
+                self.head -= 1;
+                self.data.items[self.head] = value;
+            } else {
+                _ = try self.data.insert(0, value);
+            }
+        }
+
+        pub fn insertHeadItems(self: *Self, values: []const E) !void {
+            // TODO: do this in a single go
+            for (values) |value| {
+                try self.insertHead(value);
+            }
+        }
+
         pub fn appendTail(self: *Self, value: E) !void {
             if (self.tail < self.data.items.len) {
                 self.data.items[self.tail] = value;
@@ -111,27 +82,38 @@ pub fn SimpleDeque(comptime E: type) type {
         }
 
         pub fn appendTailItems(self: *Self, values: []const E) !void {
+            // TODO: do this in a single go
             for (values) |value| {
                 try self.appendTail(value);
             }
-        }
-
-        pub fn popTail(self: *Self) !E {
-            if (self.empty()) return error.DequeEmpty;
-            self.tail -= 1;
-            return self.data.items[self.tail];
         }
 
         pub fn append(self: *Self, value: E) !void {
             try self.appendTail(value);
         }
 
-        pub fn appendItems(self: *Self, values: []const E) !void {
-            try self.appendTailItems(values);
+        pub fn enqueue(self: *Self, value: E) !void {
+            try self.appendTail(value);
+        }
+
+        pub fn popHead(self: *Self) !E {
+            if (self.empty()) return error.QueueEmpty;
+            defer self.head += 1;
+            return self.data.items[self.head];
+        }
+
+        pub fn popTail(self: *Self) !E {
+            if (self.empty()) return error.QueueEmpty;
+            self.tail -= 1;
+            return self.data.items[self.tail];
         }
 
         pub fn pop(self: *Self) !E {
             return try self.popTail();
+        }
+
+        pub fn dequeue(self: *Self) !E {
+            return try self.popHead();
         }
 
         pub fn rotate(self: *Self, count: isize) !void {
@@ -170,8 +152,10 @@ pub fn SimpleDeque(comptime E: type) type {
     };
 }
 
-test "SimpleQueue" {
-    const Queue = SimpleQueue(usize);
+// TODO add more tests
+
+test "DoubleEndedQueue simple" {
+    const Queue = DoubleEndedQueue(usize);
     var q = Queue.init(testing.allocator);
     defer q.deinit();
 
@@ -195,9 +179,9 @@ test "SimpleQueue" {
     try testing.expectError(error.QueueEmpty, q.dequeue());
 }
 
-test "SimpleDeque basic" {
-    const DQ = SimpleDeque(usize);
-    var q = DQ.init(testing.allocator);
+test "DoubleEndedQueue basic" {
+    const Queue = DoubleEndedQueue(usize);
+    var q = Queue.init(testing.allocator);
     defer q.deinit();
 
     try testing.expectEqual(q.size(), 0);
@@ -220,9 +204,9 @@ test "SimpleDeque basic" {
     try testing.expect(q.empty());
 }
 
-test "SimpleDeque rotate positive" {
-    const DQ = SimpleDeque(usize);
-    var q = DQ.init(testing.allocator);
+test "DoubleEndedQueue rotate positive" {
+    const Queue = DoubleEndedQueue(usize);
+    var q = Queue.init(testing.allocator);
     defer q.deinit();
     var len: usize = 0;
 
@@ -264,9 +248,9 @@ test "SimpleDeque rotate positive" {
     }
 }
 
-test "SimpleDeque rotate negative" {
-    const DQ = SimpleDeque(usize);
-    var q = DQ.init(testing.allocator);
+test "DoubleEndedQueue rotate negative" {
+    const Queue = DoubleEndedQueue(usize);
+    var q = Queue.init(testing.allocator);
     defer q.deinit();
     var len: usize = 0;
 

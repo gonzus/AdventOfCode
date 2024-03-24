@@ -1,11 +1,11 @@
 const std = @import("std");
 const testing = std.testing;
-const SimpleQueue = @import("./util/queue.zig").SimpleQueue;
+const DoubleEndedQueue = @import("./util/queue.zig").DoubleEndedQueue;
 
 const Allocator = std.mem.Allocator;
 
 pub const Cluster = struct {
-    const Queue = SimpleQueue(isize);
+    const Queue = DoubleEndedQueue(isize);
 
     const INVALID_PC = std.math.maxInt(usize);
     const REGISTERS = 26;
