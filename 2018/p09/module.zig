@@ -1,6 +1,5 @@
 const std = @import("std");
 const testing = std.testing;
-const assert = std.debug.assert;
 const DoubleEndedQueue = @import("./util/queue.zig").DoubleEndedQueue;
 
 const Allocator = std.mem.Allocator;
@@ -40,7 +39,7 @@ pub const Game = struct {
 
     pub fn playGame(self: *Game, marble_multiplier: usize) !usize {
         self.elves.clearRetainingCapacity();
-        self.circle.clear();
+        self.circle.clearRetainingCapacity();
         const max_marble = self.points * marble_multiplier;
         for (0..max_marble + 1) |marble| {
             const elf = marble % self.players;

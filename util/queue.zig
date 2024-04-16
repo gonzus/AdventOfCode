@@ -11,6 +11,7 @@ pub fn DoubleEndedQueue(comptime E: type) type {
         head: usize,
         tail: usize,
 
+        // TODO: add initWithSpareElements(front, rear);
         pub fn init(allocator: Allocator) Self {
             return .{
                 .data = std.ArrayList(E).init(allocator),
@@ -29,7 +30,7 @@ pub fn DoubleEndedQueue(comptime E: type) type {
             _: std.fmt.FormatOptions,
             writer: anytype,
         ) !void {
-            _ = try writer.print("dequeue", .{});
+            _ = try writer.print("DEQueue", .{});
             for (q.head..q.tail) |p| {
                 const c: u8 = if (p == q.head) '[' else ',';
                 _ = try writer.print("{c}{}", .{ c, q.data.items[p] });
@@ -50,10 +51,17 @@ pub fn DoubleEndedQueue(comptime E: type) type {
             return self.data.items[self.head..self.tail];
         }
 
-        pub fn clear(self: *Self) void {
+        pub fn clearRetainingCapacity(self: *Self) void {
+            const middle = self.data.items.len / 2;
             self.data.clearRetainingCapacity();
-            self.head = self.data.items.len / 2;
-            self.tail = self.head;
+            self.head = middle;
+            self.tail = middle;
+        }
+
+        pub fn clearAndFree(self: *Self) void {
+            self.data.clearAndFree();
+            self.head = 0;
+            self.tail = 0;
         }
 
         pub fn insertHead(self: *Self, value: E) !void {
@@ -152,7 +160,7 @@ pub fn DoubleEndedQueue(comptime E: type) type {
     };
 }
 
-// TODO add more tests
+// TODO: add more tests
 
 test "DoubleEndedQueue simple" {
     const Queue = DoubleEndedQueue(usize);
