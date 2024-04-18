@@ -86,7 +86,7 @@ pub const Pos = struct {
     }
 };
 
-pub fn Grid(comptime T: type) type {
+pub fn DenseGrid(comptime T: type) type {
     return struct {
         const Self = @This();
 
@@ -277,10 +277,10 @@ test "Pos" {
     try testing.expectEqual(Pos.cmp({}, p2, p2), std.math.Order.eq);
 }
 
-test "Grid" {
+test "DenseGrid" {
     const default = '*';
     const treasure = 'X';
-    var grid = Grid(u8).init(testing.allocator, default);
+    var grid = DenseGrid(u8).init(testing.allocator, default);
     defer grid.deinit();
     try testing.expectEqual(grid.rows(), 0);
     try testing.expectEqual(grid.cols(), 0);
