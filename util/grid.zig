@@ -107,6 +107,18 @@ pub fn DenseGrid(comptime T: type) type {
             self.allocator.free(self.data);
         }
 
+        pub fn clone(self: Self) !Self {
+            var copy = Self.init(self.allocator, self.default);
+            try copy.ensureCols(self.cols());
+            for (0..self.rows()) |y| {
+                try copy.ensureExtraRow();
+                for (0..self.cols()) |x| {
+                    try copy.set(x, y, self.get(x, y));
+                }
+            }
+            return copy;
+        }
+
         fn ensureSize(self: *Self, new_rows: usize, new_cols: usize) !void {
             if (self.row_cap >= new_rows and self.col_cap >= new_cols) return;
             const old_size = self.row_cap * self.col_cap;
