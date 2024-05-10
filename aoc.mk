@@ -12,7 +12,7 @@ endef
 
 define make-aoc-prg-target
   $1: $1.zig $(MODULES)
-	zig build-exe $1.zig -freference-trace
+	zig build-exe $1.zig -freference-trace -OReleaseFast
   $1_clean:
 	rm -f $1
   $1_run: $1_run1 $1_run2
