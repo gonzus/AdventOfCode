@@ -53,7 +53,6 @@ pub fn DoubleEndedQueue(comptime E: type) type {
 
         pub fn clearRetainingCapacity(self: *Self) void {
             const middle = self.data.items.len / 2;
-            self.data.clearRetainingCapacity();
             self.head = middle;
             self.tail = middle;
         }
