@@ -225,8 +225,8 @@ pub fn SparseGrid(comptime T: type) type {
 
         pub fn clear(self: *Self) void {
             self.data.clearRetainingCapacity();
-            self.min = Pos.init(0, 0);
-            self.max = Pos.init(-1, -1);
+            self.min = Pos.init(std.math.maxInt(isize), std.math.maxInt(isize));
+            self.max = Pos.init(std.math.minInt(isize), std.math.minInt(isize));
         }
 
         pub fn validPos(self: Self, x: isize, y: isize) bool {
@@ -236,10 +236,12 @@ pub fn SparseGrid(comptime T: type) type {
         }
 
         pub fn rows(self: Self) usize {
+            if (self.data.count() == 0) return 0;
             return @intCast(self.max.y - self.min.y + 1);
         }
 
         pub fn cols(self: Self) usize {
+            if (self.data.count() == 0) return 0;
             return @intCast(self.max.x - self.min.x + 1);
         }
 
@@ -322,6 +324,6 @@ test "SparseGrid" {
     try testing.expectEqual(grid.get(pos), default);
     try grid.set(pos, treasure);
     try testing.expectEqual(grid.get(pos), treasure);
-    try testing.expectEqual(grid.rows(), 3);
-    try testing.expectEqual(grid.cols(), 2);
+    try testing.expectEqual(grid.rows(), 1);
+    try testing.expectEqual(grid.cols(), 1);
 }
