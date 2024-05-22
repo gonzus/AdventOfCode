@@ -2,7 +2,7 @@ const std = @import("std");
 const testing = std.testing;
 
 pub const Math = struct {
-    const INFINITY = std.math.maxInt(usize);
+    pub const INFINITY = std.math.maxInt(usize);
 
     pub fn lcm(a: usize, b: usize) usize {
         const prod: u64 = a * b;
