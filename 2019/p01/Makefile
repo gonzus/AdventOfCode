@@ -1,4 +1,4 @@
 DAY = 01
-MODULES = tank.zig
+MODULES = module.zig
 
-include ../aoc.mk
+include ../../aoc.mk
