@@ -1,4 +1,4 @@
 DAY = 03
-MODULES = board.zig
+MODULES = module.zig
 
-include ../aoc.mk
+include ../../aoc.mk
