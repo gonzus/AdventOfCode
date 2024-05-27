@@ -36,7 +36,7 @@ pub const Computer = struct {
     }
 
     pub fn addLine(self: *Computer, line: []const u8) !void {
-        var it = std.mem.split(u8, line, ",");
+        var it = std.mem.tokenizeScalar(u8, line, ',');
         while (it.next()) |chunk| {
             try self.code.append(try std.fmt.parseUnsigned(usize, chunk, 10));
         }

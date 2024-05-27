@@ -73,7 +73,7 @@ pub const Board = struct {
     }
 
     pub fn addLine(self: *Board, line: []const u8) !void {
-        var it = std.mem.split(u8, line, ",");
+        var it = std.mem.tokenizeScalar(u8, line, ',');
         while (it.next()) |chunk| {
             try self.specs[self.count].append(try Spec.init(chunk));
         }
