@@ -1,4 +1,4 @@
 DAY = 08
-MODULES = img.zig
+MODULES = module.zig
 
-include ../aoc.mk
+include ../../aoc.mk
