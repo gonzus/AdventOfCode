@@ -18,6 +18,7 @@ pub fn main() anyerror!u8 {
     }
 
     const out = std.io.getStdOut().writer();
+    try out.print("=== {s} ===\n", .{@tagName(part)});
     switch (part) {
         .part1 => {
             _ = try message.findMessage();
@@ -33,7 +34,6 @@ pub fn main() anyerror!u8 {
         },
     }
 
-    try out.print("=== {s} ===\n", .{@tagName(part)});
     try out.print("Elapsed: {}ms\n", .{command.getElapsedMs()});
     return 0;
 }

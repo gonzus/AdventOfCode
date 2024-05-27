@@ -19,6 +19,7 @@ pub fn main() anyerror!u8 {
     // sleigh.show();
 
     const out = std.io.getStdOut().writer();
+    try out.print("=== {s} ===\n", .{@tagName(part)});
     switch (part) {
         .part1 => {
             const answer = try sleigh.sortSteps();
@@ -34,7 +35,6 @@ pub fn main() anyerror!u8 {
         },
     }
 
-    try out.print("=== {s} ===\n", .{@tagName(part)});
     try out.print("Elapsed: {}ms\n", .{command.getElapsedMs()});
     return 0;
 }

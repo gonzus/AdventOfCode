@@ -34,8 +34,8 @@ pub fn main() anyerror!u8 {
     }
 
     const out = std.io.getStdOut().writer();
-    try out.print("Answer: {}\n", .{answer});
     try out.print("=== {s} ===\n", .{@tagName(part)});
+    try out.print("Answer: {}\n", .{answer});
     try out.print("Elapsed: {}ms\n", .{command.getElapsedMs()});
     return 0;
 }
