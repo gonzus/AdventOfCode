@@ -1,4 +1,4 @@
 DAY = 12
-MODULES = map.zig
+MODULES = module.zig
 
-include ../aoc.mk
+include ../../aoc.mk
