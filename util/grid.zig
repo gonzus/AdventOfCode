@@ -137,6 +137,11 @@ pub fn DenseGrid(comptime T: type) type {
             try self.ensureSize(new_rows, new_cols);
         }
 
+        pub fn ensureRows(self: *Self, new_rows: usize) !void {
+            const new_cols = @max(new_rows, self.col_cap); // estimate
+            try self.ensureSize(new_rows, new_cols);
+        }
+
         pub fn ensureExtraRow(self: *Self) !void {
             const new_rows = self.row_len + 1;
             const new_cols = self.col_len;
@@ -177,8 +182,8 @@ pub fn DenseGrid(comptime T: type) type {
         }
 
         pub fn set(self: *Self, x: usize, y: usize, val: T) !void {
-            if (x < 0 or x >= self.col_cap or y < 0 or y >= self.row_cap)
-                return error.InvalidPos;
+            try self.ensureCols(x + 1);
+            try self.ensureRows(y + 1);
             if (self.col_len <= x) self.col_len = x + 1;
             if (self.row_len <= y) self.row_len = y + 1;
             const pos = self.col_cap * y + x;

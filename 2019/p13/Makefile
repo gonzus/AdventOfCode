@@ -1,4 +1,4 @@
 DAY = 13
-MODULES = computer.zig board.zig
+MODULES = module.zig
 
-include ../aoc.mk
+include ../../aoc.mk
