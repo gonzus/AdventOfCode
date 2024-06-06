@@ -1,4 +1,4 @@
 DAY = 14
-MODULES = factory.zig
+MODULES = module.zig
 
-include ../aoc.mk
+include ../../aoc.mk
