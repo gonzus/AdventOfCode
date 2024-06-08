@@ -1,4 +1,4 @@
 DAY = 16
-MODULES = fft.zig
+MODULES = module.zig
 
-include ../aoc.mk
+include ../../aoc.mk
