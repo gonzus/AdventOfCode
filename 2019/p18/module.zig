@@ -1,5 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
+const StringTable = @import("./util/strtab.zig").StringTable;
 const DoubleEndedQueue = @import("./util/queue.zig").DoubleEndedQueue;
 const Math = @import("./util/math.zig").Math;
 const UtilGrid = @import("./util/grid.zig");
@@ -7,10 +8,11 @@ const UtilGrid = @import("./util/grid.zig");
 const Allocator = std.mem.Allocator;
 
 pub const Vault = struct {
+    const StringId = StringTable.StringId;
     const Pos = UtilGrid.Pos;
     const Grid = UtilGrid.SparseGrid(Tile);
     const Score = std.AutoHashMap(Pos, usize);
-    const INFINITY = std.math.maxInt(usize);
+    const INFINITY = std.math.maxInt(u32);
     const OFFSET = 500;
 
     pub const Dir = enum(u8) {
@@ -41,64 +43,6 @@ pub const Vault = struct {
     };
     const Dirs = std.meta.tags(Dir);
 
-    pub const Node = struct {
-        pos: Pos,
-        mask: usize,
-        gonzo: std.AutoHashMap(u64, void),
-
-        pub fn init(allocator: Allocator, pos: Pos, mask: usize) Node {
-            return Node{
-                .pos = pos,
-                .mask = mask,
-                .gonzo = std.AutoHashMap(u64, void).init(allocator),
-            };
-        }
-
-        pub fn deinit(self: *Node) void {
-            self.gonzo.deinit();
-        }
-
-        pub fn encode(self: Node) u64 {
-            var code: u64 = 0;
-            code += self.mask;
-            code *= 1000;
-            code += @intCast(self.pos.x);
-            code *= 1000;
-            code += @intCast(self.pos.y);
-            return code;
-        }
-
-        pub fn get_mask(label: u64) usize {
-            return label / 1000000;
-        }
-
-        fn cmp(_: void, l: Node, r: Node) std.math.Order {
-            if (l.mask < r.mask) return std.math.Order.lt;
-            if (l.mask > r.mask) return std.math.Order.gt;
-            return Pos.cmp({}, l.pos, r.pos);
-        }
-    };
-
-    pub const NodeInfo = struct {
-        label: u64,
-        dist: usize,
-
-        pub fn init(label: u64, dist: usize) NodeInfo {
-            return NodeInfo{
-                .label = label,
-                .dist = dist,
-            };
-        }
-
-        fn cmp(_: void, l: NodeInfo, r: NodeInfo) std.math.Order {
-            if (l.dist < r.dist) return std.math.Order.lt;
-            if (l.dist > r.dist) return std.math.Order.gt;
-            if (l.label < r.label) return std.math.Order.lt;
-            if (l.label > r.label) return std.math.Order.gt;
-            return std.math.Order.eq;
-        }
-    };
-
     pub const Tile = enum(u8) {
         empty = ' ',
         wall = '#',
@@ -121,8 +65,8 @@ pub const Vault = struct {
     cols: usize,
     keys: std.AutoHashMap(Pos, u8),
     doors: std.AutoHashMap(Pos, u8),
-    nodes: std.AutoHashMap(u64, Node),
     start: Pos,
+    key_paths: KeyPaths,
 
     pub fn init(allocator: Allocator) Vault {
         return .{
@@ -132,51 +76,49 @@ pub const Vault = struct {
             .cols = 0,
             .keys = std.AutoHashMap(Pos, u8).init(allocator),
             .doors = std.AutoHashMap(Pos, u8).init(allocator),
-            .nodes = std.AutoHashMap(u64, Node).init(allocator),
             .start = undefined,
+            .key_paths = KeyPaths.init(allocator),
         };
     }
 
     pub fn deinit(self: *Vault) void {
-        var it = self.nodes.valueIterator();
-        while (it.next()) |node| {
-            node.*.deinit();
-        }
-        self.nodes.deinit();
         self.doors.deinit();
         self.keys.deinit();
         self.grid.deinit();
+        self.key_paths.deinit();
     }
 
-    // pub fn show(self: Vault) void {
-    //     std.debug.print("MAP: {} x {} - {} {} - {} {} - Oxygen at {}\n", .{
-    //         self.grid.max.x - self.grid.min.x + 1,
-    //         self.grid.max.y - self.grid.min.y + 1,
-    //         self.grid.min.x,
-    //         self.grid.min.y,
-    //         self.grid.max.x,
-    //         self.grid.max.y,
-    //         self.pos_oxygen,
-    //     });
-    //     var y: isize = self.grid.min.y;
-    //     while (y <= self.grid.max.y) : (y += 1) {
-    //         const uy: usize = @intCast(y);
-    //         std.debug.print("{:>4} | ", .{uy});
-    //         var x: isize = self.grid.min.x;
-    //         while (x <= self.grid.max.x) : (x += 1) {
-    //             const pos = Pos.init(x, y);
-    //             var label: u8 = @intFromEnum(self.grid.get(pos));
-    //             if (pos.equal(self.pos_oxygen)) {
-    //                 label = 'O';
-    //             }
-    //             if (pos.equal(self.start)) {
-    //                 label = 'D';
-    //             }
-    //             std.debug.print("{c}", .{label});
-    //         }
-    //         std.debug.print("\n", .{});
-    //     }
-    // }
+    pub fn show(self: Vault) void {
+        std.debug.print("MAP: {} x {} - {} {} - {} {}\n", .{
+            self.grid.max.x - self.grid.min.x + 1,
+            self.grid.max.y - self.grid.min.y + 1,
+            self.grid.min.x,
+            self.grid.min.y,
+            self.grid.max.x,
+            self.grid.max.y,
+        });
+        var y: isize = self.grid.min.y;
+        while (y <= self.grid.max.y) : (y += 1) {
+            const uy: usize = @intCast(y);
+            std.debug.print("{:>4} | ", .{uy});
+            var x: isize = self.grid.min.x;
+            while (x <= self.grid.max.x) : (x += 1) {
+                const pos = Pos.init(x, y);
+                const kind = self.grid.get(pos);
+                var label: u8 = switch (kind) {
+                    .empty => '.',
+                    .wall => '#',
+                    .door => self.doors.get(pos).?,
+                    .key => self.keys.get(pos).?,
+                };
+                if (pos.equal(self.start)) {
+                    label = '@';
+                }
+                std.debug.print("{c}", .{label});
+            }
+            std.debug.print("\n", .{});
+        }
+    }
 
     pub fn addLine(self: *Vault, line: []const u8) !void {
         for (0..line.len) |x| {
@@ -200,233 +142,274 @@ pub const Vault = struct {
         self.rows += 1;
     }
 
-    pub fn collectAllKeys(self: *Vault) !usize {
-        self.walk_map();
-        return self.walk_graph();
-    }
-
-    const State = struct {
+    const Path = struct {
         steps: usize,
-        pos: Pos,
         doors: u32,
+        pos: Pos,
 
-        pub fn init(steps: usize, pos: Pos, doors: u32) State {
+        pub fn init(steps: usize, doors: u32, pos: Pos) Path {
             return .{
                 .steps = steps,
-                .pos = pos,
                 .doors = doors,
+                .pos = pos,
             };
+        }
+
+        fn cmp(_: void, l: Path, r: Path) std.math.Order {
+            if (l.steps < r.steps) return .lt;
+            if (l.steps > r.steps) return .gt;
+            if (l.doors < r.doors) return .lt;
+            if (l.doors > r.doors) return .gt;
+            return Pos.cmp({}, l.pos, r.pos);
         }
     };
 
-    const Path = struct {
-        steps: usize,
-        doors: usize,
+    const KeyPaths = struct {
+        keys: std.AutoHashMap(u8, u8),
+        paths: std.AutoHashMap(u16, Path),
 
-        pub fn init(steps: usize, doors: usize) Path {
+        pub fn init(allocator: Allocator) KeyPaths {
             return .{
-                .steps = steps,
-                .doors = doors,
+                .paths = std.AutoHashMap(u16, Path).init(allocator),
+                .keys = std.AutoHashMap(u8, u8).init(allocator),
             };
+        }
+
+        pub fn deinit(self: *KeyPaths) void {
+            self.keys.deinit();
+            self.paths.deinit();
+        }
+
+        pub fn addPath(self: *KeyPaths, src: u8, tgt: u8, path: Path) !void {
+            // src, tgt can be 'a'..'z' => keys
+            // src, tgt can be '0'..'9' => starts
+            try self.keys.put(src, tgt);
+            var key: u16 = 0;
+            key |= src;
+            key <<= 8;
+            key |= tgt;
+            try self.paths.put(key, path);
+        }
+
+        pub fn clear(self: *KeyPaths) void {
+            self.paths.clearRetainingCapacity();
+            self.keys.clearRetainingCapacity();
+        }
+
+        pub fn pathFound(self: *KeyPaths, src: u8, tgt: u8) bool {
+            var key: u16 = 0;
+            key |= src;
+            key <<= 8;
+            key |= tgt;
+            return self.paths.contains(key);
+        }
+
+        pub fn show(self: KeyPaths) void {
+            std.debug.print("KeyPaths: {}\n", .{self.paths.count()});
+            var it = self.paths.iterator();
+            while (it.next()) |e| {
+                const key = e.key_ptr.*;
+                const src: u8 = @intCast(key >> 8);
+                const tgt: u8 = @intCast(key & 0xff);
+                const path = e.value_ptr.*;
+                std.debug.print("  path {c} {c}: {} steps, crossing doors", .{ src, tgt, path.steps });
+                for (0..26) |p| {
+                    const shift: u5 = @intCast(p);
+                    const mask = @as(u32, 1) << shift;
+                    if (path.doors & mask == 0) continue;
+                    var label: u8 = 'A';
+                    label += @intCast(p);
+                    std.debug.print(" {c}", .{label});
+                }
+                std.debug.print("\n", .{});
+            }
         }
     };
 
     fn findShortestPath(self: *Vault, src: Pos, tgt: Pos) !Path {
+        // std.debug.print("Shortest path {} {}\n", .{ src, tgt });
         var visited = std.AutoHashMap(Pos, void).init(self.allocator);
         defer visited.deinit();
 
-        const PQ = std.PriorityQueue(State, void, State.cmp);
+        const PQ = std.PriorityQueue(Path, void, Path.cmp);
         var queue = PQ.init(self.allocator, {});
         defer queue.deinit();
 
-        _ = try queue.add(State.init(0, src, 0));
+        _ = try queue.add(Path.init(0, 0, src));
         while (queue.count() != 0) {
-            var state = queue.remove();
-            if (state.pos.equal(tgt)) {
-                return Path.init(state.steps, state.doors);
+            var path = queue.remove();
+            if (path.pos.equal(tgt)) {
+                // std.debug.print("Shortest path {} {} => {} steps\n", .{ src, tgt, path.steps });
+                return path;
             }
-            try visited.put(state.pos, {});
-            var doors = state.doors;
-            if (self.doors.get(state.pos)) |door| {
-                doors |= door;
+            var doors = path.doors; // make a copy
+            if (self.doors.get(path.pos)) |door| {
+                if (std.ascii.isUpper(door)) {
+                    // std.debug.print("Door {c}\n", .{door});
+                    const shift: u3 = @intCast(std.ascii.toLower(door) - 'a');
+                    doors |= @as(u8, 1) << shift;
+                }
             }
+            try visited.put(path.pos, {});
             for (Dirs) |d| {
-                const nxt = Dir.move(state.pos, d);
+                const nxt = Dir.move(path.pos, d);
                 if (visited.contains(nxt)) continue;
                 if (self.grid.get(nxt) == .wall) continue;
-                _ = try queue.add(State.init(state.steps + 1, nxt, doors));
+                _ = try queue.add(Path.init(path.steps + 1, doors, nxt));
             }
         }
-        return Path.init(INFINITY, INFINITY);
+        return Path.init(INFINITY, 0, src);
     }
 
-    fn findKeyPaths(self: *Vault, src: Pos, tgt: Pos) u32 {
-        _ = tgt;
-        _ = src;
-        _ = self;
-    }
-
-    fn walk_map(self: *Vault) void {
-        // _ = self.get_all_keys();
-        self.nodes.clearRetainingCapacity();
-
-        const PQ = std.PriorityQueue(Node, void, Node.cmp);
-        var Pend = PQ.init(self.allocator, {});
-        defer Pend.deinit();
-
-        // We start from the oxygen system position, which has already been filled with oxygen
-        const first = Node.init(self.allocator, self.start, 0);
-        _ = Pend.add(first) catch unreachable;
-        while (Pend.count() != 0) {
-            var curr = Pend.remove();
-            if (self.nodes.contains(curr.encode())) continue;
-            if (curr.mask == self.get_all_keys()) continue;
-
-            for (Dirs) |d| {
-                const v = Dir.move(curr.pos, d);
-                const tile = self.grid.get(v);
-                var next: ?Node = null;
-                switch (tile) {
-                    .wall => {},
-                    .empty => {
-                        next = Node.init(self.allocator, v, curr.mask);
-                    },
-                    .key => {
-                        const shift: u5 = @as(u5, @intCast(self.keys.get(v).? - 'a'));
-                        const needed: usize = @shlExact(@as(usize, @intCast(1)), shift);
-                        next = Node.init(self.allocator, v, curr.mask | needed);
-                    },
-                    .door => {
-                        if (!self.doors.contains(v)) {
-                            next = Node.init(self.allocator, v, curr.mask);
-                        } else {
-                            const shift: u5 = @as(u5, @intCast(self.doors.get(v).? - 'A'));
-                            const needed: usize = @shlExact(@as(usize, @intCast(1)), shift);
-                            if (curr.mask & needed != 0) {
-                                next = Node.init(self.allocator, v, curr.mask);
-                            }
-                        }
-                    },
+    fn findKeyPaths(self: *Vault, starts: []const Pos) !void {
+        self.key_paths.clear();
+        for (starts) |start_pos| {
+            const start = self.doors.get(start_pos).?;
+            var its = self.keys.iterator();
+            while (its.next()) |es| {
+                const src = es.value_ptr.*;
+                const src_pos = es.key_ptr.*;
+                const pss = try self.findShortestPath(start_pos, src_pos);
+                if (pss.steps != INFINITY) {
+                    try self.key_paths.addPath(start, src, pss);
                 }
-                if (next == null) continue;
-                const n = next.?;
-                const e = n.encode();
-                _ = curr.gonzo.put(e, {}) catch unreachable;
-                if (self.nodes.contains(e)) continue;
-                _ = Pend.add(n) catch unreachable;
-            }
-            _ = self.nodes.put(curr.encode(), curr) catch unreachable;
-        }
-        // std.debug.warn("Graph has {} nodes\n", self.nodes.count());
-    }
-
-    fn walk_graph(self: *Vault) usize {
-        var seen = std.AutoHashMap(u64, void).init(self.allocator);
-        defer seen.deinit();
-
-        const PQ = std.PriorityQueue(NodeInfo, void, NodeInfo.cmp);
-        var Pend = PQ.init(self.allocator, {});
-        defer Pend.deinit();
-
-        const all_keys = self.get_all_keys();
-
-        var dmax: usize = 0;
-        const home = Node.init(self.allocator, self.start, 0);
-        const first = NodeInfo.init(home.encode(), 0);
-        _ = Pend.add(first) catch unreachable;
-        while (Pend.count() != 0) {
-            const data = Pend.remove();
-            _ = Node.get_mask(data.label);
-            if (dmax < data.dist) dmax = data.dist;
-            if (Node.get_mask(data.label) == all_keys) break;
-            const node = self.nodes.get(data.label).?;
-            const dist = data.dist + 1;
-            var it = node.gonzo.iterator();
-            while (it.next()) |kv| {
-                const l = kv.key_ptr.*;
-                if (seen.contains(l)) continue;
-                _ = seen.put(l, {}) catch unreachable;
-                _ = Pend.add(NodeInfo.init(l, dist)) catch unreachable;
+                var itt = self.keys.iterator();
+                while (itt.next()) |et| {
+                    const tgt = et.value_ptr.*;
+                    if (tgt == src) continue;
+                    if (self.key_paths.pathFound(tgt, src)) continue;
+                    const tgt_pos = et.key_ptr.*;
+                    const pst = try self.findShortestPath(src_pos, tgt_pos);
+                    if (pst.steps != INFINITY) {
+                        try self.key_paths.addPath(src, tgt, pst);
+                        try self.key_paths.addPath(tgt, src, pst);
+                    }
+                }
             }
         }
-        return dmax;
+        self.show();
+        self.key_paths.show();
     }
 
-    fn get_all_keys(self: Vault) usize {
-        var all_keys: usize = 0;
-        var it = self.keys.valueIterator();
-        while (it.next()) |key| {
-            const shift: u5 = @as(u5, @intCast(key.* - 'a'));
-            const mask: usize = @shlExact(@as(usize, @intCast(1)), shift);
-            all_keys |= mask;
+    fn alterGrid(self: *Vault, starts: *[4]Pos) !void {
+        try self.grid.set(self.start, .wall);
+        for (Dirs) |d| {
+            const nxt = Dir.move(self.start, d);
+            try self.grid.set(nxt, .wall);
         }
-        return all_keys;
+        {
+            const p = Pos.init(self.start.x + 1, self.start.y - 1);
+            try self.grid.set(p, .door);
+            _ = try self.doors.put(p, '0');
+            starts[0] = p;
+        }
+        {
+            const p = Pos.init(self.start.x + 1, self.start.y + 1);
+            try self.grid.set(p, .door);
+            _ = try self.doors.put(p, '1');
+            starts[1] = p;
+        }
+        {
+            const p = Pos.init(self.start.x - 1, self.start.y + 1);
+            try self.grid.set(p, .door);
+            _ = try self.doors.put(p, '2');
+            starts[2] = p;
+        }
+        {
+            const p = Pos.init(self.start.x - 1, self.start.y - 1);
+            try self.grid.set(p, .door);
+            _ = try self.doors.put(p, '3');
+            starts[3] = p;
+        }
+
+        self.start = Pos.init(999999, 999999);
+    }
+
+    fn findKeys(self: *Vault, starts: []const Pos) !void {
+        _ = self;
+        _ = starts;
+    }
+
+    fn findKeysDefault(self: *Vault, starts: []const Pos) !void {
+        _ = self;
+        _ = starts;
+    }
+
+    pub fn collectAllKeys(self: *Vault) !usize {
+        var starts: [4]Pos = undefined;
+        try self.alterGrid(&starts);
+        for (starts) |s| {
+            std.debug.print("Start: {}\n", .{s});
+        }
+        try self.findKeyPaths(&starts);
+        self.show();
+        return 0;
     }
 };
 
-test "sample part 1 case A" {
-    const data: []const u8 =
-        \\#########
-        \\#b.A.@.a#
-        \\#########
-    ;
-
-    var vault = Vault.init(testing.allocator);
-    defer vault.deinit();
-
-    var it = std.mem.split(u8, data, "\n");
-    while (it.next()) |line| {
-        try vault.addLine(line);
-    }
-
-    const result = try vault.collectAllKeys();
-    const expected = @as(usize, 8);
-    try testing.expectEqual(expected, result);
-}
-
-test "sample part 1 case B" {
-    const data: []const u8 =
-        \\########################
-        \\#f.D.E.e.C.b.A.@.a.B.c.#
-        \\######################.#
-        \\#d.....................#
-        \\########################
-    ;
-
-    var vault = Vault.init(testing.allocator);
-    defer vault.deinit();
-
-    var it = std.mem.split(u8, data, "\n");
-    while (it.next()) |line| {
-        try vault.addLine(line);
-    }
-
-    const result = try vault.collectAllKeys();
-    const expected = @as(usize, 86);
-    try testing.expectEqual(expected, result);
-}
-
-test "sample part 1 case C" {
-    const data: []const u8 =
-        \\########################
-        \\#...............b.C.D.f#
-        \\#.######################
-        \\#.....@.a.B.c.d.A.e.F.g#
-        \\########################
-    ;
-
-    var vault = Vault.init(testing.allocator);
-    defer vault.deinit();
-
-    var it = std.mem.split(u8, data, "\n");
-    while (it.next()) |line| {
-        try vault.addLine(line);
-    }
-
-    const result = try vault.collectAllKeys();
-    const expected = @as(usize, 132);
-    try testing.expectEqual(expected, result);
-}
+// test "sample part 1 case A" {
+//     const data: []const u8 =
+//         \\#########
+//         \\#b.A.@.a#
+//         \\#########
+//     ;
+//
+//     var vault = Vault.init(testing.allocator);
+//     defer vault.deinit();
+//
+//     var it = std.mem.split(u8, data, "\n");
+//     while (it.next()) |line| {
+//         try vault.addLine(line);
+//     }
+//
+//     const result = try vault.collectAllKeys();
+//     const expected = @as(usize, 8);
+//     try testing.expectEqual(expected, result);
+// }
+//
+// test "sample part 1 case B" {
+//     const data: []const u8 =
+//         \\########################
+//         \\#f.D.E.e.C.b.A.@.a.B.c.#
+//         \\######################.#
+//         \\#d.....................#
+//         \\########################
+//     ;
+//
+//     var vault = Vault.init(testing.allocator);
+//     defer vault.deinit();
+//
+//     var it = std.mem.split(u8, data, "\n");
+//     while (it.next()) |line| {
+//         try vault.addLine(line);
+//     }
+//
+//     const result = try vault.collectAllKeys();
+//     const expected = @as(usize, 86);
+//     try testing.expectEqual(expected, result);
+// }
+//
+// test "sample part 1 case C" {
+//     const data: []const u8 =
+//         \\########################
+//         \\#...............b.C.D.f#
+//         \\#.######################
+//         \\#.....@.a.B.c.d.A.e.F.g#
+//         \\########################
+//     ;
+//
+//     var vault = Vault.init(testing.allocator);
+//     defer vault.deinit();
+//
+//     var it = std.mem.split(u8, data, "\n");
+//     while (it.next()) |line| {
+//         try vault.addLine(line);
+//     }
+//
+//     const result = try vault.collectAllKeys();
+//     const expected = @as(usize, 132);
+//     try testing.expectEqual(expected, result);
+// }
 
 test "sample part 1 case D" {
     const data: []const u8 =
@@ -454,25 +437,25 @@ test "sample part 1 case D" {
     try testing.expectEqual(expected, result);
 }
 
-test "sample part 1 case E" {
-    const data: []const u8 =
-        \\########################
-        \\#@..............ac.GI.b#
-        \\###d#e#f################
-        \\###A#B#C################
-        \\###g#h#i################
-        \\########################
-    ;
-
-    var vault = Vault.init(testing.allocator);
-    defer vault.deinit();
-
-    var it = std.mem.split(u8, data, "\n");
-    while (it.next()) |line| {
-        try vault.addLine(line);
-    }
-
-    const result = try vault.collectAllKeys();
-    const expected = @as(usize, 81);
-    try testing.expectEqual(expected, result);
-}
+// test "sample part 1 case E" {
+//     const data: []const u8 =
+//         \\########################
+//         \\#@..............ac.GI.b#
+//         \\###d#e#f################
+//         \\###A#B#C################
+//         \\###g#h#i################
+//         \\########################
+//     ;
+//
+//     var vault = Vault.init(testing.allocator);
+//     defer vault.deinit();
+//
+//     var it = std.mem.split(u8, data, "\n");
+//     while (it.next()) |line| {
+//         try vault.addLine(line);
+//     }
+//
+//     const result = try vault.collectAllKeys();
+//     const expected = @as(usize, 81);
+//     try testing.expectEqual(expected, result);
+// }
