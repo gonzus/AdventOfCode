@@ -25,9 +25,9 @@ pub fn main() anyerror!u8 {
             try testing.expectEqual(expected, answer);
         },
         .part2 => {
-            // answer = try vault.measureTimeToFillWithOxygen();
-            // const expected = @as(usize, 372);
-            // try testing.expectEqual(expected, answer);
+            answer = 0;
+            const expected = @as(usize, 1858);
+            try testing.expectEqual(expected, answer);
         },
     }
 

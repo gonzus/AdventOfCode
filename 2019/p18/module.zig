@@ -10,6 +10,7 @@ pub const Vault = struct {
     const Pos = UtilGrid.Pos;
     const Grid = UtilGrid.SparseGrid(Tile);
     const Score = std.AutoHashMap(Pos, usize);
+    const INFINITY = std.math.maxInt(usize);
     const OFFSET = 500;
 
     pub const Dir = enum(u8) {
@@ -121,7 +122,7 @@ pub const Vault = struct {
     keys: std.AutoHashMap(Pos, u8),
     doors: std.AutoHashMap(Pos, u8),
     nodes: std.AutoHashMap(u64, Node),
-    pos_current: Pos,
+    start: Pos,
 
     pub fn init(allocator: Allocator) Vault {
         return .{
@@ -132,7 +133,7 @@ pub const Vault = struct {
             .keys = std.AutoHashMap(Pos, u8).init(allocator),
             .doors = std.AutoHashMap(Pos, u8).init(allocator),
             .nodes = std.AutoHashMap(u64, Node).init(allocator),
-            .pos_current = Pos.init(OFFSET / 2, OFFSET / 2),
+            .start = undefined,
         };
     }
 
@@ -168,7 +169,7 @@ pub const Vault = struct {
     //             if (pos.equal(self.pos_oxygen)) {
     //                 label = 'O';
     //             }
-    //             if (pos.equal(self.pos_current)) {
+    //             if (pos.equal(self.start)) {
     //                 label = 'D';
     //             }
     //             std.debug.print("{c}", .{label});
@@ -183,7 +184,7 @@ pub const Vault = struct {
             var t: Tile = .empty;
             switch (line[x]) {
                 '#' => t = .wall,
-                '@' => self.pos_current = p,
+                '@' => self.start = p,
                 'A'...'Z' => {
                     t = .door;
                     _ = try self.doors.put(p, line[x]);
@@ -204,7 +205,68 @@ pub const Vault = struct {
         return self.walk_graph();
     }
 
-    pub fn walk_map(self: *Vault) void {
+    const State = struct {
+        steps: usize,
+        pos: Pos,
+        doors: u32,
+
+        pub fn init(steps: usize, pos: Pos, doors: u32) State {
+            return .{
+                .steps = steps,
+                .pos = pos,
+                .doors = doors,
+            };
+        }
+    };
+
+    const Path = struct {
+        steps: usize,
+        doors: usize,
+
+        pub fn init(steps: usize, doors: usize) Path {
+            return .{
+                .steps = steps,
+                .doors = doors,
+            };
+        }
+    };
+
+    fn findShortestPath(self: *Vault, src: Pos, tgt: Pos) !Path {
+        var visited = std.AutoHashMap(Pos, void).init(self.allocator);
+        defer visited.deinit();
+
+        const PQ = std.PriorityQueue(State, void, State.cmp);
+        var queue = PQ.init(self.allocator, {});
+        defer queue.deinit();
+
+        _ = try queue.add(State.init(0, src, 0));
+        while (queue.count() != 0) {
+            var state = queue.remove();
+            if (state.pos.equal(tgt)) {
+                return Path.init(state.steps, state.doors);
+            }
+            try visited.put(state.pos, {});
+            var doors = state.doors;
+            if (self.doors.get(state.pos)) |door| {
+                doors |= door;
+            }
+            for (Dirs) |d| {
+                const nxt = Dir.move(state.pos, d);
+                if (visited.contains(nxt)) continue;
+                if (self.grid.get(nxt) == .wall) continue;
+                _ = try queue.add(State.init(state.steps + 1, nxt, doors));
+            }
+        }
+        return Path.init(INFINITY, INFINITY);
+    }
+
+    fn findKeyPaths(self: *Vault, src: Pos, tgt: Pos) u32 {
+        _ = tgt;
+        _ = src;
+        _ = self;
+    }
+
+    fn walk_map(self: *Vault) void {
         // _ = self.get_all_keys();
         self.nodes.clearRetainingCapacity();
 
@@ -213,7 +275,7 @@ pub const Vault = struct {
         defer Pend.deinit();
 
         // We start from the oxygen system position, which has already been filled with oxygen
-        const first = Node.init(self.allocator, self.pos_current, 0);
+        const first = Node.init(self.allocator, self.start, 0);
         _ = Pend.add(first) catch unreachable;
         while (Pend.count() != 0) {
             var curr = Pend.remove();
@@ -258,7 +320,7 @@ pub const Vault = struct {
         // std.debug.warn("Graph has {} nodes\n", self.nodes.count());
     }
 
-    pub fn walk_graph(self: *Vault) usize {
+    fn walk_graph(self: *Vault) usize {
         var seen = std.AutoHashMap(u64, void).init(self.allocator);
         defer seen.deinit();
 
@@ -269,7 +331,7 @@ pub const Vault = struct {
         const all_keys = self.get_all_keys();
 
         var dmax: usize = 0;
-        const home = Node.init(self.allocator, self.pos_current, 0);
+        const home = Node.init(self.allocator, self.start, 0);
         const first = NodeInfo.init(home.encode(), 0);
         _ = Pend.add(first) catch unreachable;
         while (Pend.count() != 0) {
