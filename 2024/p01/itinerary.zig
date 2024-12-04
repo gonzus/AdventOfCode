@@ -78,7 +78,7 @@ test "sample part 1" {
         try itinerary.addLine(line);
     }
 
-    const distance = itinerary.getTotalDistance();
+    const distance = try itinerary.getTotalDistance();
     const expected = @as(usize, 11);
     try testing.expectEqual(expected, distance);
 }
@@ -101,7 +101,7 @@ test "sample part 2" {
         try itinerary.addLine(line);
     }
 
-    const score = itinerary.getSimilarityScore();
+    const score = try itinerary.getSimilarityScore();
     const expected = @as(usize, 31);
     try testing.expectEqual(expected, score);
 }

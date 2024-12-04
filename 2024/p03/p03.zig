@@ -17,12 +17,12 @@ pub fn main() anyerror!u8 {
     var answer: usize = 0;
     switch (part) {
         .part1 => {
-            answer = try computer.runMultiplies();
+            answer = computer.runMultiplies();
             const expected = @as(usize, 182780583);
             try testing.expectEqual(expected, answer);
         },
         .part2 => {
-            answer = try computer.runMultiplies();
+            answer = computer.runMultiplies();
             const expected = @as(usize, 90772405);
             try testing.expectEqual(expected, answer);
         },

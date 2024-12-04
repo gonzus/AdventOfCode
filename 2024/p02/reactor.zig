@@ -116,7 +116,7 @@ test "sample part 1" {
         try reactor.addLine(line);
     }
 
-    const count = reactor.countSafeReports();
+    const count = try reactor.countSafeReports();
     const expected = @as(usize, 2);
     try testing.expectEqual(expected, count);
 }
@@ -139,7 +139,7 @@ test "sample part 2" {
         try reactor.addLine(line);
     }
 
-    const count = reactor.countSafeReports();
+    const count = try reactor.countSafeReports();
     const expected = @as(usize, 4);
     try testing.expectEqual(expected, count);
 }

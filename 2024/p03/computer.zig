@@ -53,7 +53,7 @@ pub const Computer = struct {
         }
     }
 
-    pub fn runMultiplies(self: Computer) !usize {
+    pub fn runMultiplies(self: Computer) usize {
         return self.total;
     }
 };
