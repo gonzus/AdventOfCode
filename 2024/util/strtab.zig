@@ -11,7 +11,7 @@ pub const StringTable = struct {
     s2p: std.StringHashMap(StringId),
 
     pub fn init(allocator: Allocator) StringTable {
-        var self = StringTable{
+        const self = StringTable{
             .allocator = allocator,
             .p2s = std.ArrayList([]const u8).init(allocator),
             .s2p = std.StringHashMap(StringId).init(allocator),
@@ -62,7 +62,7 @@ pub const StringTable = struct {
 };
 
 test "basic" {
-    var strtab = StringTable.init(std.testing.allocator);
+    var strtab = StringTable.init(testing.allocator);
     defer strtab.deinit();
 
     const str = "gonzo";
@@ -75,7 +75,7 @@ test "basic" {
 }
 
 test "no overwrites" {
-    var strtab = StringTable.init(std.testing.allocator);
+    var strtab = StringTable.init(testing.allocator);
     defer strtab.deinit();
 
     const prefix = "This is string #";

@@ -70,7 +70,7 @@ test "sample part 1" {
         \\3   3
     ;
 
-    var itinerary = Itinerary.init(std.testing.allocator);
+    var itinerary = Itinerary.init(testing.allocator);
     defer itinerary.deinit();
 
     var it = std.mem.split(u8, data, "\n");
@@ -93,7 +93,7 @@ test "sample part 2" {
         \\3   3
     ;
 
-    var itinerary = Itinerary.init(std.testing.allocator);
+    var itinerary = Itinerary.init(testing.allocator);
     defer itinerary.deinit();
 
     var it = std.mem.split(u8, data, "\n");

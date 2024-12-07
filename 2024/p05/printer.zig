@@ -125,7 +125,7 @@ test "sample part 1" {
         \\97,13,75,29,47
     ;
 
-    var printer = Printer.init(std.testing.allocator, false);
+    var printer = Printer.init(testing.allocator, false);
     defer printer.deinit();
 
     var it = std.mem.split(u8, data, "\n");
@@ -170,7 +170,7 @@ test "sample part 2" {
         \\97,13,75,29,47
     ;
 
-    var printer = Printer.init(std.testing.allocator, true);
+    var printer = Printer.init(testing.allocator, true);
     defer printer.deinit();
 
     var it = std.mem.split(u8, data, "\n");

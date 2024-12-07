@@ -108,7 +108,7 @@ test "sample part 1" {
         \\1 3 6 7 9
     ;
 
-    var reactor = Reactor.init(std.testing.allocator, false);
+    var reactor = Reactor.init(testing.allocator, false);
     defer reactor.deinit();
 
     var it = std.mem.split(u8, data, "\n");
@@ -131,7 +131,7 @@ test "sample part 2" {
         \\1 3 6 7 9
     ;
 
-    var reactor = Reactor.init(std.testing.allocator, true);
+    var reactor = Reactor.init(testing.allocator, true);
     defer reactor.deinit();
 
     var it = std.mem.split(u8, data, "\n");
