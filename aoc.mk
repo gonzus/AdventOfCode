@@ -3,6 +3,11 @@ SHELL := /bin/bash
 DATA = ../data/input$(DAY).txt
 PROGRAMS = p$(DAY)
 
+BUILD_OPTS += -freference-trace
+ifneq ($(DEVEL),1)
+BUILD_OPTS += -OReleaseFast
+endif
+
 define make-aoc-mod-target
   $1_test:
 	zig test $1 -freference-trace
@@ -12,7 +17,7 @@ endef
 
 define make-aoc-prg-target
   $1: $1.zig $(MODULES)
-	zig build-exe $1.zig -freference-trace -OReleaseFast
+	zig build-exe $1.zig $(BUILD_OPTS)
   $1_clean:
 	rm -f $1
   $1_run: $1_run1 $1_run2
