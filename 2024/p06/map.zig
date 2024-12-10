@@ -74,7 +74,7 @@ pub const Map = struct {
         }
     };
 
-    board: [SIZE][SIZE]Mark,
+    grid: [SIZE][SIZE]Mark,
     rows: usize,
     cols: usize,
     gx: usize,
@@ -83,7 +83,7 @@ pub const Map = struct {
 
     pub fn init() Map {
         const self = Map{
-            .board = undefined,
+            .grid = undefined,
             .rows = 0,
             .cols = 0,
             .gx = 0,
@@ -100,18 +100,18 @@ pub const Map = struct {
             self.cols = line.len;
         }
         if (self.cols != line.len) {
-            return error.JaggedBoard;
+            return error.JaggedGrid;
         }
         const y = self.rows;
         for (line, 0..) |c, x| {
-            self.board[x][y] = Mark.init();
+            self.grid[x][y] = Mark.init();
             switch (c) {
-                '#' => self.board[x][y].markOccupied(),
+                '#' => self.grid[x][y].markOccupied(),
                 '^' => {
                     self.gx = x;
                     self.gy = y;
                     self.gd = .U;
-                    self.board[self.gx][self.gy].markVisitedGoing(self.gd);
+                    self.grid[self.gx][self.gy].markVisitedGoing(self.gd);
                 },
                 else => {},
             }
@@ -127,7 +127,7 @@ pub const Map = struct {
         var count: usize = 0;
         for (0..self.rows) |y| {
             for (0..self.cols) |x| {
-                if (self.board[x][y].visitedEver()) {
+                if (self.grid[x][y].visitedEver()) {
                     count += 1;
                 }
             }
@@ -147,16 +147,16 @@ pub const Map = struct {
                 if (nx == gx and ny == gy) {
                     continue; // skip guard
                 }
-                if (self.board[nx][ny].isOccupied()) {
+                if (self.grid[nx][ny].isOccupied()) {
                     continue; // skip occupied
                 }
                 self.reset(gx, gy, gd);
-                self.board[nx][ny].markOccupied();
+                self.grid[nx][ny].markOccupied();
                 if (!try self.walkAround()) {
                     // we managed to put guard in a loop
                     count += 1;
                 }
-                self.board[nx][ny].markUnoccupied();
+                self.grid[nx][ny].markUnoccupied();
             }
         }
         return count;
@@ -172,7 +172,7 @@ pub const Map = struct {
             }
             const nx: u8 = @intCast(ix);
             const ny: u8 = @intCast(iy);
-            if (self.board[nx][ny].isOccupied()) {
+            if (self.grid[nx][ny].isOccupied()) {
                 // change direction
                 self.gd.turnRight();
             } else {
@@ -180,11 +180,11 @@ pub const Map = struct {
                 self.gx = nx;
                 self.gy = ny;
             }
-            if (self.board[self.gx][self.gy].visitedGoing(self.gd)) {
+            if (self.grid[self.gx][self.gy].visitedGoing(self.gd)) {
                 // we are in a loop
                 return false;
             }
-            self.board[self.gx][self.gy].markVisitedGoing(self.gd);
+            self.grid[self.gx][self.gy].markVisitedGoing(self.gd);
             continue;
         }
         return false;
@@ -193,13 +193,13 @@ pub const Map = struct {
     fn reset(self: *Map, gx: usize, gy: usize, gd: Dir) void {
         for (0..self.rows) |y| {
             for (0..self.cols) |x| {
-                self.board[x][y].forgetVisits();
+                self.grid[x][y].forgetVisits();
             }
         }
         self.gx = gx;
         self.gy = gy;
         self.gd = gd;
-        self.board[self.gx][self.gy].markVisitedGoing(self.gd);
+        self.grid[self.gx][self.gy].markVisitedGoing(self.gd);
     }
 };
 

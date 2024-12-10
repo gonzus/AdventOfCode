@@ -18,7 +18,7 @@ pub const Map = struct {
     };
 
     harmonics: bool,
-    board: [SIZE][SIZE]u8,
+    grid: [SIZE][SIZE]u8,
     rows: usize,
     cols: usize,
     antennas: [ANTENNAS]std.ArrayList(Pos),
@@ -27,7 +27,7 @@ pub const Map = struct {
     pub fn init(allocator: Allocator, harmonics: bool) Map {
         var self = Map{
             .harmonics = harmonics,
-            .board = undefined,
+            .grid = undefined,
             .rows = 0,
             .cols = 0,
             .antennas = undefined,
@@ -71,7 +71,7 @@ pub const Map = struct {
             self.cols = line.len;
         }
         if (self.cols != line.len) {
-            return error.JaggedBoard;
+            return error.JaggedGrid;
         }
         const y = self.rows;
         for (line, 0..) |c, x| {
@@ -79,16 +79,16 @@ pub const Map = struct {
             if (p != INFINITY) {
                 try self.antennas[p].append(Pos.init(x, y));
             }
-            self.board[x][y] = c;
+            self.grid[x][y] = c;
         }
         self.rows += 1;
     }
 
     pub fn show(self: *Map) void {
-        std.debug.print("BOARD {} x {}\n", .{ self.rows, self.cols });
+        std.debug.print("Grid {} x {}\n", .{ self.rows, self.cols });
         for (0..self.rows) |y| {
             for (0..self.cols) |x| {
-                std.debug.print("{c}", .{self.board[x][y]});
+                std.debug.print("{c}", .{self.grid[x][y]});
             }
             std.debug.print("\n", .{});
         }

@@ -6,13 +6,13 @@ pub const Game = struct {
     const XMAS = "XMAS";
     const MAS = "MAS";
 
-    board: [SIZE][SIZE]u8,
+    grid: [SIZE][SIZE]u8,
     rows: usize,
     cols: usize,
 
     pub fn init() Game {
         const self = Game{
-            .board = undefined,
+            .grid = undefined,
             .rows = 0,
             .cols = 0,
         };
@@ -26,10 +26,10 @@ pub const Game = struct {
             self.cols = line.len;
         }
         if (self.cols != line.len) {
-            return error.JaggedBoard;
+            return error.JaggedGrid;
         }
         for (line, 0..) |c, x| {
-            self.board[x][self.rows] = c;
+            self.grid[x][self.rows] = c;
         }
         self.rows += 1;
     }
@@ -100,7 +100,7 @@ pub const Game = struct {
             if (iy < 0 or iy >= self.rows) return false;
             const nx: usize = @intCast(ix);
             const ny: usize = @intCast(iy);
-            if (self.board[nx][ny] != c) return false;
+            if (self.grid[nx][ny] != c) return false;
             ix += delta.x;
             iy += delta.y;
         }
@@ -112,12 +112,12 @@ pub const Game = struct {
         // But I cannot be arsed.
         if (x < 1 or y < 1) return false;
         if (x + 1 >= self.cols or y + 1 >= self.rows) return false;
-        if (self.board[x][y] != 'A') return false;
+        if (self.grid[x][y] != 'A') return false;
         var found: usize = 0;
-        if (self.board[x - 1][y - 1] == 'M' and self.board[x + 1][y + 1] == 'S') found += 1;
-        if (self.board[x - 1][y - 1] == 'S' and self.board[x + 1][y + 1] == 'M') found += 1;
-        if (self.board[x - 1][y + 1] == 'M' and self.board[x + 1][y - 1] == 'S') found += 1;
-        if (self.board[x - 1][y + 1] == 'S' and self.board[x + 1][y - 1] == 'M') found += 1;
+        if (self.grid[x - 1][y - 1] == 'M' and self.grid[x + 1][y + 1] == 'S') found += 1;
+        if (self.grid[x - 1][y - 1] == 'S' and self.grid[x + 1][y + 1] == 'M') found += 1;
+        if (self.grid[x - 1][y + 1] == 'M' and self.grid[x + 1][y - 1] == 'S') found += 1;
+        if (self.grid[x - 1][y + 1] == 'S' and self.grid[x + 1][y - 1] == 'M') found += 1;
         return found == 2;
     }
 };
