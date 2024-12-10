@@ -1,8 +1,23 @@
 const std = @import("std");
 const testing = std.testing;
 
+const Allocator = std.mem.Allocator;
+
 pub const Map = struct {
-    const SIZE = 150;
+    const SIZE = 130;
+
+    const Pos = struct {
+        x: usize,
+        y: usize,
+
+        pub fn init(x: usize, y: usize) Pos {
+            return .{ .x = x, .y = y };
+        }
+
+        pub fn equals(self: Pos, other: Pos) bool {
+            return self.x == other.x and self.y == other.y;
+        }
+    };
 
     const Dir = enum(u8) {
         U = 0b00010,
@@ -26,6 +41,15 @@ pub const Map = struct {
                 .D => y.* += 1,
                 .L => x.* -= 1,
             }
+        }
+    };
+
+    const Guard = struct {
+        pos: Pos,
+        dir: Dir,
+
+        pub fn init(x: usize, y: usize, dir: Dir) Guard {
+            return .{ .pos = Pos.init(x, y), .dir = dir };
         }
     };
 
@@ -77,23 +101,26 @@ pub const Map = struct {
     grid: [SIZE][SIZE]Mark,
     rows: usize,
     cols: usize,
-    gx: usize,
-    gy: usize,
-    gd: Dir,
+    guard: Guard,
+    visited: std.AutoHashMap(Pos, void),
+    attempted: std.AutoHashMap(Pos, void),
 
-    pub fn init() Map {
+    pub fn init(allocator: Allocator) Map {
         const self = Map{
             .grid = undefined,
             .rows = 0,
             .cols = 0,
-            .gx = 0,
-            .gy = 0,
-            .gd = .U,
+            .guard = Guard.init(0, 0, .U),
+            .visited = std.AutoHashMap(Pos, void).init(allocator),
+            .attempted = std.AutoHashMap(Pos, void).init(allocator),
         };
         return self;
     }
 
-    pub fn deinit(_: *Map) void {}
+    pub fn deinit(self: *Map) void {
+        self.attempted.deinit();
+        self.visited.deinit();
+    }
 
     pub fn addLine(self: *Map, line: []const u8) !void {
         if (self.cols == 0) {
@@ -107,12 +134,7 @@ pub const Map = struct {
             self.grid[x][y] = Mark.init();
             switch (c) {
                 '#' => self.grid[x][y].markOccupied(),
-                '^' => {
-                    self.gx = x;
-                    self.gy = y;
-                    self.gd = .U;
-                    self.grid[self.gx][self.gy].markVisitedGoing(self.gd);
-                },
+                '^' => self.updateGuard(Guard.init(x, y, .U)),
                 else => {},
             }
         }
@@ -136,70 +158,96 @@ pub const Map = struct {
     }
 
     pub fn countPossibleObstructions(self: *Map) !usize {
-        // we could (probably) only attempt to place obstructions around the original path
-        // but I cannot be arsed, so I will just brute-force it.
+        // remember all visited locations during simple walk
+        self.visited.clearRetainingCapacity();
+        _ = try self.walkAround();
+        for (0..self.rows) |y| {
+            for (0..self.cols) |x| {
+                if (self.grid[x][y].visitedEver()) {
+                    _ = try self.visited.getOrPut(Pos.init(x, y));
+                }
+            }
+        }
+        self.forgetAllVisits();
+
+        self.attempted.clearRetainingCapacity();
         var count: usize = 0;
-        const gx = self.gx;
-        const gy = self.gy;
-        const gd = self.gd;
-        for (0..self.rows) |ny| {
-            for (0..self.cols) |nx| {
-                if (nx == gx and ny == gy) {
-                    continue; // skip guard
+        for (0..self.rows) |y| {
+            for (0..self.cols) |x| {
+                if (self.grid[x][y].isOccupied()) continue; // skip occupied
+                if (self.guard.pos.equals(Pos.init(x, y))) continue; // skip guard
+                for (std.enums.values(Dir)) |dir| {
+                    count += try self.attemptBlockingPos(x, y, dir);
                 }
-                if (self.grid[nx][ny].isOccupied()) {
-                    continue; // skip occupied
-                }
-                self.reset(gx, gy, gd);
-                self.grid[nx][ny].markOccupied();
-                if (!try self.walkAround()) {
-                    // we managed to put guard in a loop
-                    count += 1;
-                }
-                self.grid[nx][ny].markUnoccupied();
             }
         }
         return count;
     }
 
+    fn updateGuard(self: *Map, guard: Guard) void {
+        self.guard = guard;
+        self.grid[guard.pos.x][guard.pos.y].markVisitedGoing(guard.dir);
+    }
+
+    fn validPos(self: Map, ix: isize, iy: isize) bool {
+        return (ix >= 0 and ix < self.cols and iy >= 0 and iy < self.rows);
+    }
+
     fn walkAround(self: *Map) !bool {
+        const guard = self.guard;
+        defer self.updateGuard(guard);
         while (true) {
-            var ix: isize = @intCast(self.gx);
-            var iy: isize = @intCast(self.gy);
-            self.gd.takeStep(&ix, &iy);
-            if (ix < 0 or ix >= self.cols or iy < 0 or iy >= self.rows) {
+            var ix: isize = @intCast(self.guard.pos.x);
+            var iy: isize = @intCast(self.guard.pos.y);
+            self.guard.dir.takeStep(&ix, &iy);
+            if (!self.validPos(ix, iy)) {
                 return true;
             }
             const nx: u8 = @intCast(ix);
             const ny: u8 = @intCast(iy);
             if (self.grid[nx][ny].isOccupied()) {
                 // change direction
-                self.gd.turnRight();
+                self.guard.dir.turnRight();
             } else {
                 // move there
-                self.gx = nx;
-                self.gy = ny;
+                self.guard.pos = Pos.init(nx, ny);
             }
-            if (self.grid[self.gx][self.gy].visitedGoing(self.gd)) {
+            if (self.grid[self.guard.pos.x][self.guard.pos.y].visitedGoing(self.guard.dir)) {
                 // we are in a loop
                 return false;
             }
-            self.grid[self.gx][self.gy].markVisitedGoing(self.gd);
-            continue;
+            self.updateGuard(self.guard);
         }
         return false;
     }
 
-    fn reset(self: *Map, gx: usize, gy: usize, gd: Dir) void {
+    fn forgetAllVisits(self: *Map) void {
         for (0..self.rows) |y| {
             for (0..self.cols) |x| {
                 self.grid[x][y].forgetVisits();
             }
         }
-        self.gx = gx;
-        self.gy = gy;
-        self.gd = gd;
-        self.grid[self.gx][self.gy].markVisitedGoing(self.gd);
+    }
+
+    fn attemptBlockingPos(self: *Map, x: usize, y: usize, dir: Dir) !usize {
+        var ix: isize = @intCast(x);
+        var iy: isize = @intCast(y);
+        dir.takeStep(&ix, &iy);
+        if (!self.validPos(ix, iy)) return 0;
+        const nx: usize = @intCast(ix);
+        const ny: usize = @intCast(iy);
+        if (!self.visited.contains(Pos.init(nx, ny))) return 0;
+        const r = try self.attempted.getOrPut(Pos.init(nx, ny));
+        if (r.found_existing) return 0;
+        var blocked: usize = 0;
+        self.grid[nx][ny].markOccupied();
+        if (!try self.walkAround()) {
+            // we managed to put guard in a loop
+            blocked = 1;
+        }
+        self.grid[nx][ny].markUnoccupied();
+        self.forgetAllVisits();
+        return blocked;
     }
 };
 
@@ -217,7 +265,7 @@ test "sample part 1" {
         \\......#...
     ;
 
-    var map = Map.init();
+    var map = Map.init(testing.allocator);
     defer map.deinit();
 
     var it = std.mem.split(u8, data, "\n");
@@ -244,7 +292,7 @@ test "sample part 2" {
         \\......#...
     ;
 
-    var map = Map.init();
+    var map = Map.init(testing.allocator);
     defer map.deinit();
 
     var it = std.mem.split(u8, data, "\n");

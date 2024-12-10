@@ -4,8 +4,12 @@ const command = @import("./util/command.zig");
 const Map = @import("./map.zig").Map;
 
 pub fn main() anyerror!u8 {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
     const part = command.choosePart();
-    var map = Map.init();
+    var map = Map.init(allocator);
     defer map.deinit();
 
     const inp = std.io.getStdIn().reader();
