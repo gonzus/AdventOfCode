@@ -3,7 +3,7 @@ const testing = std.testing;
 
 const Allocator = std.mem.Allocator;
 
-pub const Reactor = struct {
+pub const Module = struct {
     const Report = struct {
         levels: std.ArrayList(isize),
         pub fn init(allocator: Allocator) Report {
@@ -62,8 +62,8 @@ pub const Reactor = struct {
     dampener: bool,
     reports: std.ArrayList(Report),
 
-    pub fn init(allocator: Allocator, dampener: bool) Reactor {
-        const self = Reactor{
+    pub fn init(allocator: Allocator, dampener: bool) Module {
+        const self = Module{
             .allocator = allocator,
             .dampener = dampener,
             .reports = std.ArrayList(Report).init(allocator),
@@ -71,14 +71,14 @@ pub const Reactor = struct {
         return self;
     }
 
-    pub fn deinit(self: *Reactor) void {
+    pub fn deinit(self: *Module) void {
         for (self.reports.items) |*r| {
             r.*.deinit();
         }
         self.reports.deinit();
     }
 
-    pub fn addLine(self: *Reactor, line: []const u8) !void {
+    pub fn addLine(self: *Module, line: []const u8) !void {
         var report = Report.init(self.allocator);
         var it = std.mem.tokenizeScalar(u8, line, ' ');
         while (it.next()) |chunk| {
@@ -88,7 +88,7 @@ pub const Reactor = struct {
         try self.reports.append(report);
     }
 
-    pub fn countSafeReports(self: Reactor) !usize {
+    pub fn countSafeReports(self: Module) !usize {
         var count: usize = 0;
         for (self.reports.items) |report| {
             if (!try report.isSafe(self.dampener)) continue;
@@ -108,15 +108,15 @@ test "sample part 1" {
         \\1 3 6 7 9
     ;
 
-    var reactor = Reactor.init(testing.allocator, false);
-    defer reactor.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try reactor.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try reactor.countSafeReports();
+    const count = try module.countSafeReports();
     const expected = @as(usize, 2);
     try testing.expectEqual(expected, count);
 }
@@ -131,15 +131,15 @@ test "sample part 2" {
         \\1 3 6 7 9
     ;
 
-    var reactor = Reactor.init(testing.allocator, true);
-    defer reactor.deinit();
+    var module = Module.init(testing.allocator, true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try reactor.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try reactor.countSafeReports();
+    const count = try module.countSafeReports();
     const expected = @as(usize, 4);
     try testing.expectEqual(expected, count);
 }

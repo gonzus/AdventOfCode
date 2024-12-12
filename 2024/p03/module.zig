@@ -1,13 +1,13 @@
 const std = @import("std");
 const testing = std.testing;
 
-pub const Computer = struct {
+pub const Module = struct {
     conditional: bool,
     do: bool,
     total: usize,
 
-    pub fn init(conditional: bool) Computer {
-        const self = Computer{
+    pub fn init(conditional: bool) Module {
+        const self = Module{
             .conditional = conditional,
             .do = true,
             .total = 0,
@@ -15,9 +15,9 @@ pub const Computer = struct {
         return self;
     }
 
-    pub fn deinit(_: *Computer) void {}
+    pub fn deinit(_: *Module) void {}
 
-    pub fn addLine(self: *Computer, line: []const u8) !void {
+    pub fn addLine(self: *Module, line: []const u8) !void {
         var window = std.mem.window(u8, line, 7, 1);
         while (window.next()) |prefix| {
             if (std.mem.eql(u8, prefix[0..4], "mul(")) {
@@ -53,7 +53,7 @@ pub const Computer = struct {
         }
     }
 
-    pub fn runMultiplies(self: Computer) usize {
+    pub fn runMultiplies(self: Module) usize {
         return self.total;
     }
 };
@@ -63,15 +63,15 @@ test "sample part 1" {
         \\xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))
     ;
 
-    var computer = Computer.init(false);
-    defer computer.deinit();
+    var module = Module.init(false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try computer.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = computer.runMultiplies();
+    const count = module.runMultiplies();
     const expected = @as(usize, 161);
     try testing.expectEqual(expected, count);
 }
@@ -81,15 +81,15 @@ test "sample part 2" {
         \\xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))
     ;
 
-    var computer = Computer.init(true);
-    defer computer.deinit();
+    var module = Module.init(true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try computer.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = computer.runMultiplies();
+    const count = module.runMultiplies();
     const expected = @as(usize, 48);
     try testing.expectEqual(expected, count);
 }

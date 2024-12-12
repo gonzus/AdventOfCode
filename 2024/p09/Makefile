@@ -1,4 +1,4 @@
 DAY = 09
-MODULES = disk.zig
+MODULES = module.zig
 
 include ../../aoc.mk

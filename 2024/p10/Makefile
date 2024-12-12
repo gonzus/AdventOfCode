@@ -1,5 +1,5 @@
 DAY = 10
-MODULES = map.zig
+MODULES = module.zig
 # DEVEL = 1
 
 include ../../aoc.mk

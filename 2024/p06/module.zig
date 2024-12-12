@@ -3,7 +3,7 @@ const testing = std.testing;
 
 const Allocator = std.mem.Allocator;
 
-pub const Map = struct {
+pub const Module = struct {
     const SIZE = 130;
 
     const Pos = struct {
@@ -105,8 +105,8 @@ pub const Map = struct {
     visited: std.AutoHashMap(Pos, void),
     attempted: std.AutoHashMap(Pos, void),
 
-    pub fn init(allocator: Allocator) Map {
-        const self = Map{
+    pub fn init(allocator: Allocator) Module {
+        const self = Module{
             .grid = undefined,
             .rows = 0,
             .cols = 0,
@@ -117,12 +117,12 @@ pub const Map = struct {
         return self;
     }
 
-    pub fn deinit(self: *Map) void {
+    pub fn deinit(self: *Module) void {
         self.attempted.deinit();
         self.visited.deinit();
     }
 
-    pub fn addLine(self: *Map, line: []const u8) !void {
+    pub fn addLine(self: *Module, line: []const u8) !void {
         if (self.cols == 0) {
             self.cols = line.len;
         }
@@ -141,7 +141,7 @@ pub const Map = struct {
         self.rows += 1;
     }
 
-    pub fn countVisited(self: *Map) !usize {
+    pub fn countVisited(self: *Module) !usize {
         if (!try self.walkAround()) {
             // was in a loop, return 0 in this case
             return 0;
@@ -157,7 +157,7 @@ pub const Map = struct {
         return count;
     }
 
-    pub fn countPossibleObstructions(self: *Map) !usize {
+    pub fn countPossibleObstructions(self: *Module) !usize {
         // remember all visited locations during simple walk
         self.visited.clearRetainingCapacity();
         _ = try self.walkAround();
@@ -184,16 +184,16 @@ pub const Map = struct {
         return count;
     }
 
-    fn updateGuard(self: *Map, guard: Guard) void {
+    fn updateGuard(self: *Module, guard: Guard) void {
         self.guard = guard;
         self.grid[guard.pos.x][guard.pos.y].markVisitedGoing(guard.dir);
     }
 
-    fn validPos(self: Map, ix: isize, iy: isize) bool {
+    fn validPos(self: Module, ix: isize, iy: isize) bool {
         return (ix >= 0 and ix < self.cols and iy >= 0 and iy < self.rows);
     }
 
-    fn walkAround(self: *Map) !bool {
+    fn walkAround(self: *Module) !bool {
         const guard = self.guard;
         defer self.updateGuard(guard);
         while (true) {
@@ -221,7 +221,7 @@ pub const Map = struct {
         return false;
     }
 
-    fn forgetAllVisits(self: *Map) void {
+    fn forgetAllVisits(self: *Module) void {
         for (0..self.rows) |y| {
             for (0..self.cols) |x| {
                 self.grid[x][y].forgetVisits();
@@ -229,7 +229,7 @@ pub const Map = struct {
         }
     }
 
-    fn attemptBlockingPos(self: *Map, x: usize, y: usize, dir: Dir) !usize {
+    fn attemptBlockingPos(self: *Module, x: usize, y: usize, dir: Dir) !usize {
         var ix: isize = @intCast(x);
         var iy: isize = @intCast(y);
         dir.takeStep(&ix, &iy);
@@ -265,15 +265,15 @@ test "sample part 1" {
         \\......#...
     ;
 
-    var map = Map.init(testing.allocator);
-    defer map.deinit();
+    var module = Module.init(testing.allocator);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.countVisited();
+    const count = try module.countVisited();
     const expected = @as(usize, 41);
     try testing.expectEqual(expected, count);
 }
@@ -292,15 +292,15 @@ test "sample part 2" {
         \\......#...
     ;
 
-    var map = Map.init(testing.allocator);
-    defer map.deinit();
+    var module = Module.init(testing.allocator);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.countPossibleObstructions();
+    const count = try module.countPossibleObstructions();
     const expected = @as(usize, 6);
     try testing.expectEqual(expected, count);
 }

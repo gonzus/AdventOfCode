@@ -3,7 +3,7 @@ const testing = std.testing;
 
 const Allocator = std.mem.Allocator;
 
-pub const Disk = struct {
+pub const Module = struct {
     const FREE = std.math.maxInt(usize);
 
     const Free = struct {
@@ -20,8 +20,8 @@ pub const Disk = struct {
     blocks: std.ArrayList(usize),
     free: std.ArrayList(Free),
 
-    pub fn init(allocator: Allocator, whole: bool) Disk {
-        const self = Disk{
+    pub fn init(allocator: Allocator, whole: bool) Module {
+        const self = Module{
             .whole = whole,
             .map = std.ArrayList(u8).init(allocator),
             .blocks = std.ArrayList(usize).init(allocator),
@@ -30,18 +30,18 @@ pub const Disk = struct {
         return self;
     }
 
-    pub fn deinit(self: *Disk) void {
+    pub fn deinit(self: *Module) void {
         self.free.deinit();
         self.blocks.deinit();
         self.map.deinit();
     }
 
-    pub fn addLine(self: *Disk, line: []const u8) !void {
+    pub fn addLine(self: *Module, line: []const u8) !void {
         try self.map.appendSlice(line);
     }
 
-    pub fn show(self: *Disk) void {
-        std.debug.print("DISK with map length {}, compacting whole: {}\n", .{ self.map.items.len, self.whole });
+    pub fn show(self: *Module) void {
+        std.debug.print("Disk with map length {}, compacting whole: {}\n", .{ self.map.items.len, self.whole });
 
         std.debug.print("MAP\n", .{});
         for (self.map.items) |m| {
@@ -66,7 +66,7 @@ pub const Disk = struct {
         }
     }
 
-    fn computeMap(self: *Disk) !void {
+    fn computeMap(self: *Module) !void {
         self.blocks.clearRetainingCapacity();
         var id: usize = 0;
         var free = false;
@@ -84,7 +84,7 @@ pub const Disk = struct {
         }
     }
 
-    fn compactMapByBlocks(self: *Disk) !void {
+    fn compactMapByBlocks(self: *Module) !void {
         var beg: usize = 0;
         var end: usize = self.blocks.items.len - 1;
         while (true) {
@@ -99,7 +99,7 @@ pub const Disk = struct {
         }
     }
 
-    fn compactMapByWholeFiles(self: *Disk) !void {
+    fn compactMapByWholeFiles(self: *Module) !void {
         var end: usize = self.blocks.items.len - 1;
         while (true) {
             if (end < self.free.items[0].pos) break;
@@ -120,7 +120,7 @@ pub const Disk = struct {
         }
     }
 
-    fn compactMap(self: *Disk) !void {
+    fn compactMap(self: *Module) !void {
         if (self.whole) {
             try self.compactMapByWholeFiles();
         } else {
@@ -128,7 +128,7 @@ pub const Disk = struct {
         }
     }
 
-    pub fn computeChecksum(self: *Disk) !usize {
+    pub fn computeChecksum(self: *Module) !usize {
         try self.computeMap();
         try self.compactMap();
         // self.show();
@@ -147,15 +147,15 @@ test "sample part 1" {
         \\2333133121414131402
     ;
 
-    var disk = Disk.init(testing.allocator, false);
-    defer disk.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try disk.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try disk.computeChecksum();
+    const count = try module.computeChecksum();
     const expected = @as(usize, 1928);
     try testing.expectEqual(expected, count);
 }
@@ -165,15 +165,15 @@ test "sample part 2" {
         \\2333133121414131402
     ;
 
-    var disk = Disk.init(testing.allocator, true);
-    defer disk.deinit();
+    var module = Module.init(testing.allocator, true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try disk.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try disk.computeChecksum();
+    const count = try module.computeChecksum();
     const expected = @as(usize, 2858);
     try testing.expectEqual(expected, count);
 }

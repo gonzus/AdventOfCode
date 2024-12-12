@@ -1,4 +1,4 @@
 DAY = 03
-MODULES = computer.zig
+MODULES = module.zig
 
 include ../../aoc.mk

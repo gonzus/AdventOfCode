@@ -3,7 +3,7 @@ const testing = std.testing;
 
 const Allocator = std.mem.Allocator;
 
-pub const Map = struct {
+pub const Module = struct {
     const SIZE = 50;
 
     const Pos = struct {
@@ -21,8 +21,8 @@ pub const Map = struct {
     cols: usize,
     seen: std.AutoHashMap(Pos, void),
 
-    pub fn init(allocator: Allocator, use_rating: bool) Map {
-        const self = Map{
+    pub fn init(allocator: Allocator, use_rating: bool) Module {
+        const self = Module{
             .use_rating = use_rating,
             .grid = undefined,
             .rows = 0,
@@ -32,11 +32,11 @@ pub const Map = struct {
         return self;
     }
 
-    pub fn deinit(self: *Map) void {
+    pub fn deinit(self: *Module) void {
         self.seen.deinit();
     }
 
-    pub fn addLine(self: *Map, line: []const u8) !void {
+    pub fn addLine(self: *Module, line: []const u8) !void {
         if (self.cols == 0) {
             self.cols = line.len;
         }
@@ -50,7 +50,7 @@ pub const Map = struct {
         self.rows += 1;
     }
 
-    fn walkPaths(self: *Map, need: u8, x: usize, y: usize) !usize {
+    fn walkPaths(self: *Module, need: u8, x: usize, y: usize) !usize {
         const value = self.grid[x][y];
         if (value != need) return 0;
         if (value == '9') {
@@ -69,7 +69,7 @@ pub const Map = struct {
         return count;
     }
 
-    pub fn getTotalScore(self: *Map) !usize {
+    pub fn getTotalScore(self: *Module) !usize {
         var sum: usize = 0;
         for (0..self.rows) |y| {
             for (0..self.cols) |x| {
@@ -91,15 +91,15 @@ test "sample part 1 example 1" {
         \\9876
     ;
 
-    var map = Map.init(testing.allocator, false);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.getTotalScore();
+    const count = try module.getTotalScore();
     const expected = @as(usize, 1);
     try testing.expectEqual(expected, count);
 }
@@ -115,15 +115,15 @@ test "sample part 1 example 2" {
         \\9.....9
     ;
 
-    var map = Map.init(testing.allocator, false);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.getTotalScore();
+    const count = try module.getTotalScore();
     const expected = @as(usize, 2);
     try testing.expectEqual(expected, count);
 }
@@ -139,15 +139,15 @@ test "sample part 1 example 3" {
         \\987....
     ;
 
-    var map = Map.init(testing.allocator, false);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.getTotalScore();
+    const count = try module.getTotalScore();
     const expected = @as(usize, 4);
     try testing.expectEqual(expected, count);
 }
@@ -163,15 +163,15 @@ test "sample part 1 example 4" {
         \\.....01
     ;
 
-    var map = Map.init(testing.allocator, false);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.getTotalScore();
+    const count = try module.getTotalScore();
     const expected = @as(usize, 3);
     try testing.expectEqual(expected, count);
 }
@@ -188,15 +188,15 @@ test "sample part 1" {
         \\10456732
     ;
 
-    var map = Map.init(testing.allocator, false);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.getTotalScore();
+    const count = try module.getTotalScore();
     const expected = @as(usize, 36);
     try testing.expectEqual(expected, count);
 }
@@ -212,15 +212,15 @@ test "sample part 2 example 1" {
         \\..9....
     ;
 
-    var map = Map.init(testing.allocator, true);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.getTotalScore();
+    const count = try module.getTotalScore();
     const expected = @as(usize, 3);
     try testing.expectEqual(expected, count);
 }
@@ -236,15 +236,15 @@ test "sample part 2 example 2" {
         \\987....
     ;
 
-    var map = Map.init(testing.allocator, true);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.getTotalScore();
+    const count = try module.getTotalScore();
     const expected = @as(usize, 13);
     try testing.expectEqual(expected, count);
 }
@@ -259,15 +259,15 @@ test "sample part 2 example 3" {
         \\56789.
     ;
 
-    var map = Map.init(testing.allocator, true);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.getTotalScore();
+    const count = try module.getTotalScore();
     const expected = @as(usize, 227);
     try testing.expectEqual(expected, count);
 }
@@ -284,15 +284,15 @@ test "sample part 2" {
         \\10456732
     ;
 
-    var map = Map.init(testing.allocator, true);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try map.getTotalScore();
+    const count = try module.getTotalScore();
     const expected = @as(usize, 81);
     try testing.expectEqual(expected, count);
 }

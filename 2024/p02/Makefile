@@ -1,4 +1,4 @@
 DAY = 02
-MODULES = reactor.zig
+MODULES = module.zig
 
 include ../../aoc.mk

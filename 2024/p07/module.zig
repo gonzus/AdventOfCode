@@ -3,7 +3,7 @@ const testing = std.testing;
 
 const Allocator = std.mem.Allocator;
 
-pub const Bridge = struct {
+pub const Module = struct {
     const Value = struct {
         val: usize,
         mul: usize,
@@ -77,8 +77,8 @@ pub const Bridge = struct {
     concat: bool,
     equations: std.ArrayList(Equation),
 
-    pub fn init(allocator: Allocator, concat: bool) Bridge {
-        const self = Bridge{
+    pub fn init(allocator: Allocator, concat: bool) Module {
+        const self = Module{
             .allocator = allocator,
             .concat = concat,
             .equations = std.ArrayList(Equation).init(allocator),
@@ -86,14 +86,14 @@ pub const Bridge = struct {
         return self;
     }
 
-    pub fn deinit(self: *Bridge) void {
+    pub fn deinit(self: *Module) void {
         for (self.equations.items) |*r| {
             r.*.deinit();
         }
         self.equations.deinit();
     }
 
-    pub fn addLine(self: *Bridge, line: []const u8) !void {
+    pub fn addLine(self: *Module, line: []const u8) !void {
         var equation = Equation.init(self.allocator);
         var it = std.mem.tokenizeAny(u8, line, " :");
         while (it.next()) |chunk| {
@@ -103,7 +103,7 @@ pub const Bridge = struct {
         try self.equations.append(equation);
     }
 
-    pub fn getTotalCalibration(self: Bridge) !usize {
+    pub fn getTotalCalibration(self: Module) !usize {
         const options: usize = if (self.concat) 3 else 2;
         var total: usize = 0;
         for (self.equations.items) |equation| {
@@ -127,15 +127,15 @@ test "sample part 1" {
         \\292: 11 6 16 20
     ;
 
-    var bridge = Bridge.init(testing.allocator, false);
-    defer bridge.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try bridge.addLine(line);
+        try module.addLine(line);
     }
 
-    const total = try bridge.getTotalCalibration();
+    const total = try module.getTotalCalibration();
     const expected = @as(usize, 3749);
     try testing.expectEqual(expected, total);
 }
@@ -153,15 +153,15 @@ test "sample part 2" {
         \\292: 11 6 16 20
     ;
 
-    var bridge = Bridge.init(testing.allocator, true);
-    defer bridge.deinit();
+    var module = Module.init(testing.allocator, true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try bridge.addLine(line);
+        try module.addLine(line);
     }
 
-    const total = try bridge.getTotalCalibration();
+    const total = try module.getTotalCalibration();
     const expected = @as(usize, 11387);
     try testing.expectEqual(expected, total);
 }

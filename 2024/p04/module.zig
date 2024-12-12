@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 
-pub const Game = struct {
+pub const Module = struct {
     const SIZE = 150;
     const XMAS = "XMAS";
     const MAS = "MAS";
@@ -10,8 +10,8 @@ pub const Game = struct {
     rows: usize,
     cols: usize,
 
-    pub fn init() Game {
-        const self = Game{
+    pub fn init() Module {
+        const self = Module{
             .grid = undefined,
             .rows = 0,
             .cols = 0,
@@ -19,9 +19,9 @@ pub const Game = struct {
         return self;
     }
 
-    pub fn deinit(_: *Game) void {}
+    pub fn deinit(_: *Module) void {}
 
-    pub fn addLine(self: *Game, line: []const u8) !void {
+    pub fn addLine(self: *Module, line: []const u8) !void {
         if (self.cols == 0) {
             self.cols = line.len;
         }
@@ -67,7 +67,7 @@ pub const Game = struct {
         }
     };
 
-    pub fn countXMAS(self: Game) !usize {
+    pub fn countXMAS(self: Module) !usize {
         var count: usize = 0;
         for (0..self.cols) |y| {
             for (0..self.rows) |x| {
@@ -80,7 +80,7 @@ pub const Game = struct {
         return count;
     }
 
-    pub fn countMAS(self: Game) !usize {
+    pub fn countMAS(self: Module) !usize {
         var count: usize = 0;
         for (0..self.cols) |y| {
             for (0..self.rows) |x| {
@@ -91,7 +91,7 @@ pub const Game = struct {
         return count;
     }
 
-    fn checkXMAS(self: Game, x: usize, y: usize, dir: Dir) bool {
+    fn checkXMAS(self: Module, x: usize, y: usize, dir: Dir) bool {
         var ix: isize = @intCast(x);
         var iy: isize = @intCast(y);
         const delta = dir.delta();
@@ -107,7 +107,7 @@ pub const Game = struct {
         return true;
     }
 
-    fn checkMAS(self: Game, x: usize, y: usize) bool {
+    fn checkMAS(self: Module, x: usize, y: usize) bool {
         // This could be made generic, based on constant MAS.
         // But I cannot be arsed.
         if (x < 1 or y < 1) return false;
@@ -136,15 +136,15 @@ test "sample part 1" {
         \\MXMXAXMASX
     ;
 
-    var game = Game.init();
-    defer game.deinit();
+    var module = Module.init();
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try game.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try game.countXMAS();
+    const count = try module.countXMAS();
     const expected = @as(usize, 18);
     try testing.expectEqual(expected, count);
 }
@@ -163,15 +163,15 @@ test "sample part 2" {
         \\MXMXAXMASX
     ;
 
-    var game = Game.init();
-    defer game.deinit();
+    var module = Module.init();
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try game.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try game.countMAS();
+    const count = try module.countMAS();
     const expected = @as(usize, 9);
     try testing.expectEqual(expected, count);
 }

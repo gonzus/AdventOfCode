@@ -1,4 +1,4 @@
 DAY = 04
-MODULES = game.zig
+MODULES = module.zig
 
 include ../../aoc.mk

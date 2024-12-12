@@ -3,7 +3,7 @@ const testing = std.testing;
 
 const Allocator = std.mem.Allocator;
 
-pub const Map = struct {
+pub const Module = struct {
     const INFINITY = std.math.maxInt(usize);
     const SIZE = 60;
     const ANTENNAS = 10 + 26 + 26; // digits, lower, upper
@@ -24,8 +24,8 @@ pub const Map = struct {
     antennas: [ANTENNAS]std.ArrayList(Pos),
     antinodes: std.AutoHashMap(Pos, void),
 
-    pub fn init(allocator: Allocator, harmonics: bool) Map {
-        var self = Map{
+    pub fn init(allocator: Allocator, harmonics: bool) Module {
+        var self = Module{
             .harmonics = harmonics,
             .grid = undefined,
             .rows = 0,
@@ -40,7 +40,7 @@ pub const Map = struct {
         return self;
     }
 
-    pub fn deinit(self: *Map) void {
+    pub fn deinit(self: *Module) void {
         for (0..ANTENNAS) |a| {
             self.antennas[a].deinit();
         }
@@ -66,7 +66,7 @@ pub const Map = struct {
             q + '0';
     }
 
-    pub fn addLine(self: *Map, line: []const u8) !void {
+    pub fn addLine(self: *Module, line: []const u8) !void {
         if (self.cols == 0) {
             self.cols = line.len;
         }
@@ -84,7 +84,7 @@ pub const Map = struct {
         self.rows += 1;
     }
 
-    pub fn show(self: *Map) void {
+    pub fn show(self: *Module) void {
         std.debug.print("Grid {} x {}\n", .{ self.rows, self.cols });
         for (0..self.rows) |y| {
             for (0..self.cols) |x| {
@@ -103,7 +103,7 @@ pub const Map = struct {
         }
     }
 
-    fn placeAntiNode(self: *Map, x: isize, y: isize) !usize {
+    fn placeAntiNode(self: *Module, x: isize, y: isize) !usize {
         if (x < 0 or x >= self.cols) return 0;
         if (y < 0 or y >= self.rows) return 0;
         const nx: usize = @intCast(x);
@@ -112,7 +112,7 @@ pub const Map = struct {
         return 1;
     }
 
-    pub fn countAntiNodes(self: *Map) !usize {
+    pub fn countAntiNodes(self: *Module) !usize {
         for (0..ANTENNAS) |a| {
             const list = self.antennas[a].items;
             if (list.len < 2) continue;
@@ -158,16 +158,16 @@ test "sample part 1" {
         \\............
     ;
 
-    var map = Map.init(testing.allocator, false);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
-    // map.show();
+    // module.show();
 
-    const count = try map.countAntiNodes();
+    const count = try module.countAntiNodes();
     const expected = @as(usize, 14);
     try testing.expectEqual(expected, count);
 }
@@ -188,16 +188,16 @@ test "sample part 2" {
         \\............
     ;
 
-    var map = Map.init(testing.allocator, true);
-    defer map.deinit();
+    var module = Module.init(testing.allocator, true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try map.addLine(line);
+        try module.addLine(line);
     }
-    // map.show();
+    // module.show();
 
-    const count = try map.countAntiNodes();
+    const count = try module.countAntiNodes();
     const expected = @as(usize, 34);
     try testing.expectEqual(expected, count);
 }

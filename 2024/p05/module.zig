@@ -3,7 +3,7 @@ const testing = std.testing;
 
 const Allocator = std.mem.Allocator;
 
-pub const Printer = struct {
+pub const Module = struct {
     const State = enum { rules, pages };
     const PageList = std.ArrayList(usize);
 
@@ -22,8 +22,8 @@ pub const Printer = struct {
     rules: std.ArrayList(Rule),
     pagelist: std.ArrayList(PageList),
 
-    pub fn init(allocator: Allocator, fix: bool) Printer {
-        const self = Printer{
+    pub fn init(allocator: Allocator, fix: bool) Module {
+        const self = Module{
             .allocator = allocator,
             .fix = fix,
             .state = .rules,
@@ -33,7 +33,7 @@ pub const Printer = struct {
         return self;
     }
 
-    pub fn deinit(self: *Printer) void {
+    pub fn deinit(self: *Module) void {
         for (self.pagelist.items) |*p| {
             p.*.deinit();
         }
@@ -41,7 +41,7 @@ pub const Printer = struct {
         self.rules.deinit();
     }
 
-    pub fn addLine(self: *Printer, line: []const u8) !void {
+    pub fn addLine(self: *Module, line: []const u8) !void {
         if (line.len == 0) {
             self.state = .pages;
             return;
@@ -77,7 +77,7 @@ pub const Printer = struct {
         return false;
     }
 
-    pub fn sumMiddlePages(self: *Printer) !usize {
+    pub fn sumMiddlePages(self: *Module) !usize {
         var sum: usize = 0;
         for (self.pagelist.items) |pages| {
             var sorted = try pages.clone();
@@ -125,15 +125,15 @@ test "sample part 1" {
         \\97,13,75,29,47
     ;
 
-    var printer = Printer.init(testing.allocator, false);
-    defer printer.deinit();
+    var module = Module.init(testing.allocator, false);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try printer.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try printer.sumMiddlePages();
+    const count = try module.sumMiddlePages();
     const expected = @as(usize, 143);
     try testing.expectEqual(expected, count);
 }
@@ -170,15 +170,15 @@ test "sample part 2" {
         \\97,13,75,29,47
     ;
 
-    var printer = Printer.init(testing.allocator, true);
-    defer printer.deinit();
+    var module = Module.init(testing.allocator, true);
+    defer module.deinit();
 
     var it = std.mem.split(u8, data, "\n");
     while (it.next()) |line| {
-        try printer.addLine(line);
+        try module.addLine(line);
     }
 
-    const count = try printer.sumMiddlePages();
+    const count = try module.sumMiddlePages();
     const expected = @as(usize, 123);
     try testing.expectEqual(expected, count);
 }

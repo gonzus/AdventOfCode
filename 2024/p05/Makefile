@@ -1,4 +1,4 @@
 DAY = 05
-MODULES = printer.zig
+MODULES = module.zig
 
 include ../../aoc.mk

@@ -1,4 +1,4 @@
 DAY = 07
-MODULES = bridge.zig
+MODULES = module.zig
 
 include ../../aoc.mk

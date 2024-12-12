@@ -1,4 +1,4 @@
 DAY = 01
-MODULES = itinerary.zig
+MODULES = module.zig
 
 include ../../aoc.mk
