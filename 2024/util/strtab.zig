@@ -83,7 +83,7 @@ test "no overwrites" {
     var buf: [100]u8 = undefined;
     while (c < 10) : (c += 1) {
         var len: usize = 0;
-        std.mem.copy(u8, buf[len..], prefix);
+        std.mem.copyForwards(u8, buf[len..], prefix);
         len += prefix.len;
         buf[len] = c + '0';
         len += 1;
@@ -96,7 +96,7 @@ test "no overwrites" {
     try testing.expect(size == 10);
     while (c < 10) : (c += 1) {
         var len: usize = 0;
-        std.mem.copy(u8, buf[len..], prefix);
+        std.mem.copyForwards(u8, buf[len..], prefix);
         len += prefix.len;
         buf[len] = c + '0';
         len += 1;
