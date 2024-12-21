@@ -252,7 +252,7 @@ pub const Module = struct {
     }
 };
 
-test "sample part 1 example 1" {
+test "sample part 1" {
     const data =
         \\###############
         \\#...#...#.....#

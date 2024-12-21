@@ -176,7 +176,7 @@ test "sample part 1 example 4" {
     try testing.expectEqual(expected, count);
 }
 
-test "sample part 1" {
+test "sample part 1 example 5" {
     const data =
         \\89010123
         \\78121874
@@ -272,7 +272,7 @@ test "sample part 2 example 3" {
     try testing.expectEqual(expected, count);
 }
 
-test "sample part 2" {
+test "sample part 2 example 4" {
     const data =
         \\89010123
         \\78121874

@@ -184,7 +184,7 @@ pub const Module = struct {
     }
 };
 
-test "sample part 1 example 1" {
+test "sample part 1" {
     const data =
         \\Register A: 729
         \\Register B: 0
