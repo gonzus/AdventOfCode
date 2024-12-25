@@ -152,7 +152,6 @@ pub const Module = struct {
         }
     };
 
-    allocator: Allocator,
     grid: [SIZE][SIZE]u8,
     rows: usize,
     cols: usize,
@@ -166,7 +165,6 @@ pub const Module = struct {
     pub fn init(allocator: Allocator, in_test: bool) Module {
         const max: usize = if (in_test) MAX_TEST else MAX_DAY;
         return .{
-            .allocator = allocator,
             .grid = undefined,
             .rows = max + 1,
             .cols = max + 1,

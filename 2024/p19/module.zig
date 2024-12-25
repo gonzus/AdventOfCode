@@ -8,7 +8,6 @@ pub const Module = struct {
     const StringId = StringTable.StringId;
     const State = enum { patterns, designs };
 
-    allocator: Allocator,
     strtab: StringTable,
     state: State,
     patterns: std.ArrayList(StringId),
@@ -17,7 +16,6 @@ pub const Module = struct {
 
     pub fn init(allocator: Allocator) Module {
         return .{
-            .allocator = allocator,
             .strtab = StringTable.init(allocator),
             .state = .patterns,
             .patterns = std.ArrayList(StringId).init(allocator),

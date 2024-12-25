@@ -1,7 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
 const StringTable = @import("./util/strtab.zig").StringTable;
-const DEQueue = @import("./util/queue.zig").DoubleEndedQueue;
 
 const Allocator = std.mem.Allocator;
 

@@ -254,7 +254,7 @@ pub const Module = struct {
     }
 };
 
-test "sample part 1 small" {
+test "sample part 1" {
     const data =
         \\########
         \\#..O.O.#
