@@ -13,7 +13,7 @@ pub const StringTable = struct {
     pub fn init(allocator: Allocator) StringTable {
         const self = StringTable{
             .allocator = allocator,
-            .p2s = std.ArrayList([]const u8).init(allocator),
+            .p2s = .empty,
             .s2p = std.StringHashMap(StringId).init(allocator),
         };
         return self;
@@ -22,7 +22,7 @@ pub const StringTable = struct {
     pub fn deinit(self: *StringTable) void {
         self.clear();
         self.s2p.deinit();
-        self.p2s.deinit();
+        self.p2s.deinit(self.allocator);
     }
 
     pub fn clear(self: *StringTable) void {
@@ -44,7 +44,7 @@ pub const StringTable = struct {
         }
         const pos = self.p2s.items.len;
         const copy = self.allocator.dupe(u8, str) catch unreachable;
-        try self.p2s.append(copy);
+        try self.p2s.append(self.allocator, copy);
         _ = try self.s2p.put(copy, pos);
         return pos;
     }
