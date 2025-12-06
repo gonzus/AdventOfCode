@@ -6,11 +6,10 @@ const Module = @import("./module.zig").Module;
 pub fn main() anyerror!u8 {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
-    const alloc = arena.allocator();
 
     const part = command.choosePart();
-    var module = Module.init(alloc, if (part == .part1) .horizontal else .vertical);
-    module.deinit();
+    var module = Module.init(arena.allocator(), if (part == .part1) .horizontal else .vertical);
+    defer module.deinit();
 
     const SIZE = 18 * 1024;
 
