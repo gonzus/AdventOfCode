@@ -24,3 +24,7 @@ pub fn choosePart() Part {
 pub fn getElapsedMs() u64 {
     return timer.read() / std.time.ns_per_ms;
 }
+
+pub fn getElapsedUs() u64 {
+    return timer.read() / std.time.ns_per_us;
+}
