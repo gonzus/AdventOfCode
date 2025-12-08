@@ -43,7 +43,7 @@ pub fn main() anyerror!u8 {
         },
     }
 
-    try stdout.print("=== {s} ===\n", .{@tagName(part)});
+    try stdout.print("--- {s} ---\n", .{@tagName(part)});
     try stdout.print("Answer: {}\n", .{answer});
     try stdout.print("Elapsed: {}us\n", .{command.getElapsedUs()});
     try stdout.flush();
