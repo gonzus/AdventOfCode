@@ -4,12 +4,8 @@ const command = @import("./util/command.zig");
 const Module = @import("./module.zig").Module;
 
 pub fn main() anyerror!u8 {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-
     const part = command.choosePart();
-    var module = Module.init(arena.allocator());
-    defer module.deinit();
+    var module = Module.init();
 
     const SIZE = 18 * 1024;
 

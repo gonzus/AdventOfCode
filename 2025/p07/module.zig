@@ -13,25 +13,22 @@ pub const Module = struct {
         }
     };
 
-    const Beams = std.AutoHashMap(usize, void);
-    const Cache = std.AutoHashMap(V2, usize);
-
-    alloc: std.mem.Allocator,
     size: V2,
     start: V2,
     manifold: [SIZE][SIZE]u8,
+    beams: [SIZE]usize,
+    splits: usize,
+    timelines: usize,
 
-    pub fn init(alloc: std.mem.Allocator) Module {
+    pub fn init() Module {
         return .{
-            .alloc = alloc,
             .size = V2.init(0, 0),
             .start = undefined,
             .manifold = undefined,
+            .beams = undefined,
+            .splits = 0,
+            .timelines = 0,
         };
-    }
-
-    pub fn deinit(self: *Module) void {
-        _ = self;
     }
 
     pub fn addLine(self: *Module, line: []const u8) !void {
@@ -48,102 +45,39 @@ pub const Module = struct {
     }
 
     pub fn countBeamSplits(self: *Module) !usize {
-        var beams = Beams.init(self.alloc);
-        defer beams.deinit();
-        try beams.put(self.start.x, {});
-        return try self.exploreSplits(&beams);
+        try self.exploreSplits();
+        return self.splits;
     }
 
     pub fn countQuantumTimelines(self: *Module) !usize {
-        var cache = Cache.init(self.alloc);
-        defer cache.deinit();
-        var beams = Beams.init(self.alloc);
-        defer beams.deinit();
-        try beams.put(self.start.x, {});
-        const count = try self.exploreTimelines(self.start.y + 1, &beams, &cache);
-        return count;
+        try self.exploreSplits();
+        return self.timelines;
     }
 
-    fn exploreSplits(self: *Module, beams: *Beams) !usize {
-        var count: usize = 0;
-        var add = Beams.init(self.alloc);
-        defer add.deinit();
-        var del = Beams.init(self.alloc);
-        defer del.deinit();
+    fn exploreSplits(self: *Module) !void {
+        self.splits = 0;
+        self.timelines = 0;
+        self.beams = @splat(0);
+        self.beams[self.start.x] += 1;
         for (self.start.y + 1..self.size.y) |y| {
-            add.clearRetainingCapacity();
-            del.clearRetainingCapacity();
-            var it = beams.keyIterator();
-            while (it.next()) |xp| {
-                const x = xp.*;
+            for (0..self.size.x) |x| {
                 switch (self.manifold[x][y]) {
                     '.' => continue,
                     '^' => {
-                        count += 1;
-                        try del.put(x, {});
-                        if (x > 0) _ = try add.getOrPut(x - 1);
-                        if (x < self.size.x - 1) _ = try add.getOrPut(x + 1);
+                        if (self.beams[x] > 0) {
+                            self.splits += 1;
+                            if (x > 0) self.beams[x - 1] += self.beams[x];
+                            if (x < self.size.x - 1) self.beams[x + 1] += self.beams[x];
+                            self.beams[x] = 0;
+                        }
                     },
                     else => return error.InvalidData,
                 }
             }
-            var itd = del.keyIterator();
-            while (itd.next()) |xp| {
-                const x = xp.*;
-                _ = beams.remove(x);
-            }
-            var ita = add.keyIterator();
-            while (ita.next()) |xp| {
-                const x = xp.*;
-                _ = try beams.put(x, {});
-            }
         }
-        return count;
-    }
-
-    fn exploreTimelines(self: *Module, y: usize, beams: *Beams, cache: *Cache) !usize {
-        if (y >= self.size.y - 1) return 1;
-
-        var count: usize = 0;
-        var next = try beams.clone();
-        defer next.deinit();
-        var it = beams.keyIterator();
-        while (it.next()) |xp| {
-            const x = xp.*;
-            const pos = V2.init(x, y);
-            if (cache.get(pos)) |val| {
-                count += val;
-                continue;
-            }
-            var val: usize = 0;
-            switch (self.manifold[x][y]) {
-                '.' => {
-                    val += try self.exploreTimelines(y + 1, &next, cache);
-                },
-                '^' => {
-                    _ = next.remove(x);
-                    if (x > 0) {
-                        if (next.get(x - 1)) |_| {} else {
-                            _ = try next.put(x - 1, {});
-                            val += try self.exploreTimelines(y + 1, &next, cache);
-                            _ = next.remove(x - 1);
-                        }
-                    }
-                    if (x < self.size.x - 1) {
-                        if (next.get(x + 1)) |_| {} else {
-                            _ = try next.put(x + 1, {});
-                            val += try self.exploreTimelines(y + 1, &next, cache);
-                            _ = next.remove(x + 1);
-                        }
-                    }
-                    _ = try next.put(x, {});
-                },
-                else => return error.InvalidData,
-            }
-            try cache.put(pos, val);
-            count += val;
+        for (self.beams) |b| {
+            self.timelines += b;
         }
-        return count;
     }
 };
 
@@ -167,8 +101,7 @@ test "sample part 1" {
         \\...............
     ;
 
-    var module = Module.init(testing.allocator);
-    defer module.deinit();
+    var module = Module.init();
 
     var it = std.mem.splitScalar(u8, data, '\n');
     while (it.next()) |line| {
@@ -200,8 +133,7 @@ test "sample part 2" {
         \\...............
     ;
 
-    var module = Module.init(testing.allocator);
-    defer module.deinit();
+    var module = Module.init();
 
     var it = std.mem.splitScalar(u8, data, '\n');
     while (it.next()) |line| {
