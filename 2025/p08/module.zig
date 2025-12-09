@@ -2,98 +2,66 @@ const std = @import("std");
 const testing = std.testing;
 
 pub const Module = struct {
-    const INFINITY = std.math.maxInt(usize);
-
     const V3 = struct {
-        const SIZE = 3;
-
-        c: [SIZE]usize,
+        x: usize,
+        y: usize,
+        z: usize,
 
         pub fn init(str: []const u8) !V3 {
-            var self: V3 = undefined;
-            var p: usize = 0;
             var it = std.mem.tokenizeScalar(u8, str, ',');
-            while (it.next()) |chunk| : (p += 1) {
-                self.c[p] = try std.fmt.parseUnsigned(usize, chunk, 10);
-            }
-            return self;
+            return .{
+                .x = try std.fmt.parseUnsigned(usize, it.next().?, 10),
+                .y = try std.fmt.parseUnsigned(usize, it.next().?, 10),
+                .z = try std.fmt.parseUnsigned(usize, it.next().?, 10),
+            };
         }
 
-        fn dist(self: V3, other: V3) usize {
-            var dst: usize = 0;
-            for (0..SIZE) |p| {
-                var delta: isize = 0;
-                delta += @intCast(self.c[p]);
-                delta -= @intCast(other.c[p]);
-                const delta2: usize = @intCast(delta * delta);
-                dst += delta2;
-            }
-            return dst;
+        fn delta2(l: usize, r: usize) usize {
+            const li: isize = @intCast(l);
+            const ri: isize = @intCast(r);
+            const delta = li - ri;
+            return @intCast(delta * delta);
+        }
+
+        fn distance(self: V3, other: V3) usize {
+            return delta2(self.x, other.x) + delta2(self.y, other.y) + delta2(self.z, other.z);
         }
     };
 
     const Junction = struct {
+        id: usize,
         pos: V3,
-        id: usize = INFINITY,
+        parent: usize,
+        size: usize,
+
+        fn init(id: usize, pos: V3) Junction {
+            return .{ .id = id, .pos = pos, .parent = id, .size = 1 };
+        }
+
+        fn compare(_: void, l: usize, r: usize) std.math.Order {
+            return std.math.order(r, l);
+        }
     };
 
     const Wire = struct {
         l: usize,
         r: usize,
-        dst: usize,
+        dist: usize,
 
-        fn lessThan(_: void, l: Wire, r: Wire) bool {
-            return l.dst < r.dst;
-        }
-    };
-
-    const Circuits = struct {
-        circuits: std.AutoHashMap(usize, usize),
-
-        fn init(alloc: std.mem.Allocator) Circuits {
-            return .{ .circuits = std.AutoHashMap(usize, usize).init(alloc) };
-        }
-
-        fn deinit(self: *Circuits) void {
-            self.circuits.deinit();
-        }
-
-        fn addIdCount(self: *Circuits, id: usize, count: usize) !void {
-            const gop = try self.circuits.getOrPut(id);
-            if (!gop.found_existing) {
-                gop.value_ptr.* = 0;
-            }
-            gop.value_ptr.* += count;
-        }
-
-        fn merge(self: *Circuits, l: usize, r: usize) !void {
-            var sum: usize = 0;
-            if (self.circuits.get(l)) |c| {
-                sum += c;
-            }
-            if (self.circuits.get(r)) |c| {
-                sum += c;
-            }
-            try self.circuits.put(l, 0);
-            try self.circuits.put(r, sum);
-        }
-
-        fn getSortedCounts(self: Circuits, alloc: std.mem.Allocator, list: *std.ArrayList(usize)) !void {
-            var it = self.circuits.iterator();
-            while (it.next()) |e| {
-                try list.append(alloc, e.value_ptr.*);
-            }
-            std.sort.heap(usize, list.items, {}, std.sort.desc(usize));
+        fn compare(_: void, l: Wire, r: Wire) std.math.Order {
+            return std.math.order(l.dist, r.dist);
         }
     };
 
     alloc: std.mem.Allocator,
     junctions: std.ArrayList(Junction),
+    last_product: usize,
 
     pub fn init(alloc: std.mem.Allocator) Module {
         return .{
             .alloc = alloc,
             .junctions = .empty,
+            .last_product = 0,
         };
     }
 
@@ -102,79 +70,94 @@ pub const Module = struct {
     }
 
     pub fn addLine(self: *Module, line: []const u8) !void {
-        const j = Junction{
-            .pos = try V3.init(line),
-        };
-        try self.junctions.append(self.alloc, j);
+        const id = self.junctions.items.len;
+        try self.junctions.append(self.alloc, Junction.init(id, try V3.init(line)));
     }
 
     pub fn computeJunctionProduct(self: *Module, wanted: usize) !usize {
-        var wires = std.ArrayList(Wire).empty;
-        defer wires.deinit(self.alloc);
+        try self.mergeJunctions(wanted);
+        return self.computeTopProduct(3);
+    }
+
+    pub fn computeLastProduct(self: *Module) !usize {
+        try self.mergeJunctions(0);
+        return self.last_product;
+    }
+
+    fn mergeJunctions(self: *Module, wanted: usize) !void {
+        var pq = std.PriorityQueue(Wire, void, Wire.compare).init(self.alloc, {});
+        defer pq.deinit();
         for (0..self.junctions.items.len) |l| {
             for (l + 1..self.junctions.items.len) |r| {
-                const dst = self.junctions.items[l].pos.dist(self.junctions.items[r].pos);
-                try wires.append(self.alloc, Wire{ .l = l, .r = r, .dst = dst });
+                const dist = self.junctions.items[l].pos.distance(self.junctions.items[r].pos);
+                try pq.add(Wire{ .l = l, .r = r, .dist = dist });
             }
         }
-        std.sort.heap(Wire, wires.items, {}, Wire.lessThan);
 
-        var circuits = Circuits.init(self.alloc);
-        defer circuits.deinit();
-        var remaining: usize = self.junctions.items.len;
-        var last_product: usize = 0;
-        var next_id: usize = 0;
-        for (wires.items, 0..) |w, connections| {
+        var connections: usize = 0;
+        while (pq.count() > 0) {
+            const w = pq.remove();
+            self.junctionMerge(w.l, w.r);
+            connections += 1;
+
             if (wanted > 0 and connections >= wanted) break;
-            if (wanted == 0 and remaining == 0) return last_product;
 
-            var wl = &self.junctions.items[w.l];
-            var wr = &self.junctions.items[w.r];
-            last_product = wl.pos.c[0] * wr.pos.c[0];
+            const any_root = self.junctions.items[self.junctionFind(w.l)];
+            if (any_root.size < self.junctions.items.len) continue;
 
-            if (wl.id == INFINITY and wr.id == INFINITY) {
-                wl.id = next_id;
-                wr.id = next_id;
-                try circuits.addIdCount(next_id, 2);
-                next_id += 1;
-                remaining -= 2;
-                continue;
-            }
-            if (wl.id == INFINITY) {
-                wl.id = wr.id;
-                try circuits.addIdCount(wr.id, 1);
-                remaining -= 1;
-                continue;
-            }
-            if (wr.id == INFINITY) {
-                wr.id = wl.id;
-                try circuits.addIdCount(wr.id, 1);
-                remaining -= 1;
-                continue;
-            }
-            if (wl.id != wr.id) {
-                try circuits.merge(wl.id, wr.id);
-                self.changeJunctionIds(wl.id, wr.id);
-                continue;
-            }
+            const rl = self.junctions.items[w.l];
+            const rr = self.junctions.items[w.r];
+            self.last_product = rl.pos.x * rr.pos.x;
+            break;
         }
+    }
 
-        var counts = std.ArrayList(usize).empty;
-        defer counts.deinit(self.alloc);
-        try circuits.getSortedCounts(self.alloc, &counts);
+    fn computeTopProduct(self: *Module, top: usize) !usize {
+        var seen = std.AutoHashMap(usize, void).init(self.alloc);
+        defer seen.deinit();
+        var pq = std.PriorityQueue(usize, void, Junction.compare).init(self.alloc, {});
+        defer pq.deinit();
+        for (self.junctions.items) |j| {
+            const root_id = self.junctionFind(j.id);
+            const gop = try seen.getOrPut(root_id);
+            if (gop.found_existing) continue;
+            const root = self.junctions.items[root_id];
+            try pq.add(root.size);
+        }
+        var count: usize = 0;
         var prod: usize = 1;
-        for (0..3) |p| {
-            prod *= counts.items[p];
+        while (count < top and pq.count() > 0) : (count += 1) {
+            const size = pq.remove();
+            prod *= size;
         }
-
         return prod;
     }
 
-    fn changeJunctionIds(self: *Module, old: usize, new: usize) void {
-        for (self.junctions.items) |*j| {
-            if (j.id != old) continue;
-            j.id = new;
+    fn junctionFind(self: Module, id: usize) usize {
+        var node = &self.junctions.items[id];
+        while (node.parent != node.id) {
+            const old_parent = node.parent;
+            const parent = self.junctions.items[old_parent];
+            node.parent = parent.parent;
+            node = &self.junctions.items[old_parent];
         }
+        return node.id;
+    }
+
+    fn junctionMerge(self: Module, l: usize, r: usize) void {
+        const rl = self.junctionFind(l);
+        const rr = self.junctionFind(r);
+        if (rl == rr) return;
+
+        var nl = &self.junctions.items[rl];
+        var nr = &self.junctions.items[rr];
+        if (nl.size < nr.size) {
+            nr = &self.junctions.items[rl];
+            nl = &self.junctions.items[rr];
+        }
+
+        nr.parent = nl.id; // Make x the new root
+        nl.size += nr.size; // Update the size of x
     }
 };
 
@@ -247,7 +230,7 @@ test "sample part 2" {
         try module.addLine(line);
     }
 
-    const product = try module.computeJunctionProduct(0);
+    const product = try module.computeLastProduct();
     const expected = @as(usize, 25272);
     try testing.expectEqual(expected, product);
 }

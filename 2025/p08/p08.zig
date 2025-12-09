@@ -37,7 +37,7 @@ pub fn main() anyerror!u8 {
             try testing.expectEqual(expected, answer);
         },
         .part2 => {
-            answer = try module.computeJunctionProduct(0);
+            answer = try module.computeLastProduct();
             const expected = @as(usize, 8520040659);
             try testing.expectEqual(expected, answer);
         },
