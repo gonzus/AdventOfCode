@@ -8,7 +8,7 @@ pub fn main() anyerror!u8 {
     defer arena.deinit();
 
     const part = command.choosePart();
-    var module = Module.init(arena.allocator());
+    var module = Module.init(arena.allocator(), part == .part1);
     defer module.deinit();
 
     const SIZE = 18 * 1024;
@@ -32,13 +32,13 @@ pub fn main() anyerror!u8 {
     var answer: usize = 0;
     switch (part) {
         .part1 => {
-            answer = try module.computeJunctionProduct(1000);
-            const expected = @as(usize, 57970);
+            answer = try module.getLargestRectangle();
+            const expected = @as(usize, 4750297200);
             try testing.expectEqual(expected, answer);
         },
         .part2 => {
-            answer = try module.computeJunctionProduct(0);
-            const expected = @as(usize, 8520040659);
+            answer = try module.getLargestRectangle();
+            const expected = @as(usize, 1578115935);
             try testing.expectEqual(expected, answer);
         },
     }
