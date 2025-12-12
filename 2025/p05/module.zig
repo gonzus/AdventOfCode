@@ -16,14 +16,12 @@ pub const Module = struct {
     alloc: std.mem.Allocator,
     ranges: std.ArrayList(Range),
     fresh_count: usize,
-    counting: bool,
 
     pub fn init(alloc: std.mem.Allocator) Module {
         return .{
             .alloc = alloc,
             .ranges = .{},
             .fresh_count = 0,
-            .counting = false,
         };
     }
 
@@ -31,33 +29,37 @@ pub const Module = struct {
         self.ranges.deinit(self.alloc);
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        if (line.len == 0) {
-            std.debug.assert(self.ranges.items.len > 0);
-            std.sort.heap(Range, self.ranges.items, {}, Range.lessThan);
-            self.counting = true;
-            return;
-        }
-
-        if (self.counting) {
-            const id = try std.fmt.parseUnsigned(usize, line, 10);
-            for (self.ranges.items) |r| {
-                if (r.lo > id) break;
-                if (id <= r.hi) {
-                    self.fresh_count += 1;
-                    break;
-                }
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var counting = false;
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            if (line.len == 0) {
+                std.debug.assert(self.ranges.items.len > 0);
+                std.sort.heap(Range, self.ranges.items, {}, Range.lessThan);
+                counting = true;
+                continue;
             }
-            return;
-        }
 
-        var it = std.mem.tokenizeScalar(u8, line, '-');
-        const r = Range{
-            .lo = try std.fmt.parseUnsigned(usize, it.next().?, 10),
-            .hi = try std.fmt.parseUnsigned(usize, it.next().?, 10),
-        };
-        std.debug.assert(r.lo <= r.hi);
-        try self.ranges.append(self.alloc, r);
+            if (counting) {
+                const id = try std.fmt.parseUnsigned(usize, line, 10);
+                for (self.ranges.items) |r| {
+                    if (r.lo > id) break;
+                    if (id <= r.hi) {
+                        self.fresh_count += 1;
+                        break;
+                    }
+                }
+                continue;
+            }
+
+            var it = std.mem.tokenizeScalar(u8, line, '-');
+            const r = Range{
+                .lo = try std.fmt.parseUnsigned(usize, it.next().?, 10),
+                .hi = try std.fmt.parseUnsigned(usize, it.next().?, 10),
+            };
+            std.debug.assert(r.lo <= r.hi);
+            try self.ranges.append(self.alloc, r);
+        }
     }
 
     pub fn countFreshIDs(self: Module) !usize {
@@ -116,11 +118,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const fresh = try module.countFreshIDs();
     const expected = @as(usize, 3);
@@ -144,11 +142,7 @@ test "sample part 2" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const fresh = try module.mergeAndCountIDs();
     const expected = @as(usize, 14);

@@ -32,10 +32,13 @@ pub const Module = struct {
         self.strtab.deinit();
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        const id = try self.strtab.add(line);
-        try self.lines.append(self.alloc, id);
-        if (self.width < line.len) self.width = line.len;
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            const id = try self.strtab.add(line);
+            try self.lines.append(self.alloc, id);
+            if (self.width < line.len) self.width = line.len;
+        }
     }
 
     pub fn addAllAnswers(self: Module) !usize {
@@ -121,11 +124,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator, .horizontal);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const fresh = try module.addAllAnswers();
     const expected = @as(usize, 4277556);
@@ -142,11 +141,7 @@ test "sample part 2" {
 
     var module = Module.init(testing.allocator, .vertical);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const fresh = try module.addAllAnswers();
     const expected = @as(usize, 3263827);

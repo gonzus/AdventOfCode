@@ -56,20 +56,23 @@ pub const Module = struct {
         self.strtab.deinit();
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        var nid: StringId = INVALID;
-        var node: ?Node = null;
-        var it = std.mem.tokenizeAny(u8, line, ": ");
-        while (it.next()) |chunk| {
-            const sid = try self.strtab.add(chunk);
-            if (nid == INVALID) {
-                nid = sid;
-                node = Node.init(self.alloc, nid);
-                continue;
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            var nid: StringId = INVALID;
+            var node: ?Node = null;
+            var it = std.mem.tokenizeAny(u8, line, ": ");
+            while (it.next()) |chunk| {
+                const sid = try self.strtab.add(chunk);
+                if (nid == INVALID) {
+                    nid = sid;
+                    node = Node.init(self.alloc, nid);
+                    continue;
+                }
+                try node.?.addNeighbor(sid);
             }
-            try node.?.addNeighbor(sid);
+            try self.nodes.put(nid, node.?);
         }
-        try self.nodes.put(nid, node.?);
     }
 
     pub fn countDirectPaths(self: *Module) !usize {
@@ -141,11 +144,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const product = try module.countDirectPaths();
     const expected = @as(usize, 5);
@@ -171,11 +170,7 @@ test "sample part 2" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const product = try module.countPathsWithWaypoints();
     const expected = @as(usize, 2);

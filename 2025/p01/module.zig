@@ -19,27 +19,32 @@ pub const Module = struct {
         };
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        const dir: Dir = @enumFromInt(line[0]);
-        var num = try std.fmt.parseUnsigned(usize, line[1..], 10);
-        if (self.use_CLICK) {
-            self.zeros += num / SIZE;
+    pub fn deinit(_: *Module) void {}
+
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            const dir: Dir = @enumFromInt(line[0]);
+            var num = try std.fmt.parseUnsigned(usize, line[1..], 10);
+            if (self.use_CLICK) {
+                self.zeros += num / SIZE;
+            }
+            num %= SIZE;
+            const use_CLICK = self.use_CLICK and self.current > 0;
+            switch (dir) {
+                .L => {
+                    if (use_CLICK and self.current < num) self.zeros += 1;
+                    self.current += SIZE;
+                    self.current -= @intCast(num);
+                },
+                .R => {
+                    if (use_CLICK and self.current + num > SIZE) self.zeros += 1;
+                    self.current += @intCast(num);
+                },
+            }
+            self.current %= SIZE;
+            if (self.current == 0) self.zeros += 1;
         }
-        num %= SIZE;
-        const use_CLICK = self.use_CLICK and self.current > 0;
-        switch (dir) {
-            .L => {
-                if (use_CLICK and self.current < num) self.zeros += 1;
-                self.current += SIZE;
-                self.current -= @intCast(num);
-            },
-            .R => {
-                if (use_CLICK and self.current + num > SIZE) self.zeros += 1;
-                self.current += @intCast(num);
-            },
-        }
-        self.current %= SIZE;
-        if (self.current == 0) self.zeros += 1;
     }
 
     pub fn getPassword(self: *Module) !usize {
@@ -62,11 +67,7 @@ test "sample part 1" {
     ;
 
     var module = Module.init(false);
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const password = try module.getPassword();
     const expected = @as(usize, 3);
@@ -88,11 +89,7 @@ test "sample part 2" {
     ;
 
     var module = Module.init(true);
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const password = try module.getPassword();
     const expected = @as(usize, 6);

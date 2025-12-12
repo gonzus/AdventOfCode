@@ -63,13 +63,16 @@ pub const Module = struct {
         self.corners.deinit(self.alloc);
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        var it = std.mem.tokenizeScalar(u8, line, ',');
-        const point = Point.init(
-            try std.fmt.parseInt(isize, it.next().?, 10),
-            try std.fmt.parseInt(isize, it.next().?, 10),
-        );
-        try self.corners.append(self.alloc, point);
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            var it = std.mem.tokenizeScalar(u8, line, ',');
+            const point = Point.init(
+                try std.fmt.parseInt(isize, it.next().?, 10),
+                try std.fmt.parseInt(isize, it.next().?, 10),
+            );
+            try self.corners.append(self.alloc, point);
+        }
     }
 
     pub fn getLargestRectangle(self: *Module) !usize {
@@ -132,11 +135,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator, true);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const product = try module.getLargestRectangle();
     const expected = @as(usize, 50);
@@ -157,11 +156,7 @@ test "sample part 2" {
 
     var module = Module.init(testing.allocator, false);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const product = try module.getLargestRectangle();
     const expected = @as(usize, 24);

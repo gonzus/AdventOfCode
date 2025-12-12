@@ -31,17 +31,22 @@ pub const Module = struct {
         };
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        if (self.size.x == 0) self.size.x = line.len;
-        if (self.size.x != line.len) return error.InvalidData;
-        const y = self.size.y;
-        for (0..line.len) |x| {
-            self.manifold[x][y] = line[x];
-            if (line[x] == 'S') {
-                self.start = V2.init(x, y);
+    pub fn deinit(_: *Module) void {}
+
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            if (self.size.x == 0) self.size.x = line.len;
+            if (self.size.x != line.len) return error.InvalidData;
+            const y = self.size.y;
+            for (0..line.len) |x| {
+                self.manifold[x][y] = line[x];
+                if (line[x] == 'S') {
+                    self.start = V2.init(x, y);
+                }
             }
+            self.size.y += 1;
         }
-        self.size.y += 1;
     }
 
     pub fn countBeamSplits(self: *Module) !usize {
@@ -102,11 +107,8 @@ test "sample part 1" {
     ;
 
     var module = Module.init();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    defer module.deinit();
+    try module.parseInput(data);
 
     const fresh = try module.countBeamSplits();
     const expected = @as(usize, 21);
@@ -134,11 +136,8 @@ test "sample part 2" {
     ;
 
     var module = Module.init();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    defer module.deinit();
+    try module.parseInput(data);
 
     const fresh = try module.countQuantumTimelines();
     const expected = @as(usize, 40);

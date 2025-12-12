@@ -69,9 +69,12 @@ pub const Module = struct {
         self.junctions.deinit(self.alloc);
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        const id = self.junctions.items.len;
-        try self.junctions.append(self.alloc, Junction.init(id, try V3.init(line)));
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            const id = self.junctions.items.len;
+            try self.junctions.append(self.alloc, Junction.init(id, try V3.init(line)));
+        }
     }
 
     pub fn computeJunctionProduct(self: *Module, wanted: usize) !usize {
@@ -187,11 +190,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const product = try module.computeJunctionProduct(10);
     const expected = @as(usize, 40);
@@ -224,11 +223,7 @@ test "sample part 2" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const product = try module.computeLastProduct();
     const expected = @as(usize, 25272);

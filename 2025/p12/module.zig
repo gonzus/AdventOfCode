@@ -57,14 +57,12 @@ pub const Module = struct {
     alloc: std.mem.Allocator,
     shapes: std.ArrayList(Shape),
     boards: std.ArrayList(Board),
-    current_shape_row: usize,
 
     pub fn init(alloc: std.mem.Allocator) Module {
         return .{
             .alloc = alloc,
             .shapes = .empty,
             .boards = .empty,
-            .current_shape_row = 0,
         };
     }
 
@@ -76,42 +74,46 @@ pub const Module = struct {
         self.shapes.deinit(self.alloc);
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        if (line.len == 0) {
-            std.debug.assert(self.current_shape_row == SHAPE_SIZE);
-            return;
-        }
-
-        if (line[line.len - 1] == ':') {
-            const id = try std.fmt.parseUnsigned(usize, line[0 .. line.len - 1], 10);
-            std.debug.assert(self.shapes.items.len == id);
-
-            try self.shapes.append(self.alloc, Shape.init(id));
-            self.current_shape_row = 0;
-            return;
-        }
-
-        if (std.ascii.isDigit(line[0])) {
-            var board = Board.init();
-            var pos: usize = 0;
-            var it = std.mem.tokenizeAny(u8, line, ": ");
-            while (it.next()) |chunk| : (pos += 1) {
-                if (pos > 0) {
-                    const num = try std.fmt.parseUnsigned(usize, chunk, 10);
-                    try board.shapes.append(self.alloc, num);
-                    continue;
-                }
-                const x_pos = std.mem.indexOf(u8, chunk, "x").?;
-                board.w = try std.fmt.parseUnsigned(usize, chunk[0..x_pos], 10);
-                board.h = try std.fmt.parseUnsigned(usize, chunk[x_pos + 1 ..], 10);
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var current_shape_row: usize = 0;
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            if (line.len == 0) {
+                std.debug.assert(current_shape_row == SHAPE_SIZE);
+                continue;
             }
-            try self.boards.append(self.alloc, board);
-            return;
-        }
 
-        const shape: *Shape = &self.shapes.items[self.shapes.items.len - 1];
-        shape.setRow(self.current_shape_row, line);
-        self.current_shape_row += 1;
+            if (line[line.len - 1] == ':') {
+                const id = try std.fmt.parseUnsigned(usize, line[0 .. line.len - 1], 10);
+                std.debug.assert(self.shapes.items.len == id);
+
+                try self.shapes.append(self.alloc, Shape.init(id));
+                current_shape_row = 0;
+                continue;
+            }
+
+            if (std.ascii.isDigit(line[0])) {
+                var board = Board.init();
+                var pos: usize = 0;
+                var it = std.mem.tokenizeAny(u8, line, ": ");
+                while (it.next()) |chunk| : (pos += 1) {
+                    if (pos > 0) {
+                        const num = try std.fmt.parseUnsigned(usize, chunk, 10);
+                        try board.shapes.append(self.alloc, num);
+                        continue;
+                    }
+                    const x_pos = std.mem.indexOf(u8, chunk, "x").?;
+                    board.w = try std.fmt.parseUnsigned(usize, chunk[0..x_pos], 10);
+                    board.h = try std.fmt.parseUnsigned(usize, chunk[x_pos + 1 ..], 10);
+                }
+                try self.boards.append(self.alloc, board);
+                continue;
+            }
+
+            const shape: *Shape = &self.shapes.items[self.shapes.items.len - 1];
+            shape.setRow(current_shape_row, line);
+            current_shape_row += 1;
+        }
     }
 
     pub fn show(self: Module) void {
@@ -215,11 +217,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
     // module.show();
 
     const product = try module.countViableRegions();

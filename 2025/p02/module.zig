@@ -55,14 +55,17 @@ pub const Module = struct {
         self.ranges.deinit(self.alloc);
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        var itc = std.mem.tokenizeScalar(u8, line, ',');
-        while (itc.next()) |chunk| {
-            var itd = std.mem.tokenizeScalar(u8, chunk, '-');
-            var r: Range = undefined;
-            r.lo = try std.fmt.parseUnsigned(usize, itd.next().?, 10);
-            r.hi = try std.fmt.parseUnsigned(usize, itd.next().?, 10);
-            try self.ranges.append(self.alloc, r);
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            var it = std.mem.tokenizeScalar(u8, line, ',');
+            while (it.next()) |chunk| {
+                var itd = std.mem.tokenizeScalar(u8, chunk, '-');
+                var r: Range = undefined;
+                r.lo = try std.fmt.parseUnsigned(usize, itd.next().?, 10);
+                r.hi = try std.fmt.parseUnsigned(usize, itd.next().?, 10);
+                try self.ranges.append(self.alloc, r);
+            }
         }
     }
 
@@ -86,11 +89,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator, false);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const sum = try module.getSumInvalidIds();
     const expected = @as(usize, 1227775554);
@@ -106,11 +105,7 @@ test "sample part 2" {
 
     var module = Module.init(testing.allocator, true);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const sum = try module.getSumInvalidIds();
     const expected = @as(usize, 4174379265);

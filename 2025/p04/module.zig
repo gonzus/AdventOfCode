@@ -52,15 +52,18 @@ pub const Module = struct {
         }
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        if (self.w == 0) self.w = line.len;
-        if (self.w != line.len) return error.InvalidData;
-        const y = self.h;
-        for (0..line.len) |x| {
-            if (line[x] != '@') continue;
-            try self.rolls[self.current].put(Pos.init(x, y), {});
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            if (self.w == 0) self.w = line.len;
+            if (self.w != line.len) return error.InvalidData;
+            const y = self.h;
+            for (0..line.len) |x| {
+                if (line[x] != '@') continue;
+                try self.rolls[self.current].put(Pos.init(x, y), {});
+            }
+            self.h += 1;
         }
-        self.h += 1;
     }
 
     pub fn countAccessibleRolls(self: *Module) !usize {
@@ -131,11 +134,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const rolls = try module.countAccessibleRolls();
     const expected = @as(usize, 13);
@@ -158,11 +157,7 @@ test "sample part 2" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const removed = try module.removeAccessibleRolls();
     const expected = @as(usize, 43);

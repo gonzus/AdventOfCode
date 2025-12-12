@@ -240,43 +240,46 @@ pub const Module = struct {
         self.machines.deinit(self.alloc);
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        var its = std.mem.tokenizeScalar(u8, line, ' ');
-        var m = Machine.init();
-        while (its.next()) |chunk| {
-            if (chunk[0] == '[') {
-                const str = chunk[1 .. chunk.len - 1];
-                var mask: usize = 1;
-                for (str) |c| {
-                    if (c == '#') {
-                        m.lights |= mask;
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            var its = std.mem.tokenizeScalar(u8, line, ' ');
+            var m = Machine.init();
+            while (its.next()) |chunk| {
+                if (chunk[0] == '[') {
+                    const str = chunk[1 .. chunk.len - 1];
+                    var mask: usize = 1;
+                    for (str) |c| {
+                        if (c == '#') {
+                            m.lights |= mask;
+                        }
+                        mask <<= 1;
                     }
-                    mask <<= 1;
+                    continue;
                 }
-                continue;
-            }
-            if (chunk[0] == '(') {
-                const str = chunk[1 .. chunk.len - 1];
-                var mask: usize = 0;
-                var it = std.mem.tokenizeScalar(u8, str, ',');
-                while (it.next()) |s| {
-                    const n = try std.fmt.parseUnsigned(u6, s, 10);
-                    mask |= @as(usize, 1) << n;
+                if (chunk[0] == '(') {
+                    const str = chunk[1 .. chunk.len - 1];
+                    var mask: usize = 0;
+                    var it = std.mem.tokenizeScalar(u8, str, ',');
+                    while (it.next()) |s| {
+                        const n = try std.fmt.parseUnsigned(u6, s, 10);
+                        mask |= @as(usize, 1) << n;
+                    }
+                    try m.buttons.append(self.alloc, mask);
+                    continue;
                 }
-                try m.buttons.append(self.alloc, mask);
-                continue;
-            }
-            if (chunk[0] == '{') {
-                const str = chunk[1 .. chunk.len - 1];
-                var it = std.mem.tokenizeScalar(u8, str, ',');
-                while (it.next()) |s| {
-                    const j = try std.fmt.parseInt(i16, s, 10);
-                    try m.joltages.append(self.alloc, j);
+                if (chunk[0] == '{') {
+                    const str = chunk[1 .. chunk.len - 1];
+                    var it = std.mem.tokenizeScalar(u8, str, ',');
+                    while (it.next()) |s| {
+                        const j = try std.fmt.parseInt(i16, s, 10);
+                        try m.joltages.append(self.alloc, j);
+                    }
+                    continue;
                 }
-                continue;
             }
+            try self.machines.append(self.alloc, m);
         }
-        try self.machines.append(self.alloc, m);
     }
 
     // pub fn show(self: Module) void {
@@ -316,12 +319,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
-    // module.show();
+    try module.parseInput(data);
 
     const product = try module.getTotalButtonPressesForLights();
     const expected = @as(i16, 7);
@@ -337,12 +335,7 @@ test "sample part 2" {
 
     var module = Module.init(testing.allocator);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
-    // module.show();
+    try module.parseInput(data);
 
     const product = try module.getTotalButtonPressesForJoltages();
     const expected = @as(i16, 33);

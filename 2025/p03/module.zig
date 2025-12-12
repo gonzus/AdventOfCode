@@ -53,11 +53,14 @@ pub const Module = struct {
         self.banks.deinit(self.alloc);
     }
 
-    pub fn addLine(self: *Module, line: []const u8) !void {
-        if (self.batteries_avail == 0) self.batteries_avail = line.len;
-        if (self.batteries_avail >= SIZE) return error.DataTooBig;
-        if (self.batteries_avail != line.len) return error.InvalidData;
-        try self.banks.append(self.alloc, Bank.init(line));
+    pub fn parseInput(self: *Module, data: []const u8) !void {
+        var it_lines = std.mem.splitScalar(u8, data, '\n');
+        while (it_lines.next()) |line| {
+            if (self.batteries_avail == 0) self.batteries_avail = line.len;
+            if (self.batteries_avail >= SIZE) return error.DataTooBig;
+            if (self.batteries_avail != line.len) return error.InvalidData;
+            try self.banks.append(self.alloc, Bank.init(line));
+        }
     }
 
     pub fn getTotalJoltage(self: *Module) !usize {
@@ -79,11 +82,7 @@ test "sample part 1" {
 
     var module = Module.init(testing.allocator, 2);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const joltage = try module.getTotalJoltage();
     const expected = @as(usize, 357);
@@ -100,11 +99,7 @@ test "sample part 2" {
 
     var module = Module.init(testing.allocator, 12);
     defer module.deinit();
-
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |line| {
-        try module.addLine(line);
-    }
+    try module.parseInput(data);
 
     const joltage = try module.getTotalJoltage();
     const expected = @as(usize, 3121910778619);

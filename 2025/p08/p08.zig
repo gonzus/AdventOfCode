@@ -1,51 +1,32 @@
 const std = @import("std");
-const testing = std.testing;
-const command = @import("./util/command.zig");
+const Command = @import("./util/command.zig").Command;
 const Module = @import("./module.zig").Module;
 
 pub fn main() anyerror!u8 {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
+    var command = try Command.init();
+    defer command.deinit();
 
     const part = command.choosePart();
-    var module = Module.init(arena.allocator());
+    var module = Module.init(command.allocator());
     defer module.deinit();
 
-    const SIZE = 18 * 1024;
-
-    var stdin_buffer: [SIZE]u8 = undefined;
-    var stdin_reader = std.fs.File.stdin().reader(&stdin_buffer);
-    const stdin = &stdin_reader.interface;
-
-    var stdout_buffer: [SIZE]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
-    const stdout = &stdout_writer.interface;
-
-    read: while (true) {
-        const line = stdin.takeDelimiterInclusive('\n') catch |err| {
-            if (err == error.EndOfStream) break :read;
-            return err;
-        };
-        try module.addLine(std.mem.trim(u8, line, "\r\n"));
-    }
+    try module.parseInput(try command.readInput());
+    // module.show();
 
     var answer: usize = 0;
     switch (part) {
         .part1 => {
             answer = try module.computeJunctionProduct(1000);
             const expected = @as(usize, 57970);
-            try testing.expectEqual(expected, answer);
+            try std.testing.expectEqual(expected, answer);
         },
         .part2 => {
             answer = try module.computeLastProduct();
             const expected = @as(usize, 8520040659);
-            try testing.expectEqual(expected, answer);
+            try std.testing.expectEqual(expected, answer);
         },
     }
 
-    try stdout.print("--- {s} ---\n", .{@tagName(part)});
-    try stdout.print("Answer: {}\n", .{answer});
-    try stdout.print("Elapsed: {}us\n", .{command.getElapsedUs()});
-    try stdout.flush();
+    try command.showResults(part, answer);
     return 0;
 }
